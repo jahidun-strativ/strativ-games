@@ -1,5 +1,9 @@
-const CACHE = "ssm-v2";
-const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
+// Bump CACHE + the ?v= on icon URLs together whenever icons change. A new
+// CACHE name forces this SW to reinstall and purge the stale precache; the
+// new ?v= makes it fetch the fresh icon bytes. Keep ?v= in sync with
+// src/app/manifest.ts.
+const CACHE = "ssm-v3";
+const PRECACHE = ["/offline.html", "/icons/icon-192.png?v=3", "/icons/icon-512.png?v=3"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -41,8 +45,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: "/icons/icon-192.png?v=3",
+      badge: "/icons/icon-192.png?v=3",
       data: { url: payload.url || "/" },
       tag: payload.tag || undefined,
     }),
