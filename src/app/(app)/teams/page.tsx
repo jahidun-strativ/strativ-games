@@ -5,6 +5,7 @@ import { teams } from "@/db/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NewTeamButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 import type { Sport } from "@/db/schema";
 
 export const metadata = { title: "Teams" };
@@ -68,7 +69,8 @@ export default async function TeamsPage() {
     db.query.sports.findMany(),
   ]);
 
-  const canCreate = allSports.length > 0;
+  const admin = await isAdmin();
+  const canCreate = admin && allSports.length > 0;
   const ourTeams = allTeams.filter((t) => t.kind !== "external");
   const opponents = allTeams.filter((t) => t.kind === "external");
 
@@ -87,42 +89,52 @@ export default async function TeamsPage() {
         }
       />
 
-      {!canCreate ? (
-        <EmptyState title="Add a sport first" hint="Create a sport, then add your teams and opponents." />
-      ) : (
-        <div className="space-y-10">
-          <section>
-            <h2 className="font-display mb-3 text-xl text-ink-900">Our teams</h2>
-            {ourTeams.length === 0 ? (
-              <EmptyState
-                title="No teams yet"
-                hint="Create your first Strativ squad to start scheduling matches."
-                action={<NewTeamButton sports={allSports} label="New team" />}
-              />
-            ) : (
-              <TeamGrid items={ourTeams} />
-            )}
-          </section>
+      <div className="space-y-10">
+        <section>
+          <h2 className="font-display mb-3 text-xl text-ink-900">Our teams</h2>
+          {ourTeams.length === 0 ? (
+            <EmptyState
+              title="No teams yet"
+              hint={
+                canCreate
+                  ? "Create your first Strativ squad to start scheduling matches."
+                  : admin
+                    ? "Add a sport first, then create your teams."
+                    : "No teams have been added yet."
+              }
+              action={
+                canCreate ? <NewTeamButton sports={allSports} label="New team" /> : undefined
+              }
+            />
+          ) : (
+            <TeamGrid items={ourTeams} />
+          )}
+        </section>
 
-          <section>
-            <h2 className="font-display mb-1 text-xl text-ink-900">Opponents</h2>
-            <p className="mb-3 text-sm text-ink-500">
-              External teams you play competitive matches against.
-            </p>
-            {opponents.length === 0 ? (
-              <EmptyState
-                title="No opponents yet"
-                hint="Add a rival company or local team to schedule competitive matches."
-                action={
+        <section>
+          <h2 className="font-display mb-1 text-xl text-ink-900">Opponents</h2>
+          <p className="mb-3 text-sm text-ink-500">
+            External teams you play competitive matches against.
+          </p>
+          {opponents.length === 0 ? (
+            <EmptyState
+              title="No opponents yet"
+              hint={
+                canCreate
+                  ? "Add a rival company or local team to schedule competitive matches."
+                  : "No opponents have been added yet."
+              }
+              action={
+                canCreate ? (
                   <NewTeamButton sports={allSports} kind="external" label="New opponent" />
-                }
-              />
-            ) : (
-              <TeamGrid items={opponents} />
-            )}
-          </section>
-        </div>
-      )}
+                ) : undefined
+              }
+            />
+          ) : (
+            <TeamGrid items={opponents} />
+          )}
+        </section>
+      </div>
     </div>
   );
 }

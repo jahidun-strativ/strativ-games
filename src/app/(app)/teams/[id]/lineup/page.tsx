@@ -4,6 +4,7 @@ import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_SUBS } from "@/lib/formations";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Lineup" };
 
@@ -19,6 +20,7 @@ export default async function LineupPage({
     },
   });
   if (!team) notFound();
+  const admin = await isAdmin();
 
   const savedFormation = team.lineup?.formation;
   const initialFormation =
@@ -56,6 +58,7 @@ export default async function LineupPage({
         initialFormation={initialFormation}
         initialStarters={initialStarters}
         initialSubs={initialSubs}
+        canEdit={admin}
       />
     </div>
   );

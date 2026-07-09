@@ -16,6 +16,7 @@ import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
 import { formatFull } from "@/lib/format";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Match" };
 
@@ -40,6 +41,7 @@ export default async function MatchDetailPage({
   ]);
   if (!match) notFound();
 
+  const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
   const heading = hasTeams
     ? `${match.homeTeam!.name} v ${match.awayTeam!.name}`
@@ -48,7 +50,7 @@ export default async function MatchDetailPage({
     .filter(Boolean)
     .join(" · ");
 
-  const editButton = (
+  const editButton = admin ? (
     <EditMatchButton
       sports={allSports}
       teams={allTeams}
@@ -56,7 +58,7 @@ export default async function MatchDetailPage({
       match={match}
       label={hasTeams ? "Edit match" : "Assign teams"}
     />
-  );
+  ) : null;
 
   return (
     <div>
@@ -92,7 +94,7 @@ export default async function MatchDetailPage({
         {match.notes ? <p className="mt-3 text-sm text-ink-500">{match.notes}</p> : null}
       </section>
 
-      {match.status !== "cancelled" ? (
+      {admin && match.status !== "cancelled" ? (
         <section className="mt-8">
           <h2 className="font-display mb-3 text-xl text-ink-900">
             {match.status === "completed" ? "Edit result" : "Record result"}
@@ -120,39 +122,41 @@ export default async function MatchDetailPage({
         </section>
       ) : null}
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="tv-card-sm p-5">
-          <h2 className="font-display mb-3 text-lg text-ink-900">Reschedule / move venue</h2>
-          <RescheduleForm
-            action={rescheduleMatch.bind(null, match.id)}
-            venues={allVenues}
-            currentVenueId={match.venueId}
-            currentKickoff={match.kickoffAt}
-          />
-        </div>
-
-        <div className="tv-card-sm flex flex-col justify-between gap-3 p-5">
-          <h2 className="font-display text-lg text-ink-900">Admin</h2>
-          {match.status !== "cancelled" ? (
-            <form action={cancelMatch.bind(null, match.id)}>
-              <Button type="submit" variant="secondary">
-                Cancel match
-              </Button>
-            </form>
-          ) : (
-            <p className="text-sm text-ink-500">
-              Match is cancelled. Reschedule it to put it back on the calendar.
-            </p>
-          )}
-          <div>
-            <ConfirmDelete
-              action={deleteMatch.bind(null, match.id)}
-              label="Delete match"
-              confirmMessage="Delete this match and its player stats?"
+      {admin ? (
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="tv-card-sm p-5">
+            <h2 className="font-display mb-3 text-lg text-ink-900">Reschedule / move venue</h2>
+            <RescheduleForm
+              action={rescheduleMatch.bind(null, match.id)}
+              venues={allVenues}
+              currentVenueId={match.venueId}
+              currentKickoff={match.kickoffAt}
             />
           </div>
-        </div>
-      </section>
+
+          <div className="tv-card-sm flex flex-col justify-between gap-3 p-5">
+            <h2 className="font-display text-lg text-ink-900">Admin</h2>
+            {match.status !== "cancelled" ? (
+              <form action={cancelMatch.bind(null, match.id)}>
+                <Button type="submit" variant="secondary">
+                  Cancel match
+                </Button>
+              </form>
+            ) : (
+              <p className="text-sm text-ink-500">
+                Match is cancelled. Reschedule it to put it back on the calendar.
+              </p>
+            )}
+            <div>
+              <ConfirmDelete
+                action={deleteMatch.bind(null, match.id)}
+                label="Delete match"
+                confirmMessage="Delete this match and its player stats?"
+              />
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

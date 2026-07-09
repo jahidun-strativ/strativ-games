@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth/server";
 import { isAllowedEmail } from "@/lib/auth/allowed";
+import { getSession, getRole } from "@/server/auth";
 import { ensurePlayerForUser } from "@/server/ensure-player";
+import { ensureAppUser } from "@/server/ensure-user";
 import { SidebarNav, BottomTabs } from "@/components/shell/nav";
 import { AppUserButton } from "@/components/shell/user-button";
 import { PushToggle } from "@/components/pwa/push-toggle";
@@ -12,12 +13,18 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session } = await auth.getSession();
+  const session = await getSession();
   if (!session?.user) redirect("/auth/sign-in");
   if (!isAllowedEmail(session.user.email)) redirect("/blocked");
+  const user = session.user;
 
-  // Registered users are the source of the player roster.
-  await ensurePlayerForUser(session.user);
+  // Independent work — run together instead of one after another.
+  const [, , role] = await Promise.all([
+    ensureAppUser(user),
+    ensurePlayerForUser(user),
+    getRole(user.id),
+  ]);
+  const admin = role === "admin";
 
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
@@ -30,7 +37,7 @@ export default async function AppLayout({
           </p>
           <div className="stripes mt-2 h-1 w-24 rounded-full" />
         </Link>
-        <SidebarNav />
+        <SidebarNav admin={admin} />
         <div className="mt-auto space-y-3 border-t border-line pt-4">
           <PushToggle />
           <AppUserButton />

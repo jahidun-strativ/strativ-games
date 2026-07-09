@@ -4,11 +4,11 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { sports } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
 export async function createSport(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.insert(sports).values({
     name: str(formData, "name"),
     shortName: str(formData, "shortName").toUpperCase(),
@@ -20,7 +20,7 @@ export async function createSport(formData: FormData) {
 }
 
 export async function updateSport(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db
     .update(sports)
     .set({
@@ -35,7 +35,7 @@ export async function updateSport(id: string, formData: FormData) {
 }
 
 export async function deleteSport(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.delete(sports).where(eq(sports.id, id));
   revalidatePath("/sports");
   revalidatePath("/");

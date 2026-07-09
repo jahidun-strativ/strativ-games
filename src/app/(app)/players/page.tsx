@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { PlayersTable } from "@/components/tables/players-table";
 import { NewPlayerButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Players" };
 
@@ -25,6 +26,8 @@ export default async function PlayersPage({
     db.query.sports.findMany(),
   ]);
 
+  const admin = await isAdmin();
+  const canCreate = admin && allSports.length > 0;
   const filtered = allPlayers.filter(
     (p) => (!teamId || p.teamId === teamId) && (!sportId || p.sportId === sportId),
   );
@@ -35,9 +38,7 @@ export default async function PlayersPage({
         kicker="Locker room"
         title="Players"
         actions={
-          allSports.length > 0 ? (
-            <NewPlayerButton sports={allSports} teams={allTeams} />
-          ) : undefined
+          canCreate ? <NewPlayerButton sports={allSports} teams={allTeams} /> : undefined
         }
       />
 
@@ -61,7 +62,7 @@ export default async function PlayersPage({
           title="No players found"
           hint="Try clearing filters, or sign a new player."
           action={
-            allSports.length > 0 ? (
+            canCreate ? (
               <NewPlayerButton sports={allSports} teams={allTeams} label="New player" />
             ) : undefined
           }

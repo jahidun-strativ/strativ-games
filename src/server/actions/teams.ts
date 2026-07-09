@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { teams } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
 function teamValues(formData: FormData) {
@@ -20,21 +20,21 @@ function teamValues(formData: FormData) {
 }
 
 export async function createTeam(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.insert(teams).values(teamValues(formData));
   revalidatePath("/teams");
   revalidatePath("/");
 }
 
 export async function updateTeam(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.update(teams).set(teamValues(formData)).where(eq(teams.id, id));
   revalidatePath("/teams");
   revalidatePath(`/teams/${id}`);
 }
 
 export async function deleteTeam(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.delete(teams).where(eq(teams.id, id));
   revalidatePath("/teams");
   revalidatePath("/");

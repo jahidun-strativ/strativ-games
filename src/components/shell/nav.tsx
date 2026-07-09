@@ -9,6 +9,7 @@ import {
   EnvironmentOutlined,
   FlagOutlined,
   IdcardOutlined,
+  SafetyOutlined,
   TrophyOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -19,6 +20,7 @@ type NavLink = {
   label: string;
   icon: ReactNode;
   exact?: boolean;
+  adminOnly?: boolean;
 };
 
 const links: NavLink[] = [
@@ -30,6 +32,7 @@ const links: NavLink[] = [
   { href: "/staff", label: "Staff", icon: <IdcardOutlined /> },
   { href: "/sports", label: "Sports", icon: <DribbbleOutlined /> },
   { href: "/venues", label: "Venues", icon: <EnvironmentOutlined /> },
+  { href: "/members", label: "Members", icon: <SafetyOutlined />, adminOnly: true },
 ];
 
 // Bottom tab bar shows the 5 most-used destinations; the rest live in the sidebar.
@@ -41,14 +44,15 @@ function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 }
 
-export function SidebarNav() {
+export function SidebarNav({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
+  const visible = links.filter((l) => !l.adminOnly || admin);
   return (
     <nav className="flex flex-col gap-1">
       <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] !text-ink-400">
         Menu
       </p>
-      {links.map((link) => {
+      {visible.map((link) => {
         const active = isActive(pathname, link.href, link.exact);
         return (
           <Link

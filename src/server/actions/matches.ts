@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matches, playerMatchStats, teams } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { sendPushToAll } from "@/lib/push";
 import { formatFull } from "@/lib/format";
@@ -98,7 +98,7 @@ async function assertVenueFree(venueId: string, kickoffAt: Date, excludeMatchId?
 }
 
 export async function createMatch(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const values = await parseMatchInput(formData);
   await assertVenueFree(values.venueId, values.kickoffAt);
   const [match] = await db.insert(matches).values(values).returning();
@@ -109,7 +109,7 @@ export async function createMatch(formData: FormData) {
 
 // Assign/change sport, teams, title, venue or kickoff after creation.
 export async function updateMatch(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const values = await parseMatchInput(formData);
   await assertVenueFree(values.venueId, values.kickoffAt, id);
   await db.update(matches).set(values).where(eq(matches.id, id));
@@ -117,7 +117,7 @@ export async function updateMatch(id: string, formData: FormData) {
 }
 
 export async function rescheduleMatch(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const venueId = str(formData, "venueId");
   const kickoffAt = new Date(str(formData, "kickoffAt"));
   if (Number.isNaN(kickoffAt.getTime())) throw new Error("Invalid kickoff time.");
@@ -130,20 +130,20 @@ export async function rescheduleMatch(id: string, formData: FormData) {
 }
 
 export async function cancelMatch(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.update(matches).set({ status: "cancelled" }).where(eq(matches.id, id));
   revalidateMatchPages(id);
 }
 
 export async function deleteMatch(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.delete(matches).where(eq(matches.id, id));
   revalidateMatchPages();
   redirect("/matches");
 }
 
 export async function recordResult(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const homeScore = optInt(formData, "homeScore") ?? 0;
   const awayScore = optInt(formData, "awayScore") ?? 0;
 

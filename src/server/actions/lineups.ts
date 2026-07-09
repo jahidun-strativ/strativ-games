@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { lineupSlots, lineups } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { MAX_SQUAD, MAX_SUBS, MIN_SQUAD, MIN_SUBS } from "@/lib/formations";
 
 export type LineupSlotInput = {
@@ -20,7 +20,7 @@ export async function saveLineup(
   squadSize: number,
   slots: LineupSlotInput[],
 ) {
-  await requireUser();
+  await requireAdmin();
 
   if (squadSize < MIN_SQUAD || squadSize > MAX_SQUAD) {
     throw new Error(`Squad size must be between ${MIN_SQUAD} and ${MAX_SQUAD}.`);

@@ -9,6 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
 import { EditTeamButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Team" };
 
@@ -29,6 +30,7 @@ export default async function TeamDetailPage({
   ]);
   if (!team) notFound();
   const external = team.kind === "external";
+  const admin = await isAdmin();
 
   const teamMatches = await db.query.matches.findMany({
     where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
@@ -44,9 +46,11 @@ export default async function TeamDetailPage({
         title={team.name}
         actions={
           <>
-            <EditTeamButton sports={allSports} team={team} />
+            {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
             {!external ? (
-              <ButtonLink href={`/teams/${team.id}/lineup`}>Lineup</ButtonLink>
+              <ButtonLink variant={admin ? "secondary" : "primary"} href={`/teams/${team.id}/lineup`}>
+                Lineup
+              </ButtonLink>
             ) : null}
           </>
         }
@@ -106,13 +110,15 @@ export default async function TeamDetailPage({
             )}
           </div>
 
-          <div className="mt-8 border-t border-line pt-4">
-            <ConfirmDelete
-              action={deleteTeam.bind(null, team.id)}
-              label={external ? "Delete opponent" : "Delete team"}
-              confirmMessage={`Delete ${team.name}? Its matches will be removed${external ? "." : " and players released."}`}
-            />
-          </div>
+          {admin ? (
+            <div className="mt-8 border-t border-line pt-4">
+              <ConfirmDelete
+                action={deleteTeam.bind(null, team.id)}
+                label={external ? "Delete opponent" : "Delete team"}
+                confirmMessage={`Delete ${team.name}? Its matches will be removed${external ? "." : " and players released."}`}
+              />
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

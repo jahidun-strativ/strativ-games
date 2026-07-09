@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { venues } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 
 function venueValues(formData: FormData) {
@@ -19,20 +19,20 @@ function venueValues(formData: FormData) {
 }
 
 export async function createVenue(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.insert(venues).values(venueValues(formData));
   revalidatePath("/venues");
 }
 
 export async function updateVenue(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.update(venues).set(venueValues(formData)).where(eq(venues.id, id));
   revalidatePath("/venues");
   revalidatePath(`/venues/${id}`);
 }
 
 export async function deleteVenue(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.delete(venues).where(eq(venues.id, id));
   revalidatePath("/venues");
   redirect("/venues");

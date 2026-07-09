@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
-import { requireUser } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
 function staffValues(formData: FormData) {
@@ -18,19 +18,19 @@ function staffValues(formData: FormData) {
 }
 
 export async function createStaff(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.insert(staff).values(staffValues(formData));
   revalidatePath("/staff");
 }
 
 export async function updateStaff(id: string, formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   await db.update(staff).set(staffValues(formData)).where(eq(staff.id, id));
   revalidatePath("/staff");
 }
 
 export async function deleteStaff(id: string) {
-  await requireUser();
+  await requireAdmin();
   await db.delete(staff).where(eq(staff.id, id));
   revalidatePath("/staff");
 }

@@ -140,6 +140,16 @@ export const lineupSlots = pgTable(
   (t) => [unique().on(t.lineupId, t.role, t.slotIndex)],
 );
 
+// App-level user records with roles. One row per registered user; role gates
+// who may create/edit/delete data.
+export const appUsers = pgTable("app_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().unique(),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("member"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Web Push subscriptions — one row per browser/device a user has enabled.
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -222,6 +232,10 @@ export type PlayerMatchStat = typeof playerMatchStats.$inferSelect;
 export type Lineup = typeof lineups.$inferSelect;
 export type LineupSlot = typeof lineupSlots.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type AppUser = typeof appUsers.$inferSelect;
+
+export const ROLES = ["admin", "member"] as const;
+export type Role = (typeof ROLES)[number];
 
 export const MATCH_STATUSES = ["scheduled", "completed", "cancelled"] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];

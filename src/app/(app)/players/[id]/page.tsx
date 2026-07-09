@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EditPlayerButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 import { formatDate } from "@/lib/format";
 
 export const metadata = { title: "Player" };
@@ -33,6 +34,7 @@ export default async function PlayerDetailPage({
   ]);
   if (!player) notFound();
 
+  const admin = await isAdmin();
   const totals = await getPlayerTotals(id);
 
   return (
@@ -42,7 +44,11 @@ export default async function PlayerDetailPage({
         title={
           player.squadNumber ? `#${player.squadNumber} ${player.name}` : player.name
         }
-        actions={<EditPlayerButton sports={allSports} teams={allTeams} player={player} />}
+        actions={
+          admin ? (
+            <EditPlayerButton sports={allSports} teams={allTeams} player={player} />
+          ) : undefined
+        }
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -105,13 +111,15 @@ export default async function PlayerDetailPage({
         )}
       </section>
 
-      <div className="mt-8 border-t border-line pt-4">
-        <ConfirmDelete
-          action={deletePlayer.bind(null, player.id)}
-          label="Delete player"
-          confirmMessage={`Delete ${player.name} and all their match stats?`}
-        />
-      </div>
+      {admin ? (
+        <div className="mt-8 border-t border-line pt-4">
+          <ConfirmDelete
+            action={deletePlayer.bind(null, player.id)}
+            label="Delete player"
+            confirmMessage={`Delete ${player.name} and all their match stats?`}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

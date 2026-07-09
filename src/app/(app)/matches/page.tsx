@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { NewMatchButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 import { formatDate } from "@/lib/format";
 import type { MatchWithRefs } from "@/components/match-card";
 
@@ -39,7 +40,8 @@ export default async function MatchesPage({
     db.query.venues.findMany(),
   ]);
 
-  const canSchedule = allVenues.length >= 1;
+  const admin = await isAdmin();
+  const canSchedule = admin && allVenues.length >= 1;
   const scheduleButton = canSchedule ? (
     <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
   ) : undefined;

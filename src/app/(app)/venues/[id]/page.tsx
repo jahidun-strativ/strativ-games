@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EditVenueButton, NewMatchButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Venue" };
 
@@ -36,14 +37,15 @@ export default async function VenueDetailPage({
     db.query.venues.findMany(),
   ]);
 
-  const canSchedule = allVenues.length >= 1;
+  const admin = await isAdmin();
+  const canSchedule = admin && allVenues.length >= 1;
 
   return (
     <div>
       <PageHeader
         kicker={[venue.address, venue.city].filter(Boolean).join(", ") || "Venue"}
         title={venue.name}
-        actions={<EditVenueButton venue={venue} />}
+        actions={admin ? <EditVenueButton venue={venue} /> : undefined}
       />
 
       <div className="mb-6 flex flex-wrap gap-3 text-sm">
@@ -93,13 +95,15 @@ export default async function VenueDetailPage({
         )}
       </section>
 
-      <div className="mt-8 border-t border-line pt-4">
-        <ConfirmDelete
-          action={deleteVenue.bind(null, venue.id)}
-          label="Delete venue"
-          confirmMessage={`Delete ${venue.name}? Venues with matches cannot be deleted.`}
-        />
-      </div>
+      {admin ? (
+        <div className="mt-8 border-t border-line pt-4">
+          <ConfirmDelete
+            action={deleteVenue.bind(null, venue.id)}
+            label="Delete venue"
+            confirmMessage={`Delete ${venue.name}? Venues with matches cannot be deleted.`}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

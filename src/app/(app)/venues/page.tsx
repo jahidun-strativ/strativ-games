@@ -5,11 +5,13 @@ import { matches, venues } from "@/db/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NewVenueButton } from "@/components/entity-modals";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Venues" };
 
 export default async function VenuesPage() {
   const now = new Date();
+  const admin = await isAdmin();
   const [allVenues, upcoming] = await Promise.all([
     db.query.venues.findMany({ orderBy: asc(venues.name) }),
     db.query.matches.findMany({
@@ -28,14 +30,14 @@ export default async function VenuesPage() {
       <PageHeader
         kicker="Grounds & bookings"
         title="Venues"
-        actions={<NewVenueButton />}
+        actions={admin ? <NewVenueButton /> : undefined}
       />
 
       {allVenues.length === 0 ? (
         <EmptyState
           title="No venues yet"
           hint="Add the grounds and halls you book for matches."
-          action={<NewVenueButton label="New venue" />}
+          action={admin ? <NewVenueButton label="New venue" /> : undefined}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -4,6 +4,7 @@ import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/ic
 import { db } from "@/db";
 import { matches, players } from "@/db/schema";
 import { getMonthlyLeaderboard, type LeaderboardRow } from "@/server/queries/stats";
+import { isAdmin } from "@/server/auth";
 import { MatchCard } from "@/components/match-card";
 import { MonthlyRace } from "@/components/monthly-race";
 import { PageHeader } from "@/components/ui/page-header";
@@ -40,9 +41,10 @@ export default async function Dashboard() {
       db.$count(players),
     ]);
 
+  const admin = await isAdmin();
   const teamCount = allTeams.length;
   const venueCount = allVenues.length;
-  const canSchedule = allVenues.length >= 1;
+  const canSchedule = admin && allVenues.length >= 1;
   const scheduleButton = canSchedule ? (
     <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
   ) : undefined;

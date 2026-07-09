@@ -22,6 +22,7 @@ export function PitchBuilder({
   initialFormation,
   initialStarters,
   initialSubs,
+  canEdit = true,
 }: {
   teamId: string;
   roster: Player[];
@@ -30,6 +31,7 @@ export function PitchBuilder({
   initialStarters: Record<number, string | null>;
   // ordered bench playerIds
   initialSubs: (string | null)[];
+  canEdit?: boolean;
 }) {
   const { message } = App.useApp();
   const [formation, setFormation] = useState(initialFormation);
@@ -139,7 +141,12 @@ export function PitchBuilder({
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
       <div>
         {/* Controls */}
-        <div className="mb-4 flex flex-wrap items-end gap-3">
+        {!canEdit ? (
+          <div className="tv-card-sm mb-4 px-4 py-3 text-sm text-ink-500">
+            Viewing {formation} ({size}-a-side). Only admins can edit the lineup.
+          </div>
+        ) : null}
+        <div className={`mb-4 flex flex-wrap items-end gap-3 ${canEdit ? "" : "hidden"}`}>
           <label className="text-xs font-semibold uppercase tracking-wider text-ink-500">
             Squad size
             <select
@@ -214,8 +221,9 @@ export function PitchBuilder({
             return (
               <button
                 key={i}
+                disabled={!canEdit}
                 onClick={() => setActive(isActive ? null : { kind: "starter", index: i })}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
+                className="absolute -translate-x-1/2 -translate-y-1/2 disabled:cursor-default"
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               >
                 <span
@@ -253,8 +261,9 @@ export function PitchBuilder({
               return (
                 <button
                   key={i}
+                  disabled={!canEdit}
                   onClick={() => setActive(isActive ? null : { kind: "sub", index: i })}
-                  className={`flex min-w-28 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  className={`flex min-w-28 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors disabled:cursor-default ${
                     isActive
                       ? "border-gold-300 bg-gold-300/15"
                       : "border-line bg-cream-50 hover:bg-cream-200"
@@ -276,9 +285,11 @@ export function PitchBuilder({
       {/* Player picker */}
       <aside
         className={`tv-card h-fit p-4 ${
-          active !== null
-            ? "fixed inset-x-3 bottom-20 z-50 max-h-[55vh] overflow-y-auto lg:static lg:max-h-none"
-            : "hidden lg:block"
+          !canEdit
+            ? "hidden"
+            : active !== null
+              ? "fixed inset-x-3 bottom-20 z-50 max-h-[55vh] overflow-y-auto lg:static lg:max-h-none"
+              : "hidden lg:block"
         }`}
       >
         {active !== null ? (
