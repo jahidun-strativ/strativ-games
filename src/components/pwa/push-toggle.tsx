@@ -94,13 +94,15 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
     const on = state === "on";
     return (
       <Button
-        size="middle"
         shape="circle"
         type={on ? "default" : "primary"}
         loading={state === "loading"}
         icon={on ? <BellFilled /> : <BellOutlined />}
         onClick={on ? disable : enable}
         aria-label={on ? "Notifications on" : "Enable notifications"}
+        // Match the profile UserButton (shadcn icon size = 36px) so the two
+        // navbar controls are exactly the same width and height.
+        className="!h-9 !w-9 !min-w-9"
       />
     );
   }
