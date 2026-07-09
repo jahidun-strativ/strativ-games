@@ -42,7 +42,7 @@ export default async function TeamDetailPage({
   return (
     <div>
       <PageHeader
-        kicker={`${external ? "Opponent" : team.sport.name} · ${team.league ?? "No league"}`}
+        kicker={`${external ? "Opponent" : team.sport.name}${team.league ? ` · ${team.league}` : ""}`}
         title={team.name}
         actions={
           <>

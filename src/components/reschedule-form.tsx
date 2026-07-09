@@ -32,6 +32,9 @@ export function RescheduleForm({
           <DatePicker
             showTime={{ format: "h:mm A", minuteStep: 5, use12Hours: true }}
             format="ddd D MMM YYYY, h:mm A"
+            // Keep the field non-editable so tapping it opens the picker panel
+            // instead of the mobile on-screen keyboard.
+            inputReadOnly
             className="!w-full"
             classNames={{ popup: { root: "ssm-datetime-popup" } }}
           />

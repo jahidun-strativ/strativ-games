@@ -4,7 +4,6 @@ import { authViewPaths } from "@neondatabase/auth-ui/server";
 import { db } from "@/db";
 import { matches, players, teams } from "@/db/schema";
 import { AuthMarketing } from "@/components/auth-marketing";
-import { SignInForm } from "@/components/auth/sign-in-form";
 
 export const dynamicParams = false;
 // Render on demand so the marketing stats reflect live counts.
@@ -46,7 +45,7 @@ export default async function AuthPage({
           <div className="stripes mx-auto mt-2 h-1 w-32 rounded-full" />
         </div>
         <div className="tv-card w-full max-w-md p-4 sm:p-6">
-          {path === "sign-in" ? <SignInForm /> : <AuthView path={path} />}
+          <AuthView path={path} />
         </div>
       </section>
     </main>

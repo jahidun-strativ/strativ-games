@@ -29,7 +29,6 @@ export const teams = pgTable("teams", {
   kind: text("kind").notNull().default("internal"),
   league: text("league"),
   formation: text("formation").notNull().default("4-4-2"),
-  stadium: text("stadium"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

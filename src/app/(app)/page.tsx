@@ -82,7 +82,7 @@ async function DashboardContent() {
           <Link
             key={card.label}
             href={card.href}
-            className="tv-card-sm group flex flex-col items-start gap-2 p-3 transition-colors hover:border-cream-300 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
+            className="tv-card-sm group flex flex-col items-center gap-2 p-3 text-center transition-colors hover:border-cream-300 sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:text-left"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-burnt-500/12 text-base text-burnt-400 sm:h-11 sm:w-11 sm:text-lg">
               {card.icon}

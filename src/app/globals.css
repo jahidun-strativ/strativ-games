@@ -63,6 +63,25 @@ body {
     radial-gradient(1100px 520px at 50% -260px, rgb(249 115 22 / 0.1), transparent 70%),
     linear-gradient(180deg, #0c1119 0%, #0a0e15 40%);
   background-attachment: fixed;
+
+  /* Disable text selection / copy across the whole app (cascades to all
+     content). Form fields are re-enabled below so typing and pasting still
+     work. To restrict this to phones only, wrap this block's three lines in
+     `@media (max-width: 640px) { body { ... } }`. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no iOS long-press copy/share popover */
+}
+
+/* Keep inputs usable — text entry, selection and paste must still work. */
+input,
+textarea,
+select,
+[contenteditable="true"],
+[contenteditable=""] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* Card surfaces: crisp elevated panels, subtle top sheen, hairline border. */

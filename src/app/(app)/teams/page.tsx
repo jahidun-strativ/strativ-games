@@ -42,7 +42,9 @@ function TeamGrid({ items }: { items: TeamCard[] }) {
                 {team.sport.shortName}
               </span>
             </div>
-            <p className="mt-1 text-sm text-ink-500">{team.league ?? "No league"}</p>
+            {team.league ? (
+              <p className="mt-1 text-sm text-ink-500">{team.league}</p>
+            ) : null}
             <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-sm">
               {external ? (
                 <span className="rounded-full bg-cream-200 px-2.5 py-0.5 text-xs font-semibold uppercase text-ink-500">

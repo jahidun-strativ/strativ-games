@@ -8,14 +8,14 @@ import { teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
+// Formation is not set here: new teams take the schema default ("4-4-2") and
+// admins change it in the lineup builder, so it survives edits untouched.
 function teamValues(formData: FormData) {
   return {
     sportId: str(formData, "sportId"),
     name: str(formData, "name"),
     kind: opt(formData, "kind") === "external" ? "external" : "internal",
     league: opt(formData, "league"),
-    formation: opt(formData, "formation") ?? "4-4-2",
-    stadium: opt(formData, "stadium"),
   };
 }
 

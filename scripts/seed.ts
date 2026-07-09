@@ -59,11 +59,11 @@ async function main() {
   const [aurora, borealis, comet, dynamo, polar] = await db
     .insert(teams)
     .values([
-      { sportId: football.id, name: "Aurora FC", league: "Division 2 Norra", formation: "4-3-3", stadium: "Strativ Arena" },
-      { sportId: football.id, name: "Borealis United", league: "Division 2 Norra", formation: "4-4-2", stadium: "Gamla Stadion" },
-      { sportId: football.id, name: "Comet Rovers", league: "Division 2 Norra", formation: "3-5-2", stadium: "Nordic Dome" },
-      { sportId: futsal.id, name: "Dynamo Indoor", league: "Futsalligan", formation: "1-2-1", stadium: "Idrottshallen Väst" },
-      { sportId: futsal.id, name: "Polar Five", league: "Futsalligan", formation: "1-2-1", stadium: "Idrottshallen Väst" },
+      { sportId: football.id, name: "Aurora FC", league: "Division 2 Norra", formation: "4-3-3" },
+      { sportId: football.id, name: "Borealis United", league: "Division 2 Norra", formation: "4-4-2" },
+      { sportId: football.id, name: "Comet Rovers", league: "Division 2 Norra", formation: "3-5-2" },
+      { sportId: futsal.id, name: "Dynamo Indoor", league: "Futsalligan", formation: "1-2-1" },
+      { sportId: futsal.id, name: "Polar Five", league: "Futsalligan", formation: "1-2-1" },
     ])
     .returning();
 
