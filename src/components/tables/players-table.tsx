@@ -8,7 +8,6 @@ export type PlayerRow = {
   id: string;
   name: string;
   position: string;
-  squadNumber: number | null;
   status: string;
   teamId: string | null;
   teamName: string | null;
@@ -24,14 +23,6 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
         pagination={players.length > 15 ? { pageSize: 15 } : false}
         scroll={{ x: true }}
         columns={[
-          {
-            title: "#",
-            dataIndex: "squadNumber",
-            width: 56,
-            render: (n: number | null) => (
-              <span className="scoreboard font-bold text-burnt-400">{n ?? "–"}</span>
-            ),
-          },
           {
             title: "Player",
             dataIndex: "name",
@@ -53,7 +44,12 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
                 <span className="text-ink-500">Free agent</span>
               ),
           },
-          { title: "Pos", dataIndex: "position", width: 80 },
+          {
+            title: "Pos",
+            dataIndex: "position",
+            width: 80,
+            render: (pos: string) => pos || "—",
+          },
           {
             title: "Sport",
             dataIndex: "sportName",

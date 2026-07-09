@@ -41,9 +41,7 @@ export default async function PlayerDetailPage({
     <div>
       <PageHeader
         kicker={`${player.sport.name} · ${player.team?.name ?? "Free agent"}`}
-        title={
-          player.squadNumber ? `#${player.squadNumber} ${player.name}` : player.name
-        }
+        title={player.name}
         actions={
           admin ? (
             <EditPlayerButton sports={allSports} teams={allTeams} player={player} />

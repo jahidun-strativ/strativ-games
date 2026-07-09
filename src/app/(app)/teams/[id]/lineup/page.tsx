@@ -15,7 +15,7 @@ export default async function LineupPage({
   const team = await db.query.teams.findFirst({
     where: (t, { eq }) => eq(t.id, id),
     with: {
-      players: { orderBy: (p, { asc }) => asc(p.squadNumber) },
+      players: { orderBy: (p, { asc }) => asc(p.name) },
       lineup: { with: { slots: true } },
     },
   });

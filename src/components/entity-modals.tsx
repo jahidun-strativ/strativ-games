@@ -135,13 +135,13 @@ export function NewPlayerButton({
   defaultTeamId?: string;
 }) {
   return (
-    <FormModal title="Sign a player" triggerLabel={label} triggerVariant={variant} width={640}>
+    <FormModal title="Add a player" triggerLabel={label} triggerVariant={variant} width={640}>
       {(close) => (
         <PlayerForm
           action={createPlayer}
           sports={sports}
           teams={teams}
-          submitLabel="Sign player"
+          submitLabel="Add player"
           onSuccess={close}
           defaultSportId={defaultSportId}
           defaultTeamId={defaultTeamId}

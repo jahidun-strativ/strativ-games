@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Form, Input, InputNumber, Select } from "antd";
+import { Button, Form, Input, Select } from "antd";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { PLAYER_STATUSES } from "@/db/schema";
 import type { Player, Sport, Team } from "@/db/schema";
@@ -44,7 +44,6 @@ export function PlayerForm({
         sportId: player?.sportId ?? defaultSportId ?? sports[0]?.id,
         teamId: player?.teamId ?? defaultTeamId ?? undefined,
         position: player?.position,
-        squadNumber: player?.squadNumber ?? undefined,
         status: player?.status ?? "active",
       }}
     >
@@ -61,11 +60,8 @@ export function PlayerForm({
         <Form.Item label="Team" name="teamId">
           <Select allowClear placeholder="Free agent (no team)" options={teamOptions} />
         </Form.Item>
-        <Form.Item label="Position" name="position" rules={[{ required: true }]}>
-          <Input placeholder="ST" />
-        </Form.Item>
-        <Form.Item label="Squad number" name="squadNumber">
-          <InputNumber min={1} max={99} className="!w-full" />
+        <Form.Item label="Preferred position (optional)" name="position">
+          <Input placeholder="e.g. Striker — leave blank if any" />
         </Form.Item>
         <Form.Item label="Status" name="status">
           <Select options={PLAYER_STATUSES.map((s) => ({ value: s, label: s }))} />

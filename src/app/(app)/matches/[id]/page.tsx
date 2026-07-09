@@ -28,8 +28,8 @@ export default async function MatchDetailPage({
     db.query.matches.findFirst({
       where: (m, { eq }) => eq(m.id, id),
       with: {
-        homeTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.squadNumber) } } },
-        awayTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.squadNumber) } } },
+        homeTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.name) } } },
+        awayTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.name) } } },
         venue: true,
         sport: true,
         playerStats: true,

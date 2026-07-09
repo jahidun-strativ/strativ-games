@@ -9,14 +9,7 @@ function squadColumns() {
     {
       title: "Player",
       dataIndex: "name",
-      render: (_: unknown, p: Player) => (
-        <span>
-          <span className="scoreboard mr-2 text-xs text-burnt-400">
-            {p.squadNumber ?? "–"}
-          </span>
-          {p.name}
-        </span>
-      ),
+      render: (_: unknown, p: Player) => <span>{p.name}</span>,
     },
     {
       title: "Played",

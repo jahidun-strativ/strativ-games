@@ -6,15 +6,15 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { players } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
-import { opt, optInt, str } from "@/server/form";
+import { opt, str } from "@/server/form";
 
 function playerValues(formData: FormData) {
   return {
     sportId: str(formData, "sportId"),
     teamId: opt(formData, "teamId"),
     name: str(formData, "name"),
-    position: str(formData, "position"),
-    squadNumber: optInt(formData, "squadNumber"),
+    // Position is optional — anyone can play anywhere in casual games.
+    position: opt(formData, "position") ?? "",
     status: opt(formData, "status") ?? "active",
   };
 }

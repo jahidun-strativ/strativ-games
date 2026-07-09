@@ -184,9 +184,6 @@ export function PitchBuilder({
                         : "bg-cream-50 hover:bg-cream-200"
                   }`}
                 >
-                  <span className="scoreboard mr-2 text-burnt-400">
-                    {p.squadNumber ?? "–"}
-                  </span>
                   {p.name}
                   <span className="float-right text-xs text-ink-500">
                     {p.position}
@@ -299,10 +296,7 @@ export function PitchBuilder({
                   }`}
                 >
                   {player ? (
-                    <>
-                      <span className="scoreboard text-xs">{player.squadNumber ?? ""}</span>
-                      <span className="max-w-full truncate px-1">{surname(player.name)}</span>
-                    </>
+                    <span className="max-w-full truncate px-1">{surname(player.name)}</span>
                   ) : (
                     <span>{slot.position}</span>
                   )}
@@ -333,7 +327,7 @@ export function PitchBuilder({
                   }`}
                 >
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cream-200 text-xs font-bold">
-                    {player?.squadNumber ?? i + 1}
+                    {i + 1}
                   </span>
                   <span className="truncate font-semibold">
                     {player ? player.name : "Empty"}

@@ -8,7 +8,6 @@ export type RosterRow = {
   id: string;
   name: string;
   position: string;
-  squadNumber: number | null;
   status: string;
 };
 
@@ -23,14 +22,6 @@ export function RosterTable({ players }: { players: RosterRow[] }) {
         locale={{ emptyText: "No players yet" }}
         columns={[
           {
-            title: "#",
-            dataIndex: "squadNumber",
-            width: 56,
-            render: (n: number | null) => (
-              <span className="scoreboard font-bold text-burnt-400">{n ?? "–"}</span>
-            ),
-          },
-          {
             title: "Player",
             dataIndex: "name",
             render: (name: string, p) => (
@@ -39,7 +30,12 @@ export function RosterTable({ players }: { players: RosterRow[] }) {
               </Link>
             ),
           },
-          { title: "Pos", dataIndex: "position", width: 80 },
+          {
+            title: "Pos",
+            dataIndex: "position",
+            width: 80,
+            render: (pos: string) => pos || "—",
+          },
           {
             title: "Status",
             dataIndex: "status",

@@ -66,10 +66,10 @@ async function PlayersContent({
       {filtered.length === 0 ? (
         <EmptyState
           title="No players found"
-          hint="Try clearing filters, or sign a new player."
+          hint="Try clearing filters, or add a player."
           action={
             canCreate ? (
-              <NewPlayerButton sports={allSports} teams={allTeams} label="New player" />
+              <NewPlayerButton sports={allSports} teams={allTeams} label="Add player" />
             ) : undefined
           }
         />
@@ -79,7 +79,6 @@ async function PlayersContent({
             id: p.id,
             name: p.name,
             position: p.position,
-            squadNumber: p.squadNumber,
             status: p.status,
             teamId: p.teamId,
             teamName: p.team?.name ?? null,

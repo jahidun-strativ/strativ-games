@@ -23,7 +23,7 @@ export default async function TeamDetailPage({
       where: (t, { eq }) => eq(t.id, id),
       with: {
         sport: true,
-        players: { orderBy: (p, { asc }) => asc(p.squadNumber) },
+        players: { orderBy: (p, { asc }) => asc(p.name) },
         staff: true,
       },
     }),
@@ -88,7 +88,6 @@ export default async function TeamDetailPage({
                       id: p.id,
                       name: p.name,
                       position: p.position,
-                      squadNumber: p.squadNumber,
                       sportId: p.sportId,
                       teamId: p.teamId,
                       teamName: p.team?.name ?? null,
@@ -101,7 +100,6 @@ export default async function TeamDetailPage({
                   id: p.id,
                   name: p.name,
                   position: p.position,
-                  squadNumber: p.squadNumber,
                   status: p.status,
                 }))}
               />
@@ -141,7 +139,7 @@ export default async function TeamDetailPage({
               <ConfirmDelete
                 action={deleteTeam.bind(null, team.id)}
                 label={external ? "Delete opponent" : "Delete team"}
-                confirmMessage={`Delete ${team.name}? Its matches will be removed${external ? "." : " and players released."}`}
+                confirmMessage={`Delete ${team.name}? Its matches will be removed${external ? "." : " and players unassigned."}`}
               />
             </div>
           ) : null}

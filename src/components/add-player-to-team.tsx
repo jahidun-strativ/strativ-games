@@ -11,7 +11,6 @@ export type AssignablePlayer = {
   id: string;
   name: string;
   position: string;
-  squadNumber: number | null;
   sportId: string;
   teamId: string | null;
   teamName: string | null;
@@ -110,11 +109,10 @@ function AddPlayerBody({
                   }`}
                 >
                   <span className="min-w-0 truncate">
-                    <span className="scoreboard mr-2 text-burnt-400">
-                      {p.squadNumber ?? "–"}
-                    </span>
                     {p.name}
-                    <span className="ml-2 text-xs text-ink-500">{p.position}</span>
+                    {p.position ? (
+                      <span className="ml-2 text-xs text-ink-500">{p.position}</span>
+                    ) : null}
                   </span>
                   <span className="shrink-0 text-xs font-semibold">
                     {onThisTeam ? (
@@ -136,14 +134,14 @@ function AddPlayerBody({
 
       <details className="mt-5 border-t border-line pt-4">
         <summary className="cursor-pointer text-sm font-semibold text-burnt-400">
-          Or sign a brand-new player
+          Or add a brand-new player
         </summary>
         <div className="mt-3">
           <PlayerForm
             action={createPlayer}
             sports={sports}
             teams={teams}
-            submitLabel="Sign player"
+            submitLabel="Add player"
             onSuccess={onDone}
             defaultSportId={teamSportId}
             defaultTeamId={teamId}
