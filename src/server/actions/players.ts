@@ -38,3 +38,17 @@ export async function deletePlayer(id: string) {
   revalidatePath("/players");
   redirect("/players");
 }
+
+// Assign an existing (unassigned) player to a team — used by the team page's
+// "Add player" modal. Refuses to poach a player already on another team.
+export async function assignPlayerToTeam(playerId: string, teamId: string) {
+  await requireAdmin();
+  const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
+  if (!player) throw new Error("Player not found.");
+  if (player.teamId && player.teamId !== teamId) {
+    throw new Error("That player is already on another team.");
+  }
+  await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+  revalidatePath("/players");
+  revalidatePath(`/teams/${teamId}`);
+}

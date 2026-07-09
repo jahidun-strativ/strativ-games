@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
-import { EditTeamButton, NewPlayerButton } from "@/components/entity-modals";
+import { EditTeamButton } from "@/components/entity-modals";
+import { AddPlayerButton } from "@/components/add-player-to-team";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Team" };
@@ -17,7 +18,7 @@ export default async function TeamDetailPage({
   params,
 }: PageProps<"/teams/[id]">) {
   const { id } = await params;
-  const [team, allSports, allTeams] = await Promise.all([
+  const [team, allSports, allTeams, allPlayers] = await Promise.all([
     db.query.teams.findFirst({
       where: (t, { eq }) => eq(t.id, id),
       with: {
@@ -28,6 +29,10 @@ export default async function TeamDetailPage({
     }),
     db.query.sports.findMany(),
     db.query.teams.findMany(),
+    db.query.players.findMany({
+      orderBy: (p, { asc }) => asc(p.name),
+      with: { team: { columns: { name: true } } },
+    }),
   ]);
   if (!team) notFound();
   const external = team.kind === "external";
@@ -73,12 +78,21 @@ export default async function TeamDetailPage({
                   Roster <span className="text-sm text-ink-500">({team.players.length})</span>
                 </h2>
                 {admin ? (
-                  <NewPlayerButton
+                  <AddPlayerButton
+                    teamId={team.id}
+                    teamName={team.name}
+                    teamSportId={team.sportId}
                     sports={allSports}
                     teams={allTeams}
-                    label="+ Add player"
-                    defaultSportId={team.sportId}
-                    defaultTeamId={team.id}
+                    players={allPlayers.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      position: p.position,
+                      squadNumber: p.squadNumber,
+                      sportId: p.sportId,
+                      teamId: p.teamId,
+                      teamName: p.team?.name ?? null,
+                    }))}
                   />
                 ) : null}
               </div>
