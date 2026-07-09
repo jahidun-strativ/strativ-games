@@ -1,14 +1,18 @@
-// All times are shown in 12-hour format with uppercase AM/PM.
+import { APP_TIMEZONE } from "@/lib/timezone";
+
+// All times are shown in 12-hour format with uppercase AM/PM (Bangladesh time).
 const dateFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
   month: "short",
+  timeZone: APP_TIMEZONE,
 });
 
 const timeFmt = new Intl.DateTimeFormat("en-GB", {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
+  timeZone: APP_TIMEZONE,
 });
 
 const fullFmt = new Intl.DateTimeFormat("en-GB", {
@@ -19,6 +23,7 @@ const fullFmt = new Intl.DateTimeFormat("en-GB", {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
+  timeZone: APP_TIMEZONE,
 });
 
 // Renders parts, forcing the am/pm marker to uppercase (en-GB emits lowercase).

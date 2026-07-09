@@ -1,8 +1,8 @@
 "use client";
 
-import dayjs from "dayjs";
 import { Button, DatePicker, Form, Input, Segmented, Select } from "antd";
 import { useActionSubmit } from "@/components/forms/form-utils";
+import { utcToPickerValue } from "@/lib/timezone";
 import type { Match, Sport, Team, Venue } from "@/db/schema";
 
 export function MatchForm({
@@ -81,7 +81,7 @@ export function MatchForm({
         isHome: initialCompetitive.isHome,
         title: match?.title ?? undefined,
         venueId: match?.venueId ?? undefined,
-        kickoffAt: match ? dayjs(match.kickoffAt) : undefined,
+        kickoffAt: match ? utcToPickerValue(match.kickoffAt) : undefined,
         notes: match?.notes ?? undefined,
       }}
     >
@@ -116,7 +116,11 @@ export function MatchForm({
           }))}
         />
       </Form.Item>
-      <Form.Item label="Kickoff" name="kickoffAt" rules={[{ required: true }]}>
+      <Form.Item
+        label="Kickoff (Bangladesh time)"
+        name="kickoffAt"
+        rules={[{ required: true }]}
+      >
         <DatePicker
           showTime={{ format: "h:mm A", minuteStep: 5, use12Hours: true }}
           format="ddd D MMM YYYY, h:mm A"

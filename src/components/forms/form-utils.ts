@@ -1,7 +1,9 @@
 "use client";
 
+import type { Dayjs } from "dayjs";
 import { App } from "antd";
 import { useTransition } from "react";
+import { pickerValueToUtcIso } from "@/lib/timezone";
 
 // Converts antd Form values into the FormData shape the server actions expect.
 export function toFormData(values: Record<string, unknown>): FormData {
@@ -12,9 +14,9 @@ export function toFormData(values: Record<string, unknown>): FormData {
       if (value) fd.set(key, "on");
       continue;
     }
-    // dayjs values from DatePicker
-    if (typeof value === "object" && "toDate" in (value as object)) {
-      fd.set(key, (value as { toDate: () => Date }).toDate().toISOString());
+    // dayjs values from DatePicker — wall clock is always app TZ (Asia/Dhaka)
+    if (typeof value === "object" && "format" in (value as object)) {
+      fd.set(key, pickerValueToUtcIso(value as Dayjs));
       continue;
     }
     if (typeof value === "object" && "toHexString" in (value as object)) {
