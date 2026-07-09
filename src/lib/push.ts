@@ -1,6 +1,6 @@
 import "server-only";
 import webpush from "web-push";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 
@@ -46,5 +46,28 @@ export async function sendPushToAll(payload: PushPayload) {
 
   if (stale.length > 0) {
     await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, stale));
+  }
+}
+
+// Sends to the subscriptions of a single device/endpoint (e.g. a catch-up push
+// when a user first enables notifications).
+export async function sendPushToEndpoint(endpoint: string, payload: PushPayload) {
+  if (!pushConfigured) return;
+  configure();
+  const [sub] = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, endpoint));
+  if (!sub) return;
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify(payload),
+    );
+  } catch (err) {
+    const code = (err as { statusCode?: number }).statusCode;
+    if (code === 404 || code === 410) {
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    }
   }
 }

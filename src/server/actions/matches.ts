@@ -7,8 +7,8 @@ import { db } from "@/db";
 import { matches, playerMatchStats, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
-import { sendPushToAll } from "@/lib/push";
-import { formatFull } from "@/lib/format";
+import { notifyMatchToAll } from "@/server/notify-match";
+import { getNotificationSettings } from "@/server/queries/notification-settings";
 
 function revalidateMatchPages(id?: string) {
   revalidatePath("/matches");
@@ -61,24 +61,6 @@ async function parseMatchInput(formData: FormData) {
   };
 }
 
-// Fire a Web Push to all subscribers announcing a newly scheduled match.
-async function notifyNewMatch(id: string) {
-  const m = await db.query.matches.findFirst({
-    where: (mm, { eq }) => eq(mm.id, id),
-    with: { venue: true, homeTeam: true, awayTeam: true },
-  });
-  if (!m) return;
-  const label =
-    m.homeTeam && m.awayTeam
-      ? `${m.homeTeam.name} vs ${m.awayTeam.name}`
-      : m.title || "New match";
-  await sendPushToAll({
-    title: "⚽ New match scheduled",
-    body: `${label} · ${formatFull(m.kickoffAt)} at ${m.venue.name}`,
-    url: `/matches/${m.id}`,
-  });
-}
-
 async function assertVenueFree(venueId: string, kickoffAt: Date, excludeMatchId?: string) {
   const clash = await db.query.matches.findFirst({
     where: excludeMatchId
@@ -103,8 +85,11 @@ export async function createMatch(formData: FormData) {
   await assertVenueFree(values.venueId, values.kickoffAt);
   const [match] = await db.insert(matches).values(values).returning();
   revalidateMatchPages();
-  // Don't let a push failure fail the scheduling.
-  await notifyNewMatch(match.id).catch(() => {});
+  // Notify all subscribers (admins included) if on-create notifications are on.
+  const settings = await getNotificationSettings();
+  if (settings.notifyOnCreate) {
+    await notifyMatchToAll(match.id, "created").catch(() => {});
+  }
 }
 
 // Assign/change sport, teams, title, venue or kickoff after creation.
