@@ -16,7 +16,13 @@ const ROWS: { key: keyof Settings; label: string; hint: string }[] = [
   { key: "notifyHourBefore", label: "1 hour before kickoff", hint: "A final reminder an hour before kickoff." },
 ];
 
-export function NotificationSettingsCard({ initial }: { initial: Settings }) {
+export function NotificationSettingsCard({
+  initial,
+  canEdit = true,
+}: {
+  initial: Settings;
+  canEdit?: boolean;
+}) {
   const { message } = App.useApp();
   const [settings, setSettings] = useState<Settings>(initial);
   const [isPending, startTransition] = useTransition();
@@ -38,7 +44,9 @@ export function NotificationSettingsCard({ initial }: { initial: Settings }) {
     <div className="tv-card p-5">
       <h2 className="font-display text-lg text-ink-900">Match notifications</h2>
       <p className="mt-1 text-sm text-ink-500">
-        Choose when push notifications go out to everyone who has enabled them.
+        {canEdit
+          ? "Choose when push notifications go out to everyone who has enabled them."
+          : "When reminders go out is set by your admin. Turn notifications on or off for this device above."}
       </p>
       <div className="mt-4 divide-y divide-line">
         {ROWS.map((row) => (
@@ -49,7 +57,7 @@ export function NotificationSettingsCard({ initial }: { initial: Settings }) {
             </div>
             <Switch
               checked={settings[row.key]}
-              disabled={isPending}
+              disabled={isPending || !canEdit}
               onChange={(v) => toggle(row.key, v)}
             />
           </div>

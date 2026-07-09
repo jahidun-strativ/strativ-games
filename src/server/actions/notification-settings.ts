@@ -18,5 +18,5 @@ export async function updateNotificationSettings(settings: {
     .update(notificationSettings)
     .set({ ...settings, updatedAt: new Date() })
     .where(eq(notificationSettings.id, current.id));
-  revalidatePath("/members");
+  revalidatePath("/account/settings");
 }

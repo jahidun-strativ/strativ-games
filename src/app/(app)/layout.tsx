@@ -61,7 +61,7 @@ export default async function AppLayout({
         </main>
       </div>
 
-      <BottomTabs />
+      <BottomTabs admin={admin} />
     </div>
   );
 }
