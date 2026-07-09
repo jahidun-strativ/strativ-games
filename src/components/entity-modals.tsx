@@ -124,11 +124,15 @@ export function NewPlayerButton({
   teams,
   label = "+ New player",
   variant = "primary",
+  defaultSportId,
+  defaultTeamId,
 }: {
   sports: Sport[];
   teams: Team[];
   label?: string;
   variant?: Variant;
+  defaultSportId?: string;
+  defaultTeamId?: string;
 }) {
   return (
     <FormModal title="Sign a player" triggerLabel={label} triggerVariant={variant} width={640}>
@@ -139,6 +143,8 @@ export function NewPlayerButton({
           teams={teams}
           submitLabel="Sign player"
           onSuccess={close}
+          defaultSportId={defaultSportId}
+          defaultTeamId={defaultTeamId}
         />
       )}
     </FormModal>

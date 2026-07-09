@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
-import { EditTeamButton } from "@/components/entity-modals";
+import { EditTeamButton, NewPlayerButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Team" };
@@ -17,7 +17,7 @@ export default async function TeamDetailPage({
   params,
 }: PageProps<"/teams/[id]">) {
   const { id } = await params;
-  const [team, allSports] = await Promise.all([
+  const [team, allSports, allTeams] = await Promise.all([
     db.query.teams.findFirst({
       where: (t, { eq }) => eq(t.id, id),
       with: {
@@ -27,6 +27,7 @@ export default async function TeamDetailPage({
       },
     }),
     db.query.sports.findMany(),
+    db.query.teams.findMany(),
   ]);
   if (!team) notFound();
   const external = team.kind === "external";
@@ -67,9 +68,20 @@ export default async function TeamDetailPage({
             </div>
           ) : (
             <>
-              <h2 className="font-display mb-3 text-xl text-ink-900">
-                Roster <span className="text-sm text-ink-500">({team.players.length})</span>
-              </h2>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-display text-xl text-ink-900">
+                  Roster <span className="text-sm text-ink-500">({team.players.length})</span>
+                </h2>
+                {admin ? (
+                  <NewPlayerButton
+                    sports={allSports}
+                    teams={allTeams}
+                    label="+ Add player"
+                    defaultSportId={team.sportId}
+                    defaultTeamId={team.id}
+                  />
+                ) : null}
+              </div>
               <RosterTable
                 players={team.players.map((p) => ({
                   id: p.id,

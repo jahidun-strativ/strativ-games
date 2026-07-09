@@ -12,6 +12,8 @@ export function PlayerForm({
   player,
   submitLabel,
   onSuccess,
+  defaultSportId,
+  defaultTeamId,
 }: {
   action: (formData: FormData) => Promise<void>;
   sports: Sport[];
@@ -19,6 +21,9 @@ export function PlayerForm({
   player?: Player;
   submitLabel: string;
   onSuccess?: () => void;
+  // Pre-select sport/team when adding a player straight from a team page.
+  defaultSportId?: string;
+  defaultTeamId?: string;
 }) {
   const { onFinish, isPending } = useActionSubmit(action, onSuccess);
   const [form] = Form.useForm();
@@ -36,8 +41,8 @@ export function PlayerForm({
       onFinish={onFinish}
       initialValues={{
         name: player?.name,
-        sportId: player?.sportId ?? sports[0]?.id,
-        teamId: player?.teamId ?? undefined,
+        sportId: player?.sportId ?? defaultSportId ?? sports[0]?.id,
+        teamId: player?.teamId ?? defaultTeamId ?? undefined,
         position: player?.position,
         squadNumber: player?.squadNumber ?? undefined,
         status: player?.status ?? "active",
