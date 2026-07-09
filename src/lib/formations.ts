@@ -28,6 +28,10 @@ export const FORMATIONS_BY_SIZE: Record<number, string[]> = {
 export const ALL_FORMATIONS = Object.values(FORMATIONS_BY_SIZE).flat();
 export const FORMATION_KEYS = ALL_FORMATIONS; // back-compat alias
 
+// Strativ mostly plays small-sided games, so a fresh lineup builds up at
+// 6-a-side (2 DEF, 2 MID, 1 FWD + GK) rather than a full 11.
+export const DEFAULT_FORMATION = "2-2-1";
+
 // Total players (GK included) implied by a formation string.
 export function formationSize(formation: string): number {
   return 1 + formation.split("-").reduce((sum, n) => sum + (parseInt(n, 10) || 0), 0);

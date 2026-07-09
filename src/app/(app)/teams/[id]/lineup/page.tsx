@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
-import { ALL_FORMATIONS, DEFAULT_SUBS } from "@/lib/formations";
+import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Lineup" };
@@ -22,13 +22,13 @@ export default async function LineupPage({
   if (!team) notFound();
   const admin = await isAdmin();
 
+  // A previously saved lineup keeps its formation; otherwise a fresh team
+  // builds up at the 6-a-side default rather than a full 11.
   const savedFormation = team.lineup?.formation;
   const initialFormation =
     savedFormation && ALL_FORMATIONS.includes(savedFormation)
       ? savedFormation
-      : ALL_FORMATIONS.includes(team.formation)
-        ? team.formation
-        : "4-4-2";
+      : DEFAULT_FORMATION;
 
   const starterSlots = (team.lineup?.slots ?? []).filter((s) => s.role === "starter");
   const subSlots = (team.lineup?.slots ?? [])
