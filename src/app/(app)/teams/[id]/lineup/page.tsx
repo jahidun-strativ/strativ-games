@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
+import { ALL_FORMATIONS, DEFAULT_SUBS } from "@/lib/formations";
 
 export const metadata = { title: "Lineup" };
 
@@ -19,12 +20,24 @@ export default async function LineupPage({
   });
   if (!team) notFound();
 
-  const initialSlots =
-    team.lineup?.slots.map((s) => ({
-      slotIndex: s.slotIndex,
-      positionLabel: s.positionLabel,
-      playerId: s.playerId,
-    })) ?? [];
+  const savedFormation = team.lineup?.formation;
+  const initialFormation =
+    savedFormation && ALL_FORMATIONS.includes(savedFormation)
+      ? savedFormation
+      : ALL_FORMATIONS.includes(team.formation)
+        ? team.formation
+        : "4-4-2";
+
+  const starterSlots = (team.lineup?.slots ?? []).filter((s) => s.role === "starter");
+  const subSlots = (team.lineup?.slots ?? [])
+    .filter((s) => s.role === "sub")
+    .sort((a, b) => a.slotIndex - b.slotIndex);
+
+  const initialStarters: Record<number, string | null> = {};
+  for (const s of starterSlots) initialStarters[s.slotIndex] = s.playerId;
+
+  const initialSubs =
+    subSlots.length > 0 ? subSlots.map((s) => s.playerId) : Array(DEFAULT_SUBS).fill(null);
 
   return (
     <div>
@@ -40,8 +53,9 @@ export default async function LineupPage({
       <PitchBuilder
         teamId={team.id}
         roster={team.players}
-        initialFormation={team.lineup?.formation ?? team.formation}
-        initialSlots={initialSlots}
+        initialFormation={initialFormation}
+        initialStarters={initialStarters}
+        initialSubs={initialSubs}
       />
     </div>
   );

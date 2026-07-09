@@ -114,6 +114,8 @@ export const lineups = pgTable("lineups", {
     .unique()
     .references(() => teams.id, { onDelete: "cascade" }),
   formation: text("formation").notNull().default("4-4-2"),
+  // Number of on-pitch starters (goalkeeper included), 5–11.
+  squadSize: integer("squad_size").notNull().default(11),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -124,11 +126,13 @@ export const lineupSlots = pgTable(
     lineupId: uuid("lineup_id")
       .notNull()
       .references(() => lineups.id, { onDelete: "cascade" }),
+    // "starter" = on the pitch, "sub" = on the bench.
+    role: text("role").notNull().default("starter"),
     slotIndex: integer("slot_index").notNull(),
     positionLabel: text("position_label").notNull(),
     playerId: uuid("player_id").references(() => players.id, { onDelete: "set null" }),
   },
-  (t) => [unique().on(t.lineupId, t.slotIndex)],
+  (t) => [unique().on(t.lineupId, t.role, t.slotIndex)],
 );
 
 // Web Push subscriptions — one row per browser/device a user has enabled.

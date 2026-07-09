@@ -1,88 +1,61 @@
-// Slot coordinates are percentages on a vertical pitch: x 0–100 (left→right),
+// Strativ plays small- and large-sided games, so lineups range from 5 to 11
+// players (goalkeeper included) with 1–5 substitutes on the bench.
+//
+// Coordinates are percentages on a vertical pitch: x 0–100 (left→right),
 // y 0–100 (own goal at bottom → opponent goal at top).
 export type FormationSlot = { position: string; x: number; y: number };
 
-export const FORMATIONS: Record<string, { label: string; slots: FormationSlot[] }> = {
-  "4-4-2": {
-    label: "4-4-2 Classic",
-    slots: [
-      { position: "GK", x: 50, y: 92 },
-      { position: "RB", x: 85, y: 72 },
-      { position: "CB", x: 63, y: 76 },
-      { position: "CB", x: 37, y: 76 },
-      { position: "LB", x: 15, y: 72 },
-      { position: "RM", x: 85, y: 46 },
-      { position: "CM", x: 62, y: 50 },
-      { position: "CM", x: 38, y: 50 },
-      { position: "LM", x: 15, y: 46 },
-      { position: "ST", x: 62, y: 20 },
-      { position: "ST", x: 38, y: 20 },
-    ],
-  },
-  "4-3-3": {
-    label: "4-3-3 Attack",
-    slots: [
-      { position: "GK", x: 50, y: 92 },
-      { position: "RB", x: 85, y: 72 },
-      { position: "CB", x: 63, y: 76 },
-      { position: "CB", x: 37, y: 76 },
-      { position: "LB", x: 15, y: 72 },
-      { position: "CM", x: 72, y: 50 },
-      { position: "CM", x: 50, y: 54 },
-      { position: "CM", x: 28, y: 50 },
-      { position: "RW", x: 80, y: 22 },
-      { position: "ST", x: 50, y: 16 },
-      { position: "LW", x: 20, y: 22 },
-    ],
-  },
-  "3-5-2": {
-    label: "3-5-2 Wingbacks",
-    slots: [
-      { position: "GK", x: 50, y: 92 },
-      { position: "CB", x: 72, y: 76 },
-      { position: "CB", x: 50, y: 79 },
-      { position: "CB", x: 28, y: 76 },
-      { position: "RWB", x: 88, y: 52 },
-      { position: "CM", x: 66, y: 50 },
-      { position: "CM", x: 50, y: 56 },
-      { position: "CM", x: 34, y: 50 },
-      { position: "LWB", x: 12, y: 52 },
-      { position: "ST", x: 62, y: 20 },
-      { position: "ST", x: 38, y: 20 },
-    ],
-  },
-  "4-2-3-1": {
-    label: "4-2-3-1 Modern",
-    slots: [
-      { position: "GK", x: 50, y: 92 },
-      { position: "RB", x: 85, y: 72 },
-      { position: "CB", x: 63, y: 76 },
-      { position: "CB", x: 37, y: 76 },
-      { position: "LB", x: 15, y: 72 },
-      { position: "DM", x: 62, y: 56 },
-      { position: "DM", x: 38, y: 56 },
-      { position: "RAM", x: 78, y: 34 },
-      { position: "CAM", x: 50, y: 36 },
-      { position: "LAM", x: 22, y: 34 },
-      { position: "ST", x: 50, y: 14 },
-    ],
-  },
-  "5-3-2": {
-    label: "5-3-2 Fortress",
-    slots: [
-      { position: "GK", x: 50, y: 92 },
-      { position: "RWB", x: 88, y: 66 },
-      { position: "CB", x: 68, y: 76 },
-      { position: "CB", x: 50, y: 79 },
-      { position: "CB", x: 32, y: 76 },
-      { position: "LWB", x: 12, y: 66 },
-      { position: "CM", x: 66, y: 46 },
-      { position: "CM", x: 50, y: 52 },
-      { position: "CM", x: 34, y: 46 },
-      { position: "ST", x: 62, y: 20 },
-      { position: "ST", x: 38, y: 20 },
-    ],
-  },
+export const MIN_SQUAD = 5;
+export const MAX_SQUAD = 11;
+export const SQUAD_SIZES = [5, 6, 7, 8, 9, 10, 11];
+
+export const MIN_SUBS = 1;
+export const MAX_SUBS = 5;
+export const DEFAULT_SUBS = 3;
+
+// Formation strings are the OUTFIELD lines from defense → attack; the
+// goalkeeper is implicit. Keyed by total squad size (GK included).
+export const FORMATIONS_BY_SIZE: Record<number, string[]> = {
+  5: ["2-2", "1-2-1", "2-1-1", "1-1-2"],
+  6: ["2-2-1", "1-2-2", "2-1-2", "3-2"],
+  7: ["2-3-1", "3-2-1", "2-1-3", "3-1-2", "2-2-2"],
+  8: ["3-3-1", "3-2-2", "2-3-2", "3-1-3"],
+  9: ["3-3-2", "3-2-3", "4-3-1", "3-4-1"],
+  10: ["4-3-2", "3-4-2", "4-4-1", "3-3-3"],
+  11: ["4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "5-3-2"],
 };
 
-export const FORMATION_KEYS = Object.keys(FORMATIONS);
+export const ALL_FORMATIONS = Object.values(FORMATIONS_BY_SIZE).flat();
+export const FORMATION_KEYS = ALL_FORMATIONS; // back-compat alias
+
+// Total players (GK included) implied by a formation string.
+export function formationSize(formation: string): number {
+  return 1 + formation.split("-").reduce((sum, n) => sum + (parseInt(n, 10) || 0), 0);
+}
+
+export function squadSizeOf(formation: string): number {
+  return formationSize(formation);
+}
+
+export function formationsForSize(size: number): string[] {
+  return FORMATIONS_BY_SIZE[size] ?? FORMATIONS_BY_SIZE[MAX_SQUAD];
+}
+
+// Generate on-pitch slot coordinates for any formation string.
+export function buildFormationSlots(formation: string): FormationSlot[] {
+  const lines = formation.split("-").map((n) => parseInt(n, 10) || 0);
+  const slots: FormationSlot[] = [{ position: "GK", x: 50, y: 92 }];
+  const lineCount = lines.length;
+
+  lines.forEach((count, i) => {
+    // Defense line sits near y=74, attack near y=20.
+    const y = lineCount === 1 ? 32 : 74 - (i * (74 - 20)) / (lineCount - 1);
+    const role = i === 0 ? "DEF" : i === lineCount - 1 ? "FWD" : "MID";
+    for (let j = 0; j < count; j++) {
+      const x = count === 1 ? 50 : 15 + (j * (85 - 15)) / (count - 1);
+      slots.push({ position: role, x, y });
+    }
+  });
+
+  return slots;
+}

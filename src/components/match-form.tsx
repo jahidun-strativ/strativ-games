@@ -63,8 +63,8 @@ export function MatchForm({
       </Form.Item>
       <Form.Item label="Kickoff" name="kickoffAt" rules={[{ required: true }]}>
         <DatePicker
-          showTime={{ format: "HH:mm", minuteStep: 5 }}
-          format="ddd D MMM YYYY, HH:mm"
+          showTime={{ format: "h:mm A", minuteStep: 5, use12Hours: true }}
+          format="ddd D MMM YYYY, h:mm A"
           className="!w-full sm:!w-72"
         />
       </Form.Item>

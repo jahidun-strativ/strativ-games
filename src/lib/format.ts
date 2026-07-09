@@ -1,3 +1,4 @@
+// All times are shown in 12-hour format with uppercase AM/PM.
 const dateFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -5,8 +6,9 @@ const dateFmt = new Intl.DateTimeFormat("en-GB", {
 });
 
 const timeFmt = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
+  hour12: true,
 });
 
 const fullFmt = new Intl.DateTimeFormat("en-GB", {
@@ -14,13 +16,22 @@ const fullFmt = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
   year: "numeric",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
+  hour12: true,
 });
 
-export const formatDate = (d: Date) => dateFmt.format(d);
-export const formatTime = (d: Date) => timeFmt.format(d);
-export const formatFull = (d: Date) => fullFmt.format(d);
+// Renders parts, forcing the am/pm marker to uppercase (en-GB emits lowercase).
+function render(fmt: Intl.DateTimeFormat, d: Date) {
+  return fmt
+    .formatToParts(d)
+    .map((p) => (p.type === "dayPeriod" ? p.value.toUpperCase() : p.value))
+    .join("");
+}
+
+export const formatDate = (d: Date) => render(dateFmt, d);
+export const formatTime = (d: Date) => render(timeFmt, d);
+export const formatFull = (d: Date) => render(fullFmt, d);
 
 // Value for <input type="datetime-local"> in local time.
 export function toDatetimeLocal(d: Date) {
