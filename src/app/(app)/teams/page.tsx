@@ -17,7 +17,6 @@ type TeamCard = {
   name: string;
   kind: string;
   league: string | null;
-  formation: string;
   sport: Sport;
   players: { id: string }[];
 };
@@ -51,10 +50,9 @@ function TeamGrid({ items }: { items: TeamCard[] }) {
                   Opponent
                 </span>
               ) : (
-                <>
-                  <span className="scoreboard font-bold text-pitch-500">{team.formation}</span>
-                  <span className="text-ink-500">{team.players.length} players</span>
-                </>
+                <span className="text-ink-500">
+                  {team.players.length} player{team.players.length === 1 ? "" : "s"}
+                </span>
               )}
             </div>
           </Link>
