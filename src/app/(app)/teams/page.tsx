@@ -112,7 +112,7 @@ export default async function TeamsPage() {
             {opponents.length === 0 ? (
               <EmptyState
                 title="No opponents yet"
-                hint="Add a rival company or local club to schedule competitive matches."
+                hint="Add a rival company or local team to schedule competitive matches."
                 action={
                   <NewTeamButton sports={allSports} kind="external" label="New opponent" />
                 }

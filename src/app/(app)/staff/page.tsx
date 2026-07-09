@@ -36,7 +36,7 @@ export default async function StaffPage() {
                     <p className="text-xs text-ink-500">
                       {member.role}
                       {member.department ? ` · ${member.department}` : ""} ·{" "}
-                      {member.team?.name ?? "Club-wide"} ({member.sport.name})
+                      {member.team?.name ?? "Strativ-wide"} ({member.sport.name})
                     </p>
                   </div>
                   <span className="text-xs font-bold uppercase text-burnt-400 group-open:hidden">

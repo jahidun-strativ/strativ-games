@@ -47,7 +47,7 @@ export function StaffForm({
         <Form.Item label="Team" name="teamId">
           <Select
             allowClear
-            placeholder="Club-wide (no team)"
+            placeholder="Strativ-wide (no team)"
             options={teams
               .filter((t) => t.kind !== "external")
               .map((t) => ({ value: t.id, label: t.name }))}

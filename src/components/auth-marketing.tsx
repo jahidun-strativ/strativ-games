@@ -30,7 +30,19 @@ const features = [
   },
 ];
 
-export function AuthMarketing() {
+export type AuthStats = {
+  players: number;
+  teams: number;
+  matches: number;
+};
+
+export function AuthMarketing({ stats }: { stats: AuthStats }) {
+  const statTiles: [number, string][] = [
+    [stats.players, "players"],
+    [stats.teams, "teams"],
+    [stats.matches, "matches"],
+  ];
+
   return (
     <div className="relative">
       <p className="font-display text-4xl leading-tight text-burnt-400 xl:text-5xl">
@@ -39,11 +51,11 @@ export function AuthMarketing() {
       <div className="stripes mt-3 h-1 w-32 rounded-full" />
 
       <h1 className="mt-8 max-w-lg text-3xl font-bold leading-tight text-ink-900 xl:text-4xl">
-        Run your club like the pros.
+        Run matchday like the pros.
       </h1>
       <p className="mt-3 max-w-md text-base text-ink-500">
-        One control room for teams, players, fixtures, venues and stats — built
-        for Strativ&apos;s matchdays.
+        One place for teams, players, fixtures, venues and stats — built for
+        Strativ&apos;s matchdays.
       </p>
 
       <ul className="mt-10 grid max-w-xl gap-4 sm:grid-cols-2">
@@ -58,14 +70,10 @@ export function AuthMarketing() {
         ))}
       </ul>
 
-      <div className="mt-10 flex items-center gap-6">
-        {[
-          ["21+", "players"],
-          ["3", "squads"],
-          ["∞", "matchdays"],
-        ].map(([value, label]) => (
+      <div className="mt-10 flex items-center gap-8">
+        {statTiles.map(([value, label]) => (
           <div key={label}>
-            <p className="scoreboard score-glow text-2xl font-bold text-gold-300">{value}</p>
+            <p className="scoreboard score-glow text-3xl font-bold text-gold-300">{value}</p>
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">
               {label}
             </p>

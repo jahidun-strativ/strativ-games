@@ -20,6 +20,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       changeEmail={false}
       // Allow users to delete their own account (with confirmation).
       deleteUser
+      localization={{
+        EMAIL_PLACEHOLDER: "you@strativ.se",
+        PASSWORD_PLACEHOLDER: "Your password",
+      }}
     >
       {children}
     </NeonAuthUIProvider>

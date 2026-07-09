@@ -16,7 +16,7 @@ export default async function SportsPage() {
 
   return (
     <div>
-      <PageHeader kicker="Club catalogue" title="Sports" />
+      <PageHeader kicker="Sports catalogue" title="Sports" />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-4">
