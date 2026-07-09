@@ -7,8 +7,8 @@ import { notifyMatchToAll } from "@/server/notify-match";
 
 export const dynamic = "force-dynamic";
 
-// Called on a schedule (e.g. every 15 min) to send 1-day-before and
-// 1-hour-before match reminders. Protected by CRON_SECRET.
+// Called once daily (Vercel Hobby limit) to send day-before and same-day
+// match reminders. Protected by CRON_SECRET. Schedule: 08:00 Bangladesh time.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided =
@@ -20,13 +20,12 @@ export async function GET(request: NextRequest) {
 
   const settings = await getNotificationSettings();
   const now = new Date();
-  const in1h = new Date(now.getTime() + 60 * 60 * 1000);
-  const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const h = (n: number) => new Date(now.getTime() + n * 60 * 60 * 1000);
 
   let dayCount = 0;
   let hourCount = 0;
 
-  // 1 hour before: kickoff within the next hour, hour-reminder not yet sent.
+  // Same-day reminder: kickoff within the next 12 hours (runs at 08:00 BD).
   if (settings.notifyHourBefore) {
     const due = await db
       .select({ id: matches.id })
@@ -36,7 +35,7 @@ export async function GET(request: NextRequest) {
           eq(matches.status, "scheduled"),
           eq(matches.remindedHourBefore, false),
           gt(matches.kickoffAt, now),
-          lte(matches.kickoffAt, in1h),
+          lte(matches.kickoffAt, h(12)),
         ),
       );
     for (const m of due) {
@@ -49,8 +48,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 1 day before: kickoff within the next 24h (but not the 1h window handled
-  // above), day-reminder not yet sent.
+  // Day-before reminder: kickoff roughly 20–28 hours ahead (tomorrow ~same time).
   if (settings.notifyDayBefore) {
     const due = await db
       .select({ id: matches.id })
@@ -59,8 +57,8 @@ export async function GET(request: NextRequest) {
         and(
           eq(matches.status, "scheduled"),
           eq(matches.remindedDayBefore, false),
-          gt(matches.kickoffAt, in1h),
-          lte(matches.kickoffAt, in24h),
+          gt(matches.kickoffAt, h(12)),
+          lte(matches.kickoffAt, h(28)),
         ),
       );
     for (const m of due) {
