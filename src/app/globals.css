@@ -143,3 +143,29 @@ body {
 .grain::after {
   content: none;
 }
+
+/* antd DatePicker with showTime: the date calendar and the time columns sit
+   side by side, so on phones the popup is wider than the viewport and dates
+   overlap / spill off-screen. Cap the popup to the screen and, on small
+   screens, stack the time panel under the calendar so it fits. */
+.ssm-datetime-popup {
+  max-width: calc(100vw - 16px);
+}
+
+@media (max-width: 480px) {
+  .ssm-datetime-popup .ant-picker-datetime-panel {
+    flex-direction: column;
+  }
+  .ssm-datetime-popup .ant-picker-time-panel {
+    width: 100%;
+  }
+  /* Keep the calendar readable at the narrow width and never overflow. */
+  .ssm-datetime-popup .ant-picker-panel-container,
+  .ssm-datetime-popup .ant-picker-date-panel {
+    width: 100%;
+    min-width: 0;
+  }
+  .ssm-datetime-popup .ant-picker-date-panel .ant-picker-content {
+    width: 100%;
+  }
+}

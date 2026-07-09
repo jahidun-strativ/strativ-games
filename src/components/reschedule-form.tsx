@@ -33,6 +33,7 @@ export function RescheduleForm({
             showTime={{ format: "h:mm A", minuteStep: 5, use12Hours: true }}
             format="ddd D MMM YYYY, h:mm A"
             className="!w-full"
+            classNames={{ popup: { root: "ssm-datetime-popup" } }}
           />
         </Form.Item>
       </div>

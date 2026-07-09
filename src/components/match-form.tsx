@@ -125,6 +125,7 @@ export function MatchForm({
           showTime={{ format: "h:mm A", minuteStep: 5, use12Hours: true }}
           format="ddd D MMM YYYY, h:mm A"
           className="!w-full sm:!w-72"
+          classNames={{ popup: { root: "ssm-datetime-popup" } }}
         />
       </Form.Item>
 
