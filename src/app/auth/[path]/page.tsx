@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { AuthView } from "@neondatabase/auth-ui";
 import { authViewPaths } from "@neondatabase/auth-ui/server";
@@ -17,6 +18,12 @@ export default async function AuthPage({
   params,
 }: PageProps<"/auth/[path]">) {
   const { path } = await params;
+
+  // On the password-recovery views, Neon's built-in "Go back" calls
+  // window.history.back(), which dead-ends when the page is opened straight
+  // from a reset email (no in-app history). Hide it and render a real link.
+  const isRecoveryView =
+    path === authViewPaths.FORGOT_PASSWORD || path === authViewPaths.RESET_PASSWORD;
 
   const [playerCount, teamCount, matchCount] = await Promise.all([
     db.$count(players),
@@ -45,8 +52,19 @@ export default async function AuthPage({
           <div className="stripes mx-auto mt-2 h-1 w-32 rounded-full" />
         </div>
         <div className="tv-card w-full max-w-md p-4 sm:p-6">
-          <AuthView path={path} />
+          <AuthView
+            path={path}
+            classNames={isRecoveryView ? { footer: "hidden" } : undefined}
+          />
         </div>
+        {isRecoveryView ? (
+          <Link
+            href="/auth/sign-in"
+            className="text-sm font-semibold text-burnt-400 hover:underline"
+          >
+            ← Back to sign in
+          </Link>
+        ) : null}
       </section>
     </main>
   );

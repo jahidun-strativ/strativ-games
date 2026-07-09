@@ -7,6 +7,7 @@ import { ensureAppUser } from "@/server/ensure-user";
 import { SidebarNav, BottomTabs } from "@/components/shell/nav";
 import { AppUserButton } from "@/components/shell/user-button";
 import { PushToggle } from "@/components/pwa/push-toggle";
+import { PushAutoPrompt } from "@/components/pwa/push-auto-prompt";
 
 export default async function AppLayout({
   children,
@@ -62,6 +63,7 @@ export default async function AppLayout({
       </div>
 
       <BottomTabs admin={admin} />
+      <PushAutoPrompt />
     </div>
   );
 }
