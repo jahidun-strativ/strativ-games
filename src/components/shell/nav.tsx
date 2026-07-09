@@ -39,9 +39,10 @@ const links: NavLink[] = [
   { href: "/members", label: "Members", icon: <SafetyOutlined />, adminOnly: true },
 ];
 
-// Bottom tab bar shows the 5 most-used destinations; the rest live in the sidebar.
+// Bottom tab bar pins the 4 most-used destinations; everything else (including
+// Stats) lives in the More drawer.
 const mobileLinks = links.filter((l) =>
-  ["/", "/matches", "/teams", "/players", "/stats"].includes(l.href),
+  ["/", "/matches", "/teams", "/players"].includes(l.href),
 );
 
 function isActive(pathname: string, href: string, exact?: boolean) {
@@ -100,7 +101,7 @@ export function BottomTabs({ admin = false }: { admin?: boolean }) {
 
   return (
     <nav className="glass-bar fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="grid grid-cols-6">
+      <div className="grid grid-cols-5">
         {mobileLinks.map((link) => {
           const active = isActive(pathname, link.href, link.exact);
           return (
