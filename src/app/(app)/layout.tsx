@@ -20,7 +20,7 @@ export default async function AppLayout({
   await ensurePlayerForUser(session.user);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full overflow-x-hidden">
       {/* Desktop sidebar */}
       <aside className="glass-bar sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-line p-4 md:flex">
         <Link href="/" className="block px-1 pt-1">
@@ -39,11 +39,14 @@ export default async function AppLayout({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <header className="glass-bar sticky top-0 z-40 flex items-center justify-between border-b border-line px-4 py-3 md:hidden">
-          <Link href="/" className="font-display text-lg text-burnt-500">
+        <header className="glass-bar sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line px-4 py-3 md:hidden">
+          <Link href="/" className="font-display truncate text-lg text-burnt-500">
             STRATIV <span className="text-ink-900">GAMES</span>
           </Link>
-          <AppUserButton />
+          <div className="flex shrink-0 items-center gap-2">
+            <PushToggle compact />
+            <AppUserButton compact />
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10">

@@ -18,7 +18,7 @@ function urlBase64ToUint8Array(base64: string) {
 
 type State = "unsupported" | "denied" | "off" | "on" | "loading";
 
-export function PushToggle() {
+export function PushToggle({ compact = false }: { compact?: boolean }) {
   const { message } = App.useApp();
   const [state, setState] = useState<State>("loading");
 
@@ -87,6 +87,23 @@ export function PushToggle() {
   }
 
   if (state === "unsupported") return null;
+
+  // Compact icon-only button for the mobile top bar.
+  if (compact) {
+    if (state === "denied") return null;
+    const on = state === "on";
+    return (
+      <Button
+        size="middle"
+        shape="circle"
+        type={on ? "default" : "primary"}
+        loading={state === "loading"}
+        icon={on ? <BellFilled /> : <BellOutlined />}
+        onClick={on ? disable : enable}
+        aria-label={on ? "Notifications on" : "Enable notifications"}
+      />
+    );
+  }
 
   if (state === "denied") {
     return (

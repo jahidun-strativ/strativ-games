@@ -73,16 +73,16 @@ export default async function Dashboard() {
           <Link
             key={card.label}
             href={card.href}
-            className="tv-card-sm group flex items-center gap-4 p-5 transition-colors hover:border-cream-300"
+            className="tv-card-sm group flex flex-col items-start gap-2 p-3 transition-colors hover:border-cream-300 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-burnt-500/12 text-lg text-burnt-400">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-burnt-500/12 text-base text-burnt-400 sm:h-11 sm:w-11 sm:text-lg">
               {card.icon}
             </span>
-            <div>
-              <p className="scoreboard text-3xl font-bold leading-none text-ink-900">
+            <div className="min-w-0">
+              <p className="scoreboard text-2xl font-bold leading-none text-ink-900 sm:text-3xl">
                 {card.value}
               </p>
-              <p className="mt-1.5 text-xs font-semibold uppercase tracking-wider text-ink-500">
+              <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wider text-ink-500 sm:text-xs">
                 {card.label}
               </p>
             </div>
