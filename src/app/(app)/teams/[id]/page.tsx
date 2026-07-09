@@ -28,6 +28,7 @@ export default async function TeamDetailPage({
     db.query.sports.findMany(),
   ]);
   if (!team) notFound();
+  const external = team.kind === "external";
 
   const teamMatches = await db.query.matches.findMany({
     where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
@@ -39,47 +40,60 @@ export default async function TeamDetailPage({
   return (
     <div>
       <PageHeader
-        kicker={`${team.sport.name} · ${team.league ?? "No league"}`}
+        kicker={`${external ? "Opponent" : team.sport.name} · ${team.league ?? "No league"}`}
         title={team.name}
         actions={
           <>
             <EditTeamButton sports={allSports} team={team} />
-            <ButtonLink href={`/teams/${team.id}/lineup`}>Lineup</ButtonLink>
+            {!external ? (
+              <ButtonLink href={`/teams/${team.id}/lineup`}>Lineup</ButtonLink>
+            ) : null}
           </>
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>
-          <h2 className="font-display mb-3 text-xl text-ink-900">
-            Roster <span className="text-sm text-ink-500">({team.players.length})</span>
-          </h2>
-          <RosterTable
-            players={team.players.map((p) => ({
-              id: p.id,
-              name: p.name,
-              position: p.position,
-              squadNumber: p.squadNumber,
-              status: p.status,
-            }))}
-          />
+          {external ? (
+            <div className="tv-card-sm p-5">
+              <p className="text-sm text-ink-500">
+                This is an external opponent. Strativ tracks match results against them but
+                doesn&apos;t manage their roster or lineup.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h2 className="font-display mb-3 text-xl text-ink-900">
+                Roster <span className="text-sm text-ink-500">({team.players.length})</span>
+              </h2>
+              <RosterTable
+                players={team.players.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  position: p.position,
+                  squadNumber: p.squadNumber,
+                  status: p.status,
+                }))}
+              />
 
-          <h2 className="font-display mb-3 mt-8 text-xl text-ink-900">Staff</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {team.staff.length === 0 ? (
-              <p className="text-sm text-ink-500">No team staff assigned.</p>
-            ) : (
-              team.staff.map((s) => (
-                <div key={s.id} className="tv-card-sm p-3">
-                  <p className="font-bold">{s.name}</p>
-                  <p className="text-xs text-ink-500">
-                    {s.role}
-                    {s.department ? ` · ${s.department}` : ""}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
+              <h2 className="font-display mb-3 mt-8 text-xl text-ink-900">Staff</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {team.staff.length === 0 ? (
+                  <p className="text-sm text-ink-500">No team staff assigned.</p>
+                ) : (
+                  team.staff.map((s) => (
+                    <div key={s.id} className="tv-card-sm p-3">
+                      <p className="font-bold">{s.name}</p>
+                      <p className="text-xs text-ink-500">
+                        {s.role}
+                        {s.department ? ` · ${s.department}` : ""}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section>
@@ -95,8 +109,8 @@ export default async function TeamDetailPage({
           <div className="mt-8 border-t border-line pt-4">
             <ConfirmDelete
               action={deleteTeam.bind(null, team.id)}
-              label="Delete team"
-              confirmMessage={`Delete ${team.name}? Its matches will be removed and players released.`}
+              label={external ? "Delete opponent" : "Delete team"}
+              confirmMessage={`Delete ${team.name}? Its matches will be removed${external ? "." : " and players released."}`}
             />
           </div>
         </section>

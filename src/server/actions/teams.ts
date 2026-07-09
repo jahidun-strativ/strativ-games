@@ -12,6 +12,7 @@ function teamValues(formData: FormData) {
   return {
     sportId: str(formData, "sportId"),
     name: str(formData, "name"),
+    kind: opt(formData, "kind") === "external" ? "external" : "internal",
     league: opt(formData, "league"),
     formation: opt(formData, "formation") ?? "4-4-2",
     stadium: opt(formData, "stadium"),

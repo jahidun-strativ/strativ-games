@@ -25,8 +25,9 @@ function groupByDate(list: MatchWithRefs[]) {
 export default async function MatchesPage({
   searchParams,
 }: PageProps<"/matches">) {
-  const { sport: sportFilter } = await searchParams;
+  const { sport: sportFilter, kind: kindFilter } = await searchParams;
   const sportId = typeof sportFilter === "string" && sportFilter !== "" ? sportFilter : null;
+  const kind = typeof kindFilter === "string" && kindFilter !== "" ? kindFilter : null;
 
   const [allMatches, allSports, allTeams, allVenues] = await Promise.all([
     db.query.matches.findMany({
@@ -43,7 +44,9 @@ export default async function MatchesPage({
     <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
   ) : undefined;
 
-  const filtered = sportId ? allMatches.filter((m) => m.sportId === sportId) : allMatches;
+  const filtered = allMatches.filter(
+    (m) => (!sportId || m.sportId === sportId) && (!kind || m.kind === kind),
+  );
   const now = new Date();
   const upcoming = filtered.filter((m) => m.status === "scheduled" && m.kickoffAt >= now);
   const results = filtered
@@ -60,6 +63,14 @@ export default async function MatchesPage({
 
       <FilterBar
         filters={[
+          {
+            param: "kind",
+            placeholder: "All types",
+            options: [
+              { value: "internal", label: "Internal" },
+              { value: "competitive", label: "Competitive" },
+            ],
+          },
           {
             param: "sport",
             placeholder: "All sports",

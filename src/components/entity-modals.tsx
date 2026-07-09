@@ -73,17 +73,31 @@ export function EditMatchButton({
 
 export function NewTeamButton({
   sports,
-  label = "+ New team",
+  kind = "internal",
+  label,
   variant = "primary",
 }: {
   sports: Sport[];
+  kind?: "internal" | "external";
   label?: string;
   variant?: Variant;
 }) {
+  const external = kind === "external";
   return (
-    <FormModal title="New team" triggerLabel={label} triggerVariant={variant} width={520}>
+    <FormModal
+      title={external ? "New opponent" : "New team"}
+      triggerLabel={label ?? (external ? "+ New opponent" : "+ New team")}
+      triggerVariant={variant}
+      width={520}
+    >
       {(close) => (
-        <TeamForm action={createTeam} sports={sports} submitLabel="Create team" onSuccess={close} />
+        <TeamForm
+          action={createTeam}
+          sports={sports}
+          kind={kind}
+          submitLabel={external ? "Add opponent" : "Create team"}
+          onSuccess={close}
+        />
       )}
     </FormModal>
   );

@@ -24,6 +24,9 @@ export const teams = pgTable("teams", {
     .notNull()
     .references(() => sports.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  // "internal" = a Strativ squad with a roster/lineup; "external" = an
+  // opponent (other company / local club) we only track by name.
+  kind: text("kind").notNull().default("internal"),
   league: text("league"),
   formation: text("formation").notNull().default("4-4-2"),
   stadium: text("stadium"),
@@ -76,6 +79,8 @@ export const matches = pgTable("matches", {
   sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
   homeTeamId: uuid("home_team_id").references(() => teams.id, { onDelete: "set null" }),
   awayTeamId: uuid("away_team_id").references(() => teams.id, { onDelete: "set null" }),
+  // "internal" = Strativ vs Strativ; "competitive" = Strativ vs an external opponent.
+  kind: text("kind").notNull().default("internal"),
   // Free-text label for matches without teams yet (e.g. "Friday friendly").
   title: text("title"),
   venueId: uuid("venue_id")
@@ -220,5 +225,11 @@ export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
 export const MATCH_STATUSES = ["scheduled", "completed", "cancelled"] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];
+
+export const MATCH_KINDS = ["internal", "competitive"] as const;
+export type MatchKind = (typeof MATCH_KINDS)[number];
+
+export const TEAM_KINDS = ["internal", "external"] as const;
+export type TeamKind = (typeof TEAM_KINDS)[number];
 
 export const PLAYER_STATUSES = ["active", "injured", "suspended", "inactive"] as const;

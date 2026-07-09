@@ -48,7 +48,9 @@ export function StaffForm({
           <Select
             allowClear
             placeholder="Club-wide (no team)"
-            options={teams.map((t) => ({ value: t.id, label: t.name }))}
+            options={teams
+              .filter((t) => t.kind !== "external")
+              .map((t) => ({ value: t.id, label: t.name }))}
           />
         </Form.Item>
       </div>

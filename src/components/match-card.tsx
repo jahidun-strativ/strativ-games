@@ -66,7 +66,14 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
           <span className="text-ink-400"> · </span>
           {formatTime(match.kickoffAt)}
         </span>
-        <StatusBadge status={match.status} />
+        <div className="flex items-center gap-1.5">
+          {match.kind === "competitive" ? (
+            <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burnt-400">
+              Competitive
+            </span>
+          ) : null}
+          <StatusBadge status={match.status} />
+        </div>
       </div>
 
       {hasTeams ? (

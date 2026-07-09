@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
 import { getLeaderboard } from "@/server/queries/stats";
-import { computeStandings } from "@/server/queries/standings";
+import { computeCompetitiveRecord, computeStandings } from "@/server/queries/standings";
 import { PageHeader } from "@/components/ui/page-header";
 import { StandingsTable } from "@/components/tables/standings-table";
 import type { LeaderboardRow } from "@/server/queries/stats";
@@ -74,7 +74,16 @@ export default async function StatsPage() {
       const sportMatches = await db.query.matches.findMany({
         where: eq(matches.sportId, sport.id),
       });
-      return { sport, rows: computeStandings(sport.teams, sportMatches) };
+      const internalTeams = sport.teams.filter((t) => t.kind !== "external");
+      const internal = computeStandings(
+        internalTeams,
+        sportMatches.filter((m) => m.kind === "internal"),
+      );
+      const competitive = computeCompetitiveRecord(
+        internalTeams,
+        sportMatches.filter((m) => m.kind === "competitive"),
+      );
+      return { sport, internal, competitive };
     }),
   );
 
@@ -94,13 +103,28 @@ export default async function StatsPage() {
       </div>
 
       <section className="mt-10 space-y-8">
-        {standingsBySport.map(({ sport, rows }) =>
-          rows.length === 0 ? null : (
-            <div key={sport.id}>
-              <h2 className="font-display mb-3 text-xl text-ink-900">
-                {sport.name} standings
-              </h2>
-              <StandingsTable rows={rows} />
+        {standingsBySport.map(({ sport, internal, competitive }) =>
+          internal.length === 0 && competitive.length === 0 ? null : (
+            <div key={sport.id} className="space-y-6">
+              {internal.length > 0 ? (
+                <div>
+                  <h2 className="font-display mb-3 text-xl text-ink-900">
+                    {sport.name} — internal league
+                  </h2>
+                  <StandingsTable rows={internal} />
+                </div>
+              ) : null}
+              {competitive.length > 0 ? (
+                <div>
+                  <h2 className="font-display mb-1 text-xl text-ink-900">
+                    {sport.name} — competitive record
+                  </h2>
+                  <p className="mb-3 text-sm text-ink-500">
+                    Strativ teams&apos; results against external opponents.
+                  </p>
+                  <StandingsTable rows={competitive} />
+                </div>
+              ) : null}
             </div>
           ),
         )}

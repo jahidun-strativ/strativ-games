@@ -25,7 +25,7 @@ export function PlayerForm({
   const sportId = Form.useWatch("sportId", form);
 
   const teamOptions = teams
-    .filter((t) => !sportId || t.sportId === sportId)
+    .filter((t) => t.kind !== "external" && (!sportId || t.sportId === sportId))
     .map((t) => ({ value: t.id, label: t.name }));
 
   return (
