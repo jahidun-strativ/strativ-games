@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
@@ -5,10 +6,11 @@ import { appUsers } from "@/db/schema";
 import { getSession, isAdmin } from "@/server/auth";
 import { PageHeader } from "@/components/ui/page-header";
 import { MembersTable } from "@/components/members-table";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 export const metadata = { title: "Members" };
 
-export default async function MembersPage() {
+async function MembersContent() {
   const [admin, session] = await Promise.all([isAdmin(), getSession()]);
   if (!admin) redirect("/");
 
@@ -19,9 +21,7 @@ export default async function MembersPage() {
   const nameByUser = new Map(players.filter((p) => p.userId).map((p) => [p.userId, p.name]));
 
   return (
-    <div>
-      <PageHeader kicker="Admin console" title="Members" />
-
+    <>
       <p className="mb-4 max-w-2xl text-sm text-ink-500">
         Admins can create and edit everything; members have read-only access.
         Promote teammates below. Match-notification timing lives in{" "}
@@ -36,6 +36,18 @@ export default async function MembersPage() {
           role: u.role,
         }))}
       />
+    </>
+  );
+}
+
+export default function MembersPage() {
+  return (
+    <div>
+      <PageHeader kicker="Admin console" title="Members" />
+
+      <Suspense fallback={<TableSkeleton rows={6} />}>
+        <MembersContent />
+      </Suspense>
     </div>
   );
 }

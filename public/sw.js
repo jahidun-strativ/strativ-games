@@ -3,7 +3,13 @@
 // new ?v= makes it fetch the fresh icon bytes. Keep ?v= in sync with
 // src/app/manifest.ts.
 const CACHE = "ssm-v3";
-const PRECACHE = ["/offline.html", "/icons/icon-192.png?v=3", "/icons/icon-512.png?v=3"];
+const PRECACHE = [
+  "/offline.html",
+  "/icons/icon-192.png?v=3",
+  "/icons/icon-512.png?v=3",
+  "/icons/notification-192.png?v=3",
+  "/icons/notification-96.png?v=3",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -45,8 +51,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/icons/icon-192.png?v=3",
-      badge: "/icons/icon-192.png?v=3",
+      icon: "/icons/notification-192.png?v=3",
+      badge: "/icons/notification-96.png?v=3",
       data: { url: payload.url || "/" },
       tag: payload.tag || undefined,
     }),

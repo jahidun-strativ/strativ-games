@@ -25,4 +25,15 @@ await sharp(svg)
   .png()
   .toFile("src/app/apple-icon.png");
 
+// Notification icon (push tray): rendered from the FAVICON source so the tray
+// icon matches the browser tab, and the "SG" monogram stays legible at the
+// small sizes notifications use — unlike the full wordmark.
+const favicon = await readFile(new URL("../src/app/icon.svg", import.meta.url));
+for (const size of [96, 192]) {
+  await sharp(favicon)
+    .resize(size, size)
+    .png()
+    .toFile(`public/icons/notification-${size}.png`);
+}
+
 console.log("Icons written to public/icons/ and src/app/apple-icon.png");

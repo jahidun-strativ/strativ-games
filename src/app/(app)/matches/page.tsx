@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
@@ -5,6 +6,7 @@ import { MatchCard } from "@/components/match-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
+import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewMatchButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 import { formatDate } from "@/lib/format";
@@ -23,9 +25,24 @@ function groupByDate(list: MatchWithRefs[]) {
   return [...groups.entries()];
 }
 
-export default async function MatchesPage({
+// Only admins with at least one venue can schedule; lives in the header, so it
+// gets its own Suspense boundary and never delays the page title.
+async function MatchesActions() {
+  const [admin, allSports, allTeams, allVenues] = await Promise.all([
+    isAdmin(),
+    db.query.sports.findMany(),
+    db.query.teams.findMany(),
+    db.query.venues.findMany(),
+  ]);
+  if (!admin || allVenues.length < 1) return null;
+  return <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />;
+}
+
+async function MatchesContent({
   searchParams,
-}: PageProps<"/matches">) {
+}: {
+  searchParams: PageProps<"/matches">["searchParams"];
+}) {
   const { sport: sportFilter, kind: kindFilter } = await searchParams;
   const sportId = typeof sportFilter === "string" && sportFilter !== "" ? sportFilter : null;
   const kind = typeof kindFilter === "string" && kindFilter !== "" ? kindFilter : null;
@@ -56,13 +73,7 @@ export default async function MatchesPage({
     .sort((a, b) => b.kickoffAt.getTime() - a.kickoffAt.getTime());
 
   return (
-    <div>
-      <PageHeader
-        kicker="Fixtures & results"
-        title="Matches"
-        actions={scheduleButton}
-      />
-
+    <>
       <FilterBar
         filters={[
           {
@@ -123,6 +134,33 @@ export default async function MatchesPage({
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+export default function MatchesPage({ searchParams }: PageProps<"/matches">) {
+  return (
+    <div>
+      <PageHeader
+        kicker="Fixtures & results"
+        title="Matches"
+        actions={
+          <Suspense fallback={null}>
+            <MatchesActions />
+          </Suspense>
+        }
+      />
+
+      <Suspense
+        fallback={
+          <>
+            <FilterBarSkeleton />
+            <CardGridSkeleton count={6} />
+          </>
+        }
+      >
+        <MatchesContent searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

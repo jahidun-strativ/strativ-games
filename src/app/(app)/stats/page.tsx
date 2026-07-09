@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
 import { getLeaderboard } from "@/server/queries/stats";
 import { computeCompetitiveRecord, computeStandings } from "@/server/queries/standings";
 import { PageHeader } from "@/components/ui/page-header";
+import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { StandingsTable } from "@/components/tables/standings-table";
 import type { LeaderboardRow } from "@/server/queries/stats";
 
@@ -63,7 +65,7 @@ function Leaderboard({
   );
 }
 
-export default async function StatsPage() {
+async function StatsContent() {
   const [allSports, leaderboard] = await Promise.all([
     db.query.sports.findMany({ with: { teams: true } }),
     getLeaderboard(),
@@ -88,9 +90,7 @@ export default async function StatsPage() {
   );
 
   return (
-    <div>
-      <PageHeader kicker="League office" title="Stats & standings" />
-
+    <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Leaderboard title="⚽ Top scorers" rows={leaderboard} metric={(r) => r.goals} unit="G" />
         <Leaderboard title="🅰️ Top assists" rows={leaderboard} metric={(r) => r.assists} unit="A" />
@@ -129,6 +129,18 @@ export default async function StatsPage() {
           ),
         )}
       </section>
+    </>
+  );
+}
+
+export default function StatsPage() {
+  return (
+    <div>
+      <PageHeader kicker="League office" title="Stats & standings" />
+
+      <Suspense fallback={<CardGridSkeleton count={3} height="h-64" />}>
+        <StatsContent />
+      </Suspense>
     </div>
   );
 }

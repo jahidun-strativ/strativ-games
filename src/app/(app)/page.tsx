@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { asc, desc, eq } from "drizzle-orm";
 import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/icons";
 import { db } from "@/db";
@@ -9,9 +10,21 @@ import { MatchCard } from "@/components/match-card";
 import { MonthlyRace } from "@/components/monthly-race";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewMatchButton } from "@/components/entity-modals";
 
-export default async function Dashboard() {
+async function DashboardActions() {
+  const [admin, allSports, allTeams, allVenues] = await Promise.all([
+    isAdmin(),
+    db.query.sports.findMany(),
+    db.query.teams.findMany(),
+    db.query.venues.findMany(),
+  ]);
+  if (!admin || allVenues.length < 1) return null;
+  return <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />;
+}
+
+async function DashboardContent() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -59,13 +72,7 @@ export default async function Dashboard() {
     .slice(0, 5);
 
   return (
-    <div>
-      <PageHeader
-        kicker="Matchday Control Room"
-        title="Dashboard"
-        actions={scheduleButton}
-      />
-
+    <>
       <section className="grid grid-cols-3 gap-3 sm:gap-4">
         {[
           { label: "Teams", value: teamCount, href: "/teams", icon: <FlagOutlined /> },
@@ -160,6 +167,42 @@ export default async function Dashboard() {
           />
         </section>
       </div>
+    </>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="tv-card-sm h-20" />
+        ))}
+      </div>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <CardGridSkeleton count={4} />
+        <Skeleton className="tv-card-sm h-64" />
+      </div>
+    </>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <div>
+      <PageHeader
+        kicker="Matchday Control Room"
+        title="Dashboard"
+        actions={
+          <Suspense fallback={null}>
+            <DashboardActions />
+          </Suspense>
+        }
+      />
+
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent />
+      </Suspense>
     </div>
   );
 }

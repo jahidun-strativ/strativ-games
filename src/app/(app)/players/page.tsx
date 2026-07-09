@@ -1,18 +1,32 @@
+import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { players } from "@/db/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
+import { FilterBarSkeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { PlayersTable } from "@/components/tables/players-table";
 import { NewPlayerButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Players" };
 
-export default async function PlayersPage({
+async function PlayersActions() {
+  const [admin, allSports, allTeams] = await Promise.all([
+    isAdmin(),
+    db.query.sports.findMany(),
+    db.query.teams.findMany(),
+  ]);
+  if (!admin || allSports.length === 0) return null;
+  return <NewPlayerButton sports={allSports} teams={allTeams} />;
+}
+
+async function PlayersContent({
   searchParams,
-}: PageProps<"/players">) {
+}: {
+  searchParams: PageProps<"/players">["searchParams"];
+}) {
   const { team: teamFilter, sport: sportFilter } = await searchParams;
   const teamId = typeof teamFilter === "string" && teamFilter !== "" ? teamFilter : null;
   const sportId = typeof sportFilter === "string" && sportFilter !== "" ? sportFilter : null;
@@ -33,15 +47,7 @@ export default async function PlayersPage({
   );
 
   return (
-    <div>
-      <PageHeader
-        kicker="Locker room"
-        title="Players"
-        actions={
-          canCreate ? <NewPlayerButton sports={allSports} teams={allTeams} /> : undefined
-        }
-      />
-
+    <>
       <FilterBar
         filters={[
           {
@@ -81,6 +87,33 @@ export default async function PlayersPage({
           }))}
         />
       )}
+    </>
+  );
+}
+
+export default function PlayersPage({ searchParams }: PageProps<"/players">) {
+  return (
+    <div>
+      <PageHeader
+        kicker="Locker room"
+        title="Players"
+        actions={
+          <Suspense fallback={null}>
+            <PlayersActions />
+          </Suspense>
+        }
+      />
+
+      <Suspense
+        fallback={
+          <>
+            <FilterBarSkeleton />
+            <TableSkeleton rows={8} />
+          </>
+        }
+      >
+        <PlayersContent searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

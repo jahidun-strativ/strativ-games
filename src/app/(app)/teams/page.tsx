@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { teams } from "@/db/schema";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewTeamButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 import type { Sport } from "@/db/schema";
@@ -60,7 +62,18 @@ function TeamGrid({ items }: { items: TeamCard[] }) {
   );
 }
 
-export default async function TeamsPage() {
+async function TeamsActions() {
+  const [admin, allSports] = await Promise.all([isAdmin(), db.query.sports.findMany()]);
+  if (!admin || allSports.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <NewTeamButton sports={allSports} />
+      <NewTeamButton sports={allSports} kind="external" variant="secondary" />
+    </div>
+  );
+}
+
+async function TeamsContent() {
   const [allTeams, allSports] = await Promise.all([
     db.query.teams.findMany({
       orderBy: asc(teams.name),
@@ -75,66 +88,69 @@ export default async function TeamsPage() {
   const opponents = allTeams.filter((t) => t.kind === "external");
 
   return (
+    <div className="space-y-10">
+      <section>
+        <h2 className="font-display mb-3 text-xl text-ink-900">Our teams</h2>
+        {ourTeams.length === 0 ? (
+          <EmptyState
+            title="No teams yet"
+            hint={
+              canCreate
+                ? "Create your first Strativ squad to start scheduling matches."
+                : admin
+                  ? "Add a sport first, then create your teams."
+                  : "No teams have been added yet."
+            }
+            action={canCreate ? <NewTeamButton sports={allSports} label="New team" /> : undefined}
+          />
+        ) : (
+          <TeamGrid items={ourTeams} />
+        )}
+      </section>
+
+      <section>
+        <h2 className="font-display mb-1 text-xl text-ink-900">Opponents</h2>
+        <p className="mb-3 text-sm text-ink-500">
+          External teams you play competitive matches against.
+        </p>
+        {opponents.length === 0 ? (
+          <EmptyState
+            title="No opponents yet"
+            hint={
+              canCreate
+                ? "Add a rival company or local team to schedule competitive matches."
+                : "No opponents have been added yet."
+            }
+            action={
+              canCreate ? (
+                <NewTeamButton sports={allSports} kind="external" label="New opponent" />
+              ) : undefined
+            }
+          />
+        ) : (
+          <TeamGrid items={opponents} />
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default function TeamsPage() {
+  return (
     <div>
       <PageHeader
         kicker="Squad room"
         title="Teams"
         actions={
-          canCreate ? (
-            <div className="flex flex-wrap gap-2">
-              <NewTeamButton sports={allSports} />
-              <NewTeamButton sports={allSports} kind="external" variant="secondary" />
-            </div>
-          ) : undefined
+          <Suspense fallback={null}>
+            <TeamsActions />
+          </Suspense>
         }
       />
 
-      <div className="space-y-10">
-        <section>
-          <h2 className="font-display mb-3 text-xl text-ink-900">Our teams</h2>
-          {ourTeams.length === 0 ? (
-            <EmptyState
-              title="No teams yet"
-              hint={
-                canCreate
-                  ? "Create your first Strativ squad to start scheduling matches."
-                  : admin
-                    ? "Add a sport first, then create your teams."
-                    : "No teams have been added yet."
-              }
-              action={
-                canCreate ? <NewTeamButton sports={allSports} label="New team" /> : undefined
-              }
-            />
-          ) : (
-            <TeamGrid items={ourTeams} />
-          )}
-        </section>
-
-        <section>
-          <h2 className="font-display mb-1 text-xl text-ink-900">Opponents</h2>
-          <p className="mb-3 text-sm text-ink-500">
-            External teams you play competitive matches against.
-          </p>
-          {opponents.length === 0 ? (
-            <EmptyState
-              title="No opponents yet"
-              hint={
-                canCreate
-                  ? "Add a rival company or local team to schedule competitive matches."
-                  : "No opponents have been added yet."
-              }
-              action={
-                canCreate ? (
-                  <NewTeamButton sports={allSports} kind="external" label="New opponent" />
-                ) : undefined
-              }
-            />
-          ) : (
-            <TeamGrid items={opponents} />
-          )}
-        </section>
-      </div>
+      <Suspense fallback={<CardGridSkeleton count={6} height="h-32" />}>
+        <TeamsContent />
+      </Suspense>
     </div>
   );
 }
