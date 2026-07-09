@@ -9,13 +9,20 @@ for (const size of [192, 512]) {
   await sharp(svg).resize(size, size).png().toFile(`public/icons/icon-${size}.png`);
 }
 
-// Maskable: pad the artwork into the 80% safe zone on a cream background.
+// Maskable: pad the artwork into the 80% safe zone on the dark app background.
 const inner = await sharp(svg).resize(410, 410).png().toBuffer();
 await sharp({
-  create: { width: 512, height: 512, channels: 4, background: "#faf3e3" },
+  create: { width: 512, height: 512, channels: 4, background: "#0a0e15" },
 })
   .composite([{ input: inner, gravity: "center" }])
   .png()
   .toFile("public/icons/icon-maskable-512.png");
 
-console.log("Icons written to public/icons/");
+// Apple touch icon (iOS home screen): the wordmark flattened on the dark bg.
+await sharp(svg)
+  .resize(180, 180)
+  .flatten({ background: "#0a0e15" })
+  .png()
+  .toFile("src/app/apple-icon.png");
+
+console.log("Icons written to public/icons/ and src/app/apple-icon.png");
