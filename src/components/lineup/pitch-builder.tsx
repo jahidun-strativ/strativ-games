@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { App } from "antd";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { App, Drawer } from "antd";
 import {
   DEFAULT_SUBS,
   MAX_SUBS,
@@ -42,6 +42,17 @@ export function PitchBuilder({
   const [active, setActive] = useState<Active>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Desktop shows the picker inline in the sidebar; mobile opens it as a
+  // bottom-sheet Drawer instead so it never overlaps the pitch/bench.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const size = squadSizeOf(formation);
   const slots = useMemo(() => buildFormationSlots(formation), [formation]);
@@ -136,6 +147,58 @@ export function PitchBuilder({
       : active?.kind === "sub"
         ? subs[active.index]
         : null;
+
+  const pickTitle =
+    active === null
+      ? ""
+      : active.kind === "starter"
+        ? `Pick ${slots[active.index].position}`
+        : `Pick substitute ${active.index + 1}`;
+
+  // The clear-slot action + roster list, shared by the desktop sidebar and the
+  // mobile bottom sheet.
+  const rosterPicker = active !== null && (
+    <>
+      {currentPlayerId ? (
+        <button
+          onClick={() => assign(null)}
+          className="mb-2 w-full rounded-lg bg-tvred-500/10 px-3 py-2 text-left text-sm font-semibold text-tvred-500 hover:bg-tvred-500/15"
+        >
+          ✕ Clear this slot
+        </button>
+      ) : null}
+      <ul className="space-y-1.5">
+        {roster
+          .filter((p) => p.status === "active")
+          .map((p) => {
+            const taken = usedIds.has(p.id) && p.id !== currentPlayerId;
+            return (
+              <li key={p.id}>
+                <button
+                  onClick={() => assign(p.id)}
+                  className={`w-full rounded-lg border border-line px-3 py-2 text-left text-sm font-semibold ${
+                    p.id === currentPlayerId
+                      ? "bg-gold-300/20"
+                      : taken
+                        ? "bg-cream-200 text-ink-400"
+                        : "bg-cream-50 hover:bg-cream-200"
+                  }`}
+                >
+                  <span className="scoreboard mr-2 text-burnt-400">
+                    {p.squadNumber ?? "–"}
+                  </span>
+                  {p.name}
+                  <span className="float-right text-xs text-ink-500">
+                    {p.position}
+                    {taken ? " · picked" : ""}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+      </ul>
+    </>
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
@@ -282,24 +345,12 @@ export function PitchBuilder({
         </div>
       </div>
 
-      {/* Player picker */}
-      <aside
-        className={`tv-card h-fit p-4 ${
-          !canEdit
-            ? "hidden"
-            : active !== null
-              ? "fixed inset-x-3 bottom-20 z-50 max-h-[55vh] overflow-y-auto lg:static lg:max-h-none"
-              : "hidden lg:block"
-        }`}
-      >
+      {/* Desktop: picker inline in the sidebar */}
+      <aside className={`tv-card h-fit p-4 ${canEdit ? "hidden lg:block" : "hidden"}`}>
         {active !== null ? (
           <>
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-display text-lg text-ink-900">
-                {active.kind === "starter"
-                  ? `Pick ${slots[active.index].position}`
-                  : `Pick substitute ${active.index + 1}`}
-              </p>
+              <p className="font-display text-lg text-ink-900">{pickTitle}</p>
               <button
                 onClick={() => setActive(null)}
                 className="rounded-md bg-cream-200 px-2.5 py-1 text-xs font-semibold"
@@ -307,44 +358,7 @@ export function PitchBuilder({
                 Close
               </button>
             </div>
-            {currentPlayerId ? (
-              <button
-                onClick={() => assign(null)}
-                className="mb-2 w-full rounded-lg bg-tvred-500/10 px-3 py-2 text-left text-sm font-semibold text-tvred-500 hover:bg-tvred-500/15"
-              >
-                ✕ Clear this slot
-              </button>
-            ) : null}
-            <ul className="space-y-1.5">
-              {roster
-                .filter((p) => p.status === "active")
-                .map((p) => {
-                  const taken = usedIds.has(p.id) && p.id !== currentPlayerId;
-                  return (
-                    <li key={p.id}>
-                      <button
-                        onClick={() => assign(p.id)}
-                        className={`w-full rounded-lg border border-line px-3 py-2 text-left text-sm font-semibold ${
-                          p.id === currentPlayerId
-                            ? "bg-gold-300/20"
-                            : taken
-                              ? "bg-cream-200 text-ink-400"
-                              : "bg-cream-50 hover:bg-cream-200"
-                        }`}
-                      >
-                        <span className="scoreboard mr-2 text-burnt-400">
-                          {p.squadNumber ?? "–"}
-                        </span>
-                        {p.name}
-                        <span className="float-right text-xs text-ink-500">
-                          {p.position}
-                          {taken ? " · picked" : ""}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-            </ul>
+            {rosterPicker}
           </>
         ) : (
           <div>
@@ -357,6 +371,18 @@ export function PitchBuilder({
           </div>
         )}
       </aside>
+
+      {/* Mobile: picker as an opaque bottom sheet so it never overlaps the bench */}
+      <Drawer
+        placement="bottom"
+        height="auto"
+        open={canEdit && !isDesktop && active !== null}
+        onClose={() => setActive(null)}
+        title={pickTitle}
+        styles={{ body: { maxHeight: "60vh", overflowY: "auto" } }}
+      >
+        {rosterPicker}
+      </Drawer>
     </div>
   );
 }
