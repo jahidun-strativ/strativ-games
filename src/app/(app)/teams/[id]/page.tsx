@@ -1,0 +1,106 @@
+import { notFound } from "next/navigation";
+import { desc, eq, or } from "drizzle-orm";
+import { db } from "@/db";
+import { matches } from "@/db/schema";
+import { deleteTeam } from "@/server/actions/teams";
+import { MatchCard } from "@/components/match-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { ButtonLink } from "@/components/ui/button";
+import { ConfirmDelete } from "@/components/ui/confirm-delete";
+import { RosterTable } from "@/components/tables/roster-table";
+import { EditTeamButton } from "@/components/entity-modals";
+
+export const metadata = { title: "Team" };
+
+export default async function TeamDetailPage({
+  params,
+}: PageProps<"/teams/[id]">) {
+  const { id } = await params;
+  const [team, allSports] = await Promise.all([
+    db.query.teams.findFirst({
+      where: (t, { eq }) => eq(t.id, id),
+      with: {
+        sport: true,
+        players: { orderBy: (p, { asc }) => asc(p.squadNumber) },
+        staff: true,
+      },
+    }),
+    db.query.sports.findMany(),
+  ]);
+  if (!team) notFound();
+
+  const teamMatches = await db.query.matches.findMany({
+    where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
+    orderBy: desc(matches.kickoffAt),
+    limit: 6,
+    with: { homeTeam: true, awayTeam: true, venue: true },
+  });
+
+  return (
+    <div>
+      <PageHeader
+        kicker={`${team.sport.name} · ${team.league ?? "No league"}`}
+        title={team.name}
+        actions={
+          <>
+            <EditTeamButton sports={allSports} team={team} />
+            <ButtonLink href={`/teams/${team.id}/lineup`}>Lineup</ButtonLink>
+          </>
+        }
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <section>
+          <h2 className="font-display mb-3 text-xl text-ink-900">
+            Roster <span className="text-sm text-ink-500">({team.players.length})</span>
+          </h2>
+          <RosterTable
+            players={team.players.map((p) => ({
+              id: p.id,
+              name: p.name,
+              position: p.position,
+              squadNumber: p.squadNumber,
+              status: p.status,
+            }))}
+          />
+
+          <h2 className="font-display mb-3 mt-8 text-xl text-ink-900">Staff</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {team.staff.length === 0 ? (
+              <p className="text-sm text-ink-500">No team staff assigned.</p>
+            ) : (
+              team.staff.map((s) => (
+                <div key={s.id} className="tv-card-sm p-3">
+                  <p className="font-bold">{s.name}</p>
+                  <p className="text-xs text-ink-500">
+                    {s.role}
+                    {s.department ? ` · ${s.department}` : ""}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-display mb-3 text-xl text-ink-900">Recent & upcoming</h2>
+          <div className="space-y-3">
+            {teamMatches.length === 0 ? (
+              <p className="text-sm text-ink-500">No matches for this team yet.</p>
+            ) : (
+              teamMatches.map((m) => <MatchCard key={m.id} match={m} />)
+            )}
+          </div>
+
+          <div className="mt-8 border-t border-line pt-4">
+            <ConfirmDelete
+              action={deleteTeam.bind(null, team.id)}
+              label="Delete team"
+              confirmMessage={`Delete ${team.name}? Its matches will be removed and players released.`}
+            />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
