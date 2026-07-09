@@ -1,31 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { App, Button } from "antd";
+import { useCallback, useEffect, useState } from "react";
+import { App, Button, Tooltip } from "antd";
 import { BellOutlined, BellFilled } from "@ant-design/icons";
 import { removePushSubscription } from "@/server/actions/push";
-import { pushSupported, subscribeToPush } from "@/lib/push-client";
-
-type State = "unsupported" | "denied" | "off" | "on" | "loading";
+import {
+  PUSH_CHANGED_EVENT,
+  getPushState,
+  notifyPushChanged,
+  subscribeToPush,
+  type PushState,
+} from "@/lib/push-client";
 
 export function PushToggle({ compact = false }: { compact?: boolean }) {
   const { message } = App.useApp();
-  const [state, setState] = useState<State>("loading");
+  const [state, setState] = useState<PushState>("loading");
 
-  useEffect(() => {
-    if (!pushSupported()) {
-      void Promise.resolve().then(() => setState("unsupported"));
-      return;
-    }
-    if (Notification.permission === "denied") {
-      void Promise.resolve().then(() => setState("denied"));
-      return;
-    }
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setState(sub ? "on" : "off"))
-      .catch(() => setState("off"));
+  const refresh = useCallback(() => {
+    void getPushState().then(setState);
   }, []);
+
+  // Re-sync on mount, whenever a subscription changes anywhere (e.g. the
+  // auto-prompt subscribing), and when the tab regains focus (permission may
+  // have been granted from the OS prompt while we were backgrounded).
+  useEffect(() => {
+    refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener(PUSH_CHANGED_EVENT, refresh);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(PUSH_CHANGED_EVENT, refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [refresh]);
 
   async function enable() {
     setState("loading");
@@ -35,7 +46,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
         setState(permission === "denied" ? "denied" : "off");
         return;
       }
-      await subscribeToPush();
+      await subscribeToPush(); // notifies other toggles too
       setState("on");
       message.success("Match notifications enabled on this device.");
     } catch {
@@ -54,6 +65,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
         await sub.unsubscribe();
       }
       setState("off");
+      notifyPushChanged();
       message.success("Notifications turned off on this device.");
     } catch {
       setState("on");
@@ -62,22 +74,29 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
 
   if (state === "unsupported") return null;
 
+  const on = state === "on";
+  const loading = state === "loading";
+
   // Compact icon-only button for the mobile top bar.
   if (compact) {
     if (state === "denied") return null;
-    const on = state === "on";
+    const label = on ? "Notifications on — tap to turn off" : "Enable notifications";
     return (
-      <Button
-        shape="circle"
-        type={on ? "default" : "primary"}
-        loading={state === "loading"}
-        icon={on ? <BellFilled /> : <BellOutlined />}
-        onClick={on ? disable : enable}
-        aria-label={on ? "Notifications on" : "Enable notifications"}
-        // Match the profile UserButton (shadcn icon size = 36px) so the two
-        // navbar controls are exactly the same width and height.
-        className="!h-9 !w-9 !min-w-9"
-      />
+      <Tooltip title={label}>
+        <Button
+          shape="circle"
+          type={on ? "default" : "primary"}
+          loading={loading}
+          icon={on ? <BellFilled /> : <BellOutlined />}
+          onClick={on ? disable : enable}
+          aria-label={label}
+          // Green = on, orange = needs enabling. Sized to match the profile
+          // avatar (shadcn icon = 36px) so the two navbar controls line up.
+          className={`!h-9 !w-9 !min-w-9 ${
+            on ? "!border-pitch-600 !bg-pitch-600 !text-white" : ""
+          }`}
+        />
+      </Tooltip>
     );
   }
 
@@ -89,17 +108,17 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
     );
   }
 
-  const on = state === "on";
   return (
     <Button
       block
       size="small"
       type={on ? "default" : "primary"}
-      loading={state === "loading"}
+      loading={loading}
       icon={on ? <BellFilled /> : <BellOutlined />}
       onClick={on ? disable : enable}
+      className={on ? "!border-pitch-600 !text-pitch-500" : ""}
     >
-      {on ? "Notifications on" : "Enable notifications"}
+      {on ? "Notifications on · tap to turn off" : "Enable notifications"}
     </Button>
   );
 }

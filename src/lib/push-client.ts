@@ -24,6 +24,28 @@ export function pushSupported() {
   );
 }
 
+export type PushState = "unsupported" | "denied" | "off" | "on" | "loading";
+
+/** Current push status for this device, used to render the bell toggle. */
+export async function getPushState(): Promise<PushState> {
+  if (!pushSupported()) return "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    return sub ? "on" : "off";
+  } catch {
+    return "off";
+  }
+}
+
+// Fired after subscribing/unsubscribing so any mounted bell toggle re-syncs
+// (e.g. the auto-prompt subscribing should flip the navbar bell to "on").
+export const PUSH_CHANGED_EVENT = "ssm-push-changed";
+export function notifyPushChanged() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
+}
+
 /** Subscribe (reusing an existing subscription if present) and persist it. */
 export async function subscribeToPush() {
   const reg = await navigator.serviceWorker.ready;
@@ -39,5 +61,6 @@ export async function subscribeToPush() {
     p256dh: json.keys!.p256dh,
     auth: json.keys!.auth,
   });
+  notifyPushChanged();
   return sub;
 }
