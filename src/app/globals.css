@@ -188,3 +188,52 @@ select,
     width: 100%;
   }
 }
+
+/* Loading screen: a bouncing football with a squashing shadow. */
+@keyframes ssm-ball {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); /* ease up */
+  }
+  50% {
+    transform: translateY(-56px) rotate(180deg);
+    animation-timing-function: cubic-bezier(0.8, 0, 0.7, 1); /* fall back */
+  }
+}
+@keyframes ssm-ball-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleX(0.5);
+    opacity: 0.15;
+  }
+}
+@keyframes ssm-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.ssm-ball {
+  animation: ssm-ball 0.8s infinite;
+}
+.ssm-ball-shadow {
+  animation: ssm-ball-shadow 0.8s ease-in-out infinite;
+}
+.ssm-pulse {
+  animation: ssm-pulse 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ssm-ball,
+  .ssm-ball-shadow,
+  .ssm-pulse {
+    animation: none;
+  }
+}
