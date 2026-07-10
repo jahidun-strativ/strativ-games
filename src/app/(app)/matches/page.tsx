@@ -9,21 +9,8 @@ import { FilterBar } from "@/components/filter-bar";
 import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewMatchButton, NewSessionButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
-import { formatDate } from "@/lib/format";
-import type { MatchWithRefs } from "@/components/match-card";
 
 export const metadata = { title: "Matches" };
-
-function groupByDate(list: MatchWithRefs[]) {
-  const groups = new Map<string, MatchWithRefs[]>();
-  for (const m of list) {
-    const key = formatDate(m.kickoffAt);
-    const group = groups.get(key) ?? [];
-    group.push(m);
-    groups.set(key, group);
-  }
-  return [...groups.entries()];
-}
 
 // Only admins with at least one venue can schedule; lives in the header, so it
 // gets its own Suspense boundary and never delays the page title.
@@ -116,18 +103,9 @@ async function MatchesContent({
             action={scheduleButton}
           />
         ) : (
-          <div className="space-y-6">
-            {groupByDate(upcoming).map(([date, dayMatches]) => (
-              <div key={date}>
-                <p className="scoreboard mb-2 inline-block rounded-md bg-black/60 px-2.5 py-1 text-xs font-bold uppercase text-gold-300">
-                  {date}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {dayMatches.map((m) => (
-                    <MatchCard key={m.id} match={m} />
-                  ))}
-                </div>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {upcoming.map((m) => (
+              <MatchCard key={m.id} match={m} />
             ))}
           </div>
         )}
