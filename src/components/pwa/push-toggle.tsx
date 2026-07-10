@@ -12,6 +12,17 @@ import {
   type PushState,
 } from "@/lib/push-client";
 
+// A bell with a diagonal slash — the universal "off / muted" symbol, readable
+// without a tooltip (important on mobile) and independent of colour.
+function BellOffIcon() {
+  return (
+    <span className="relative inline-flex items-center justify-center">
+      <BellOutlined />
+      <span className="pointer-events-none absolute left-1/2 top-1/2 h-[1.6px] w-[1.35em] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-current" />
+    </span>
+  );
+}
+
 export function PushToggle({ compact = false }: { compact?: boolean }) {
   const { message } = App.useApp();
   const [state, setState] = useState<PushState>("loading");
@@ -87,11 +98,11 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
           shape="circle"
           type={on ? "default" : "primary"}
           loading={loading}
-          icon={on ? <BellFilled /> : <BellOutlined />}
+          icon={on ? <BellFilled /> : <BellOffIcon />}
           onClick={on ? disable : enable}
           aria-label={label}
-          // Green = on, orange = needs enabling. Sized to match the profile
-          // avatar (shadcn icon = 36px) so the two navbar controls line up.
+          // Filled green bell = on; slashed orange bell = off/needs enabling.
+          // Sized to match the profile avatar (shadcn icon = 36px).
           className={`!h-9 !w-9 !min-w-9 ${
             on ? "!border-pitch-600 !bg-pitch-600 !text-white" : ""
           }`}
@@ -114,7 +125,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
       size="small"
       type={on ? "default" : "primary"}
       loading={loading}
-      icon={on ? <BellFilled /> : <BellOutlined />}
+      icon={on ? <BellFilled /> : <BellOffIcon />}
       onClick={on ? disable : enable}
       className={on ? "!border-pitch-600 !text-pitch-500" : ""}
     >
