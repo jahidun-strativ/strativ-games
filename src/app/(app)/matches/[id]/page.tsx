@@ -14,6 +14,7 @@ import { Scoreboard } from "@/components/ui/scoreboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { NotifyButton } from "@/components/notify-button";
+import { PosterButton, type PosterVariant } from "@/components/poster-button";
 import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
@@ -45,6 +46,13 @@ export default async function MatchDetailPage({
 
   const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
+  const posterVariants: PosterVariant[] =
+    match.kind === "competitive"
+      ? [
+          { label: "Match poster", variant: "vs", hint: "Strativ vs opponent" },
+          { label: "Team sheet", variant: "squad", hint: "Strativ line-up" },
+        ]
+      : [{ label: "Match day poster", variant: "full", hint: "Both teams + players" }];
   const heading = hasTeams
     ? `${match.homeTeam!.name} v ${match.awayTeam!.name}`
     : match.title || "Match — teams TBD";
@@ -122,6 +130,15 @@ export default async function MatchDetailPage({
           <p className="mx-auto mt-4 max-w-prose text-sm text-ink-500">{match.notes}</p>
         ) : null}
       </section>
+
+      {hasTeams ? (
+        <section className="mt-6 flex flex-wrap items-center gap-3">
+          <PosterButton basePath={`/matches/${match.id}/poster`} variants={posterVariants} />
+          <span className="text-xs text-ink-500">
+            Shareable match-day picture with the team{match.kind === "competitive" ? "" : "s"} and player list.
+          </span>
+        </section>
+      ) : null}
 
       {admin && match.status !== "cancelled" ? (
         <section className="mt-8">

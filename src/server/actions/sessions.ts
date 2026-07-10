@@ -80,10 +80,29 @@ export async function createSession(formData: FormData) {
 
   if (kind === "competitive") {
     const ourTeamId = opt(formData, "ourTeamId");
-    const opponentId = opt(formData, "opponentId");
-    if (!ourTeamId || !opponentId) throw new Error("Pick your team and the opponent.");
-    if (ourTeamId === opponentId) throw new Error("Team and opponent must differ.");
-    sportId = await sportForTeams([ourTeamId, opponentId]);
+    let opponentId = opt(formData, "opponentId");
+    // An opponent we're playing doesn't need a roster — we can log a game with
+    // just their name. Create a name-only external team on the fly.
+    const opponentName = opt(formData, "opponentName")?.trim();
+    if (!ourTeamId) throw new Error("Pick your team.");
+    if (!opponentId && !opponentName) {
+      throw new Error("Pick an opponent from the list or type their name.");
+    }
+    const ourTeam = await db.query.teams.findFirst({ where: eq(teams.id, ourTeamId) });
+    if (!ourTeam) throw new Error("Your team no longer exists.");
+    sportId = ourTeam.sportId;
+    if (opponentId) {
+      if (ourTeamId === opponentId) throw new Error("Team and opponent must differ.");
+      const opp = await db.query.teams.findFirst({ where: eq(teams.id, opponentId) });
+      if (!opp) throw new Error("That opponent no longer exists.");
+      if (opp.sportId !== sportId) throw new Error("Opponent must be in the same sport.");
+    } else {
+      const [opp] = await db
+        .insert(teams)
+        .values({ name: opponentName!, kind: "external", sportId })
+        .returning();
+      opponentId = opp.id;
+    }
     const home = opt(formData, "isHome") !== "away";
     planned = [
       {

@@ -8,6 +8,7 @@ import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { deleteSession, resendSessionNotification } from "@/server/actions/sessions";
 import { NotifyButton } from "@/components/notify-button";
+import { PosterButton, type PosterVariant } from "@/components/poster-button";
 import { isAdmin } from "@/server/auth";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 
@@ -34,6 +35,13 @@ export default async function SessionDetailPage({
 
   const external = session.kind === "competitive";
   const gameCount = session.fixtures.length;
+  const hasTeams = session.fixtures.some((f) => f.homeTeamId && f.awayTeamId);
+  const posterVariants: PosterVariant[] = external
+    ? [
+        { label: "Match poster", variant: "vs", hint: "Strativ vs opponent" },
+        { label: "Team sheet", variant: "squad", hint: "Strativ line-up" },
+      ]
+    : [{ label: "Match day poster", variant: "full", hint: "All teams + players" }];
 
   return (
     <div>
@@ -92,6 +100,15 @@ export default async function SessionDetailPage({
           </div>
         ))}
       </div>
+
+      {hasTeams ? (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <PosterButton basePath={`/sessions/${session.id}/poster`} variants={posterVariants} />
+          <span className="text-xs text-ink-500">
+            Shareable match-day picture with {external ? "the teams" : "all teams"} and player list.
+          </span>
+        </div>
+      ) : null}
 
       {admin ? (
         <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-4">

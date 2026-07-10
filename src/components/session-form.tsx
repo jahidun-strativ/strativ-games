@@ -37,7 +37,12 @@ export function SessionForm({
             { label: "Competitive (vs opponent)", value: "competitive" },
           ]}
           onChange={() =>
-            form.setFieldsValue({ teamIds: undefined, ourTeamId: undefined, opponentId: undefined })
+            form.setFieldsValue({
+              teamIds: undefined,
+              ourTeamId: undefined,
+              opponentId: undefined,
+              opponentName: undefined,
+            })
           }
         />
       </Form.Item>
@@ -104,14 +109,38 @@ export function SessionForm({
               <Form.Item
                 label="Opponent"
                 name="opponentId"
-                rules={[{ required: true, message: "Pick the opponent" }]}
+                rules={[
+                  {
+                    validator: (_, v) =>
+                      v || form.getFieldValue("opponentName")?.trim()
+                        ? Promise.resolve()
+                        : Promise.reject(new Error("Pick or name the opponent")),
+                  },
+                ]}
               >
                 <Select
-                  placeholder={externalTeams.length ? "Select opponent" : "Add opponents first"}
+                  allowClear
+                  placeholder={externalTeams.length ? "Select opponent" : "None yet — name one below"}
                   options={externalTeams.map((t) => ({ value: t.id, label: t.name }))}
+                  onChange={(v) => {
+                    if (v) form.setFieldValue("opponentName", undefined);
+                  }}
                 />
               </Form.Item>
             </div>
+            <Form.Item
+              label="…or new opponent by name"
+              name="opponentName"
+              tooltip="No roster needed — just their team name. We'll add them as an opponent."
+            >
+              <Input
+                placeholder="e.g. FC Ericsson"
+                onChange={(e) => {
+                  if (e.target.value.trim()) form.setFieldValue("opponentId", undefined);
+                  form.validateFields(["opponentId"]);
+                }}
+              />
+            </Form.Item>
             <Form.Item label="Playing" name="isHome">
               <Segmented
                 options={[

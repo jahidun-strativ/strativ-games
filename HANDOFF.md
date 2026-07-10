@@ -3,7 +3,7 @@
 > Living doc for picking up work in a new session. Update the **Open items** and
 > **Recent changes** sections at the end of any substantial task.
 
-_Last updated: 2026-07-10_
+_Last updated: 2026-07-11_
 
 ## What this is
 A sports team manager for Strativ: sports, teams, players, staff, venues,
@@ -112,6 +112,23 @@ errors linger, so trust a clean restart over the buffer.
 - **Icons:** favicon "SG" monogram `src/app/icon.svg`; wordmark PWA icons + notification
   tray icon (`notification-192.png`, from favicon) + monochrome badge (`badge-96.png`,
   white "SG"), all via `scripts/gen-icons.mjs`, URLs versioned `?v=3`.
+- **Match-day posters (share pictures):** "🖼️ Generate picture" dropdown on match +
+  session pages (`src/components/poster-button.tsx`). Branded 1080×1350 PNGs via
+  **`next/og` `ImageResponse`** — render code in `src/server/poster/` (`poster.tsx` =
+  Satori-safe JSX, flexbox-only; `fonts.ts` fetches Oswald+Archivo from Google Fonts at
+  request time, module-cached, graceful fallback; `respond.tsx` = shared builder,
+  `?download=1` forces a file download). Routes: `/matches/[id]/poster` and
+  `/sessions/[id]/poster` (`route.tsx`, `runtime=nodejs`, `force-dynamic`, gated by
+  `getSession`+`isAllowedEmail`). Three `?variant=`s: **`full`** (all teams + full player
+  lists — internal games & round-robins; session route de-dups teams across fixtures),
+  **`vs`** (bold "A vs B" hero) and **`squad`** (one Strativ team sheet). Competitive games
+  default to offering `vs` + `squad`; internal → `full`. **Player lists show names only —
+  no status/substitute labels** (deliberate, so nobody feels benched). Buttons visible to
+  all signed-in users, not just admins.
+- **Opponents need no roster:** competitive "Book a slot" now takes a free-text
+  **"…or new opponent by name"** field (`session-form.tsx`) alongside the opponent Select;
+  `createSession` (competitive branch) creates a name-only `external` team on the fly when
+  no `opponentId` is picked. So you can log a game vs an opponent you only know by name.
 
 ## Open items (pick up here)
 1. **Deploy is pending / broken.** All this session's commits are **local only** (not
