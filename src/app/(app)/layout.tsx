@@ -28,9 +28,12 @@ export default async function AppLayout({
   const admin = role === "admin";
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      {/* Desktop sidebar */}
-      <aside className="glass-bar sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-line p-4 md:flex">
+    // Pin the shell to the viewport; only the content column scrolls, so the
+    // sidebar and mobile top bar stay put. (A plain `sticky` sidebar breaks here
+    // because `overflow-x-hidden` makes an ancestor the scroll container.)
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Desktop sidebar — full height, its own scroll if the menu ever overflows */}
+      <aside className="glass-bar hidden h-screen w-60 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line p-4 md:flex">
         <Link href="/" className="block px-1 pt-1">
           <p className="font-display text-2xl leading-none text-burnt-500">
             STRATIV
@@ -45,8 +48,8 @@ export default async function AppLayout({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        {/* Mobile top bar — sticks to the top of the scrolling content column */}
         <header className="glass-bar sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line px-4 py-3 md:hidden">
           <Link href="/" className="font-display truncate text-lg text-burnt-500">
             STRATIV <span className="text-ink-900">GAMES</span>
