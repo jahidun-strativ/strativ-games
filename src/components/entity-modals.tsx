@@ -1,6 +1,7 @@
 "use client";
 
 import { FormModal } from "@/components/form-modal";
+import { FormDrawer } from "@/components/form-drawer";
 import { TeamForm } from "@/components/team-form";
 import { PlayerForm } from "@/components/player-form";
 import { VenueForm } from "@/components/venue-form";
@@ -85,11 +86,11 @@ export function NewSessionButton({
   variant?: Variant;
 }) {
   return (
-    <FormModal title="Book a slot" triggerLabel={label} triggerVariant={variant} width={560}>
+    <FormDrawer title="Book a slot" triggerLabel={label} triggerVariant={variant}>
       {(close) => (
         <SessionForm action={createSession} venues={venues} teams={teams} onSuccess={close} />
       )}
-    </FormModal>
+    </FormDrawer>
   );
 }
 
