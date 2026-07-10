@@ -73,47 +73,52 @@ export default async function MatchDetailPage({
         }
       />
 
-      {/* Big scoreboard */}
-      <section className="tv-card glossy p-6 text-center">
+      {/* Match hero */}
+      <section className="tv-card glossy p-6 text-center sm:p-8">
+        {match.kind === "competitive" ? (
+          <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.3em] text-burnt-400">
+            Competitive
+          </p>
+        ) : null}
         <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-          <p className="font-display text-xl sm:text-right">
+          <p className="font-display text-2xl leading-tight sm:text-right">
             {match.homeTeam?.name ?? "TBD"}
           </p>
           <Scoreboard home={match.homeScore} away={match.awayScore} size="lg" />
-          <p className="font-display text-xl sm:text-left">
+          <p className="font-display text-2xl leading-tight sm:text-left">
             {match.awayTeam?.name ?? "TBD"}
           </p>
         </div>
-        <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-line bg-cream-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-700">
-          <span aria-hidden>📍</span>
+
+        {/* Meta chips */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
           <Link
             href={`/venues/${match.venue.id}`}
-            className="!text-ink-700 hover:!text-burnt-400"
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-cream-200 px-3 py-1 uppercase tracking-wide !text-ink-700 transition-colors hover:!text-burnt-400"
           >
+            <span aria-hidden>📍</span>
             {match.venue.name}
             {match.venue.city ? `, ${match.venue.city}` : ""}
           </Link>
-        </p>
-        {match.sessionId ? (
-          <p className="mt-3 text-sm">
+          {match.cost != null ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-cream-200 px-3 py-1 uppercase tracking-wide text-ink-700">
+              {formatBdt(match.cost)}
+              <span className="text-ink-400">·</span>
+              {paidByLabel(match.paidBy)}
+            </span>
+          ) : null}
+          {match.sessionId ? (
             <Link
               href={`/sessions/${match.sessionId}`}
-              className="font-semibold text-burnt-400 hover:underline"
+              className="inline-flex items-center gap-1 rounded-full border border-burnt-500/30 bg-burnt-500/10 px-3 py-1 uppercase tracking-wide !text-burnt-400 transition-colors hover:!bg-burnt-500/20"
             >
-              Part of a booked slot →
+              In a slot →
             </Link>
-          </p>
+          ) : null}
+        </div>
+        {match.notes ? (
+          <p className="mx-auto mt-4 max-w-prose text-sm text-ink-500">{match.notes}</p>
         ) : null}
-        {match.cost != null ? (
-          <p className="mt-3 text-sm text-ink-500">
-            Booking cost{" "}
-            <span className="font-semibold text-ink-900">{formatBdt(match.cost)}</span>
-            {" · "}
-            paid by{" "}
-            <span className="font-semibold text-ink-900">{paidByLabel(match.paidBy)}</span>
-          </p>
-        ) : null}
-        {match.notes ? <p className="mt-3 text-sm text-ink-500">{match.notes}</p> : null}
       </section>
 
       {admin && match.status !== "cancelled" ? (
