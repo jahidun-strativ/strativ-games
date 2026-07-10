@@ -11,17 +11,16 @@ import { MonthlyRace } from "@/components/monthly-race";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton, CardGridSkeleton } from "@/components/ui/skeleton";
-import { NewMatchButton } from "@/components/entity-modals";
+import { NewSessionButton } from "@/components/entity-modals";
 
 async function DashboardActions() {
-  const [admin, allSports, allTeams, allVenues] = await Promise.all([
+  const [admin, allTeams, allVenues] = await Promise.all([
     isAdmin(),
-    db.query.sports.findMany(),
     db.query.teams.findMany(),
     db.query.venues.findMany(),
   ]);
   if (!admin || allVenues.length < 1) return null;
-  return <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />;
+  return <NewSessionButton venues={allVenues} teams={allTeams} />;
 }
 
 async function DashboardContent() {
@@ -33,7 +32,7 @@ async function DashboardContent() {
     year: "numeric",
   });
 
-  const [upcoming, recent, monthly, allSports, allTeams, allVenues, playerCount] =
+  const [upcoming, recent, monthly, allTeams, allVenues, playerCount] =
     await Promise.all([
       db.query.matches.findMany({
         where: (m, { and, eq, gte }) => and(eq(m.status, "scheduled"), gte(m.kickoffAt, now)),
@@ -48,7 +47,6 @@ async function DashboardContent() {
         with: { homeTeam: true, awayTeam: true, venue: true },
       }),
       getMonthlyLeaderboard(monthStart, monthEnd),
-      db.query.sports.findMany(),
       db.query.teams.findMany(),
       db.query.venues.findMany(),
       db.$count(players),
@@ -59,7 +57,7 @@ async function DashboardContent() {
   const venueCount = allVenues.length;
   const canSchedule = admin && allVenues.length >= 1;
   const scheduleButton = canSchedule ? (
-    <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
+    <NewSessionButton venues={allVenues} teams={allTeams} />
   ) : undefined;
 
   const topScorers: LeaderboardRow[] = [...monthly]

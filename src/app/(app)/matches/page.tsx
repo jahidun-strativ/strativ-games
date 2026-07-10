@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
-import { NewMatchButton, NewSessionButton } from "@/components/entity-modals";
+import { NewSessionButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Matches" };
@@ -15,25 +15,13 @@ export const metadata = { title: "Matches" };
 // Only admins with at least one venue can schedule; lives in the header, so it
 // gets its own Suspense boundary and never delays the page title.
 async function MatchesActions() {
-  const [admin, allSports, allTeams, allVenues] = await Promise.all([
+  const [admin, allTeams, allVenues] = await Promise.all([
     isAdmin(),
-    db.query.sports.findMany(),
     db.query.teams.findMany(),
     db.query.venues.findMany(),
   ]);
   if (!admin || allVenues.length < 1) return null;
-  return (
-    <div className="flex flex-wrap gap-2">
-      <NewSessionButton venues={allVenues} teams={allTeams} />
-      <NewMatchButton
-        sports={allSports}
-        teams={allTeams}
-        venues={allVenues}
-        label="Single match"
-        variant="secondary"
-      />
-    </div>
-  );
+  return <NewSessionButton venues={allVenues} teams={allTeams} />;
 }
 
 async function MatchesContent({
@@ -58,7 +46,7 @@ async function MatchesContent({
   const admin = await isAdmin();
   const canSchedule = admin && allVenues.length >= 1;
   const scheduleButton = canSchedule ? (
-    <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
+    <NewSessionButton venues={allVenues} teams={allTeams} />
   ) : undefined;
 
   const filtered = allMatches.filter(

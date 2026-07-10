@@ -7,7 +7,7 @@ import { MatchCard } from "@/components/match-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EditVenueButton, NewMatchButton } from "@/components/entity-modals";
+import { EditVenueButton, NewSessionButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 import { formatBdt } from "@/lib/format";
 
@@ -21,7 +21,7 @@ export default async function VenueDetailPage({
   if (!venue) notFound();
 
   const now = new Date();
-  const [upcoming, past, allSports, allTeams, allVenues] = await Promise.all([
+  const [upcoming, past, allTeams, allVenues] = await Promise.all([
     db.query.matches.findMany({
       where: and(eq(matches.venueId, id), gte(matches.kickoffAt, now)),
       orderBy: asc(matches.kickoffAt),
@@ -33,7 +33,6 @@ export default async function VenueDetailPage({
       limit: 6,
       with: { homeTeam: true, awayTeam: true, venue: true },
     }),
-    db.query.sports.findMany(),
     db.query.teams.findMany(),
     db.query.venues.findMany(),
   ]);
@@ -123,7 +122,7 @@ export default async function VenueDetailPage({
             hint="Schedule a match to book this venue."
             action={
               canSchedule ? (
-                <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />
+                <NewSessionButton venues={allVenues} teams={allTeams} />
               ) : undefined
             }
           />
