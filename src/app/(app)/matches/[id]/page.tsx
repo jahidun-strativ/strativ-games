@@ -91,6 +91,16 @@ export default async function MatchDetailPage({
             {match.venue.city ? `, ${match.venue.city}` : ""}
           </Link>
         </p>
+        {match.sessionId ? (
+          <p className="mt-3 text-sm">
+            <Link
+              href={`/sessions/${match.sessionId}`}
+              className="font-semibold text-burnt-400 hover:underline"
+            >
+              Part of a booked slot →
+            </Link>
+          </p>
+        ) : null}
         {match.cost != null ? (
           <p className="mt-3 text-sm text-ink-500">
             Booking cost{" "}

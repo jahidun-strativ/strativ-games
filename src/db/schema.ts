@@ -74,8 +74,34 @@ export const venues = pgTable("venues", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// A booked slot (e.g. a 90-min hire). Holds one or more fixtures: a single
+// game (2 teams / competitive) or a round-robin (3 internal teams). Cost and
+// who-paid live here since one slot is one bill regardless of games played.
+export const sessions = pgTable("sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
+  venueId: uuid("venue_id")
+    .notNull()
+    .references(() => venues.id, { onDelete: "restrict" }),
+  kind: text("kind").notNull().default("internal"),
+  title: text("title"),
+  notes: text("notes"),
+  cost: integer("cost"),
+  paidBy: text("paid_by").notNull().default("office"),
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("scheduled"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const matches = pgTable("matches", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Belongs to a booked slot; a fixture's venue/time/cost come from its session.
+  // Nullable for legacy standalone matches created before sessions existed.
+  sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "cascade" }),
+  // Ordering + timing within the slot (info only, not enforced).
+  orderIndex: integer("order_index").notNull().default(0),
+  durationMin: integer("duration_min"),
+  breakMin: integer("break_min"),
   // Sport and teams are optional — a match can be booked (venue + time) first
   // and have its teams assigned later.
   sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
@@ -206,9 +232,17 @@ export const staffRelations = relations(staff, ({ one }) => ({
 
 export const venuesRelations = relations(venues, ({ many }) => ({
   matches: many(matches),
+  sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one, many }) => ({
+  venue: one(venues, { fields: [sessions.venueId], references: [venues.id] }),
+  sport: one(sports, { fields: [sessions.sportId], references: [sports.id] }),
+  fixtures: many(matches),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({
+  session: one(sessions, { fields: [matches.sessionId], references: [sessions.id] }),
   sport: one(sports, { fields: [matches.sportId], references: [sports.id] }),
   homeTeam: one(teams, {
     fields: [matches.homeTeamId],
@@ -244,6 +278,7 @@ export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type StaffMember = typeof staff.$inferSelect;
 export type Venue = typeof venues.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type PlayerMatchStat = typeof playerMatchStats.$inferSelect;
 export type Lineup = typeof lineups.$inferSelect;

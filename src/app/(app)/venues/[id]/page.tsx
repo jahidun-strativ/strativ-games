@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gte, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { matches } from "@/db/schema";
+import { matches, sessions } from "@/db/schema";
 import { deleteVenue } from "@/server/actions/venues";
 import { MatchCard } from "@/components/match-card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -41,11 +41,22 @@ export default async function VenueDetailPage({
   const admin = await isAdmin();
   const canSchedule = admin && allVenues.length >= 1;
 
-  // Spend at this venue: sum booking costs (excluding cancelled) by who paid.
-  const costRows = await db.query.matches.findMany({
-    where: and(eq(matches.venueId, id), ne(matches.status, "cancelled")),
-    columns: { cost: true, paidBy: true },
-  });
+  // Spend at this venue by who paid. Session bookings own the cost for their
+  // round-robin; legacy standalone matches (no session) carry their own cost.
+  const [sessionRows, legacyMatchRows] = await Promise.all([
+    db.query.sessions.findMany({
+      where: and(eq(sessions.venueId, id), ne(sessions.status, "cancelled")),
+      columns: { cost: true, paidBy: true },
+    }),
+    db.query.matches.findMany({
+      where: and(eq(matches.venueId, id), ne(matches.status, "cancelled")),
+      columns: { cost: true, paidBy: true, sessionId: true },
+    }),
+  ]);
+  const costRows = [
+    ...sessionRows,
+    ...legacyMatchRows.filter((m) => m.sessionId == null),
+  ];
   const officeSpend = costRows
     .filter((m) => m.paidBy !== "self")
     .reduce((sum, m) => sum + (m.cost ?? 0), 0);

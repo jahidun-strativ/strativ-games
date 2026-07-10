@@ -5,10 +5,12 @@ import { TeamForm } from "@/components/team-form";
 import { PlayerForm } from "@/components/player-form";
 import { VenueForm } from "@/components/venue-form";
 import { MatchForm } from "@/components/match-form";
+import { SessionForm } from "@/components/session-form";
 import { createTeam, updateTeam } from "@/server/actions/teams";
 import { createPlayer, updatePlayer } from "@/server/actions/players";
 import { createVenue, updateVenue } from "@/server/actions/venues";
 import { createMatch, updateMatch } from "@/server/actions/matches";
+import { createSession } from "@/server/actions/sessions";
 import type { Match, Player, Sport, Team, Venue } from "@/db/schema";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost";
@@ -66,6 +68,26 @@ export function EditMatchButton({
           submitLabel="Save match"
           onSuccess={close}
         />
+      )}
+    </FormModal>
+  );
+}
+
+export function NewSessionButton({
+  venues,
+  teams,
+  label = "+ Book a slot",
+  variant = "primary",
+}: {
+  venues: Venue[];
+  teams: Team[];
+  label?: string;
+  variant?: Variant;
+}) {
+  return (
+    <FormModal title="Book a slot" triggerLabel={label} triggerVariant={variant} width={560}>
+      {(close) => (
+        <SessionForm action={createSession} venues={venues} teams={teams} onSuccess={close} />
       )}
     </FormModal>
   );

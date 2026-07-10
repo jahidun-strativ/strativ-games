@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
-import { NewMatchButton } from "@/components/entity-modals";
+import { NewMatchButton, NewSessionButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
 import { formatDate } from "@/lib/format";
 import type { MatchWithRefs } from "@/components/match-card";
@@ -35,7 +35,18 @@ async function MatchesActions() {
     db.query.venues.findMany(),
   ]);
   if (!admin || allVenues.length < 1) return null;
-  return <NewMatchButton sports={allSports} teams={allTeams} venues={allVenues} />;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <NewSessionButton venues={allVenues} teams={allTeams} />
+      <NewMatchButton
+        sports={allSports}
+        teams={allTeams}
+        venues={allVenues}
+        label="Single match"
+        variant="secondary"
+      />
+    </div>
+  );
 }
 
 async function MatchesContent({
