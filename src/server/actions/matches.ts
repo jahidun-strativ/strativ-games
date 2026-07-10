@@ -107,9 +107,19 @@ export async function updateMatch(id: string, formData: FormData) {
   await requireAdmin();
   const values = await parseMatchInput(formData);
   await assertVenueFree(values.venueId, values.kickoffAt, id);
+  // Only the "when/where" matters for a push — skip notifying on edits that
+  // just assign teams, retitle, etc. so people aren't pinged for noise.
+  const before = await db.query.matches.findFirst({
+    where: eq(matches.id, id),
+    columns: { venueId: true, kickoffAt: true },
+  });
+  const whenWhereChanged =
+    !before ||
+    before.venueId !== values.venueId ||
+    before.kickoffAt.getTime() !== values.kickoffAt.getTime();
   await db.update(matches).set(values).where(eq(matches.id, id));
   revalidateMatchPages(id);
-  await notifyMatchChange(id, "updated");
+  if (whenWhereChanged) await notifyMatchChange(id, "rescheduled");
 }
 
 export async function rescheduleMatch(id: string, formData: FormData) {
