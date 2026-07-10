@@ -96,6 +96,12 @@ export async function createMatch(formData: FormData) {
   }
 }
 
+// Notify subscribers of a change, gated by the same toggle as new matches.
+async function notifyMatchChange(id: string, variant: "updated" | "rescheduled" | "cancelled") {
+  const settings = await getNotificationSettings();
+  if (settings.notifyOnCreate) await notifyMatchToAll(id, variant).catch(() => {});
+}
+
 // Assign/change sport, teams, title, venue or kickoff after creation.
 export async function updateMatch(id: string, formData: FormData) {
   await requireAdmin();
@@ -103,6 +109,7 @@ export async function updateMatch(id: string, formData: FormData) {
   await assertVenueFree(values.venueId, values.kickoffAt, id);
   await db.update(matches).set(values).where(eq(matches.id, id));
   revalidateMatchPages(id);
+  await notifyMatchChange(id, "updated");
 }
 
 export async function rescheduleMatch(id: string, formData: FormData) {
@@ -116,12 +123,14 @@ export async function rescheduleMatch(id: string, formData: FormData) {
     .set({ venueId, kickoffAt, status: "scheduled" })
     .where(eq(matches.id, id));
   revalidateMatchPages(id);
+  await notifyMatchChange(id, "rescheduled");
 }
 
 export async function cancelMatch(id: string) {
   await requireAdmin();
   await db.update(matches).set({ status: "cancelled" }).where(eq(matches.id, id));
   revalidateMatchPages(id);
+  await notifyMatchChange(id, "cancelled");
 }
 
 export async function deleteMatch(id: string) {
