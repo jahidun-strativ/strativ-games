@@ -84,9 +84,12 @@ export default async function MatchDetailPage({
             {match.awayTeam?.name ?? "TBD"}
           </p>
         </div>
-        <p className="mt-4 inline-flex items-center gap-1 rounded-full bg-pitch-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-          📍{" "}
-          <Link href={`/venues/${match.venue.id}`} className="hover:underline">
+        <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-line bg-cream-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-700">
+          <span aria-hidden>📍</span>
+          <Link
+            href={`/venues/${match.venue.id}`}
+            className="!text-ink-700 hover:!text-burnt-400"
+          >
             {match.venue.name}
             {match.venue.city ? `, ${match.venue.city}` : ""}
           </Link>
