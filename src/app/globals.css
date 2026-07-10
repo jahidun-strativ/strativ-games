@@ -43,7 +43,7 @@
 
   --color-line: rgb(255 255 255 / 0.08);
 
-  --font-display: var(--font-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), "Oswald", system-ui, sans-serif;
   --font-sans: var(--font-archivo), "Archivo", system-ui, sans-serif;
   --font-score: var(--font-chivo), "Chivo Mono", monospace;
 
