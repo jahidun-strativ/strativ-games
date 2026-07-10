@@ -38,6 +38,13 @@ export const formatDate = (d: Date) => render(dateFmt, d);
 export const formatTime = (d: Date) => render(timeFmt, d);
 export const formatFull = (d: Date) => render(fullFmt, d);
 
+// Money — all amounts are Bangladeshi Taka (whole taka, no decimals).
+const bdtFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+export const formatBdt = (amount: number) => `৳${bdtFmt.format(amount)}`;
+
+/** Human label for who covered a booking. */
+export const paidByLabel = (paidBy: string) => (paidBy === "self" ? "We pay" : "Office");
+
 // Value for <input type="datetime-local"> in local time.
 export function toDatetimeLocal(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");

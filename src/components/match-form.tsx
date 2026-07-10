@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, DatePicker, Form, Input, Segmented, Select } from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, Segmented, Select } from "antd";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { utcToPickerValue } from "@/lib/timezone";
 import type { Match, Sport, Team, Venue } from "@/db/schema";
@@ -82,6 +82,8 @@ export function MatchForm({
         title: match?.title ?? undefined,
         venueId: match?.venueId ?? undefined,
         kickoffAt: match ? utcToPickerValue(match.kickoffAt) : undefined,
+        cost: match?.cost ?? undefined,
+        paidBy: match?.paidBy ?? "office",
         notes: match?.notes ?? undefined,
       }}
     >
@@ -114,6 +116,14 @@ export function MatchForm({
             value: v.id,
             label: `📍 ${v.name}${v.city ? ` — ${v.city}` : ""}`,
           }))}
+          // Pre-fill the booking cost from the venue's standard rate (unless a
+          // cost was already entered).
+          onChange={(venueId) => {
+            const v = venues.find((x) => x.id === venueId);
+            if (v?.defaultCost != null && !form.getFieldValue("cost")) {
+              form.setFieldValue("cost", v.defaultCost);
+            }
+          }}
         />
       </Form.Item>
       <Form.Item
@@ -131,6 +141,21 @@ export function MatchForm({
           classNames={{ popup: { root: "ssm-datetime-popup" } }}
         />
       </Form.Item>
+
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <Form.Item label="Booking cost (৳)" name="cost">
+          <InputNumber min={0} step={100} className="!w-full" placeholder="e.g. 3000" />
+        </Form.Item>
+        <Form.Item label="Paid by" name="paidBy">
+          <Segmented
+            block
+            options={[
+              { label: "Office", value: "office" },
+              { label: "We pay", value: "self" },
+            ]}
+          />
+        </Form.Item>
+      </div>
 
       <div className="my-4 border-t border-line pt-4">
         <Form.Item label="Sport" name="sportId">

@@ -30,6 +30,8 @@ async function parseMatchInput(formData: FormData) {
   const title = opt(formData, "title");
   const notes = opt(formData, "notes");
   const kind = opt(formData, "kind") === "competitive" ? "competitive" : "internal";
+  const cost = optInt(formData, "cost");
+  const paidBy = opt(formData, "paidBy") === "self" ? "self" : "office";
 
   if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
     throw new Error("Home and away team must differ.");
@@ -57,6 +59,8 @@ async function parseMatchInput(formData: FormData) {
     title,
     venueId,
     kickoffAt,
+    cost,
+    paidBy,
     notes,
   };
 }

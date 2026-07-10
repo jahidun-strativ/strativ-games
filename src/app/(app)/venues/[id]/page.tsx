@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
 import { deleteVenue } from "@/server/actions/venues";
@@ -9,6 +9,7 @@ import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EditVenueButton, NewMatchButton } from "@/components/entity-modals";
 import { isAdmin } from "@/server/auth";
+import { formatBdt } from "@/lib/format";
 
 export const metadata = { title: "Venue" };
 
@@ -40,6 +41,19 @@ export default async function VenueDetailPage({
   const admin = await isAdmin();
   const canSchedule = admin && allVenues.length >= 1;
 
+  // Spend at this venue: sum booking costs (excluding cancelled) by who paid.
+  const costRows = await db.query.matches.findMany({
+    where: and(eq(matches.venueId, id), ne(matches.status, "cancelled")),
+    columns: { cost: true, paidBy: true },
+  });
+  const officeSpend = costRows
+    .filter((m) => m.paidBy !== "self")
+    .reduce((sum, m) => sum + (m.cost ?? 0), 0);
+  const selfSpend = costRows
+    .filter((m) => m.paidBy === "self")
+    .reduce((sum, m) => sum + (m.cost ?? 0), 0);
+  const totalSpend = officeSpend + selfSpend;
+
   return (
     <div>
       <PageHeader
@@ -54,10 +68,39 @@ export default async function VenueDetailPage({
             Capacity: <span className="scoreboard font-bold">{venue.capacity}</span>
           </span>
         ) : null}
+        {venue.defaultCost != null ? (
+          <span className="tv-card-sm px-3 py-1.5">
+            Standard cost:{" "}
+            <span className="scoreboard font-bold">{formatBdt(venue.defaultCost)}</span>
+          </span>
+        ) : null}
         {venue.notes ? (
           <span className="tv-card-sm bg-gold-400/15 px-3 py-1.5 text-ink-700">📝 {venue.notes}</span>
         ) : null}
       </div>
+
+      {totalSpend > 0 ? (
+        <div className="tv-card-sm mb-6 grid grid-cols-3 gap-2 p-4 text-center">
+          <div>
+            <p className="scoreboard text-lg font-bold text-ink-900">{formatBdt(totalSpend)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Total spend
+            </p>
+          </div>
+          <div>
+            <p className="scoreboard text-lg font-bold text-pitch-500">{formatBdt(officeSpend)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Office paid
+            </p>
+          </div>
+          <div>
+            <p className="scoreboard text-lg font-bold text-burnt-400">{formatBdt(selfSpend)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              We paid
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <section>
         <h2 className="font-display mb-3 text-xl text-ink-900">

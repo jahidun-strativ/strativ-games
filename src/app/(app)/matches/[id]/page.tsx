@@ -15,7 +15,7 @@ import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
-import { formatFull } from "@/lib/format";
+import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Match" };
@@ -91,6 +91,15 @@ export default async function MatchDetailPage({
             {match.venue.city ? `, ${match.venue.city}` : ""}
           </Link>
         </p>
+        {match.cost != null ? (
+          <p className="mt-3 text-sm text-ink-500">
+            Booking cost{" "}
+            <span className="font-semibold text-ink-900">{formatBdt(match.cost)}</span>
+            {" · "}
+            paid by{" "}
+            <span className="font-semibold text-ink-900">{paidByLabel(match.paidBy)}</span>
+          </p>
+        ) : null}
         {match.notes ? <p className="mt-3 text-sm text-ink-500">{match.notes}</p> : null}
       </section>
 

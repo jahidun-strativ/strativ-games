@@ -68,6 +68,9 @@ export const venues = pgTable("venues", {
   city: text("city"),
   capacity: integer("capacity"),
   notes: text("notes"),
+  // Standard rental cost per booking (BDT, whole taka). Pre-fills a match's
+  // cost when this venue is picked; each booking can override it.
+  defaultCost: integer("default_cost"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -92,6 +95,9 @@ export const matches = pgTable("matches", {
   status: text("status").notNull().default("scheduled"),
   homeScore: integer("home_score"),
   awayScore: integer("away_score"),
+  // Booking cost (BDT, whole taka) and who covers it: "office" or "self".
+  cost: integer("cost"),
+  paidBy: text("paid_by").notNull().default("office"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

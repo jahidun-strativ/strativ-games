@@ -14,6 +14,7 @@ function venueValues(formData: FormData) {
     address: opt(formData, "address"),
     city: opt(formData, "city"),
     capacity: optInt(formData, "capacity"),
+    defaultCost: optInt(formData, "defaultCost"),
     notes: opt(formData, "notes"),
   };
 }

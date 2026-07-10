@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
 import type { Match, Team, Venue } from "@/db/schema";
 
 export type MatchWithRefs = Match & {
@@ -98,13 +98,22 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
         </div>
       )}
 
-      <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-2.5 text-xs font-medium text-ink-500">
-        <span aria-hidden>📍</span>
-        <span className="truncate">
-          {match.venue.name}
-          {match.venue.city ? `, ${match.venue.city}` : ""}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2.5 text-xs font-medium text-ink-500">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span aria-hidden>📍</span>
+          <span className="truncate">
+            {match.venue.name}
+            {match.venue.city ? `, ${match.venue.city}` : ""}
+          </span>
         </span>
-      </p>
+        {match.cost != null ? (
+          <span className="shrink-0 whitespace-nowrap">
+            {formatBdt(match.cost)}
+            <span className="text-ink-400"> · </span>
+            {paidByLabel(match.paidBy)}
+          </span>
+        ) : null}
+      </div>
     </Link>
   );
 }

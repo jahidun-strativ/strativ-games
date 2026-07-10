@@ -27,6 +27,7 @@ export function VenueForm({
         address: venue?.address ?? undefined,
         city: venue?.city ?? undefined,
         capacity: venue?.capacity ?? undefined,
+        defaultCost: venue?.defaultCost ?? undefined,
         notes: venue?.notes ?? undefined,
       }}
     >
@@ -41,9 +42,18 @@ export function VenueForm({
           <Input />
         </Form.Item>
       </div>
-      <Form.Item label="Capacity" name="capacity">
-        <InputNumber min={0} className="!w-40" />
-      </Form.Item>
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <Form.Item label="Capacity" name="capacity">
+          <InputNumber min={0} className="!w-full" />
+        </Form.Item>
+        <Form.Item
+          label="Standard cost per booking (৳)"
+          name="defaultCost"
+          tooltip="Auto-fills a match's cost when this venue is booked; you can change it per match."
+        >
+          <InputNumber min={0} step={100} className="!w-full" placeholder="e.g. 3000" />
+        </Form.Item>
+      </div>
       <Form.Item label="Booking notes" name="notes">
         <Input.TextArea rows={3} placeholder="Booking lead time, surface, facilities…" />
       </Form.Item>
