@@ -90,7 +90,7 @@ export async function GET(
     const roundRobin = teamRows.length >= 3;
     data = {
       variant: "full",
-      kindLabel: roundRobin ? "Round-robin line-ups" : "Match day line-ups",
+      kindLabel: roundRobin ? "Round-robin" : "Match day",
       teams: teamRows.map(toPosterTeam),
       venue,
       when,

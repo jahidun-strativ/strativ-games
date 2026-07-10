@@ -85,7 +85,7 @@ export async function GET(
   } else {
     data = {
       variant: "full",
-      kindLabel: "Match day line-ups",
+      kindLabel: "Match day",
       teams: [toPosterTeam(home), toPosterTeam(away)],
       venue,
       when,
