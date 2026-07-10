@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { deleteSession } from "@/server/actions/sessions";
+import { deleteSession, resendSessionNotification } from "@/server/actions/sessions";
+import { NotifyButton } from "@/components/notify-button";
 import { isAdmin } from "@/server/auth";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 
@@ -93,7 +94,11 @@ export default async function SessionDetailPage({
       </div>
 
       {admin ? (
-        <div className="mt-8 flex items-center gap-3 border-t border-line pt-4">
+        <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <NotifyButton
+            action={resendSessionNotification.bind(null, session.id)}
+            label="📣 Send notification"
+          />
           <ConfirmDelete
             action={deleteSession.bind(null, session.id)}
             label="Delete slot"

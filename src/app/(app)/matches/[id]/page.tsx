@@ -6,12 +6,14 @@ import {
   deleteMatch,
   recordResult,
   rescheduleMatch,
+  resendMatchNotification,
 } from "@/server/actions/matches";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Scoreboard } from "@/components/ui/scoreboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
+import { NotifyButton } from "@/components/notify-button";
 import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
@@ -163,6 +165,10 @@ export default async function MatchDetailPage({
 
           <div className="tv-card-sm flex flex-col justify-between gap-3 p-5">
             <h2 className="font-display text-lg text-ink-900">Admin</h2>
+            <NotifyButton
+              action={resendMatchNotification.bind(null, match.id)}
+              label="📣 Send notification"
+            />
             {match.status !== "cancelled" ? (
               <form action={cancelMatch.bind(null, match.id)}>
                 <Button type="submit" variant="secondary">

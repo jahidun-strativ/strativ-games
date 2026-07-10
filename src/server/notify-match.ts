@@ -5,13 +5,21 @@ import { matches, sessions } from "@/db/schema";
 import { sendPushToAll, sendPushToEndpoint, type PushPayload } from "@/lib/push";
 import { formatFull } from "@/lib/format";
 
-type Variant = "created" | "updated" | "rescheduled" | "cancelled" | "day" | "hour";
+type Variant =
+  | "created"
+  | "updated"
+  | "rescheduled"
+  | "cancelled"
+  | "announce"
+  | "day"
+  | "hour";
 
 const TITLES: Record<Variant, string> = {
   created: "⚽ New match scheduled",
   updated: "✏️ Match updated",
   rescheduled: "📅 Match rescheduled",
   cancelled: "❌ Match cancelled",
+  announce: "📢 Match reminder",
   day: "📅 Match tomorrow",
   hour: "⏰ Match starting soon",
 };
