@@ -52,3 +52,11 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
 }
+
+// Release a player from a team (back to free agent).
+export async function removePlayerFromTeam(playerId: string, teamId: string) {
+  await requireAdmin();
+  await db.update(players).set({ teamId: null }).where(eq(players.id, playerId));
+  revalidatePath("/players");
+  revalidatePath(`/teams/${teamId}`);
+}
