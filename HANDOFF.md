@@ -123,8 +123,8 @@ errors linger, so trust a clean restart over the buffer.
   lists — internal games & round-robins; session route de-dups teams across fixtures),
   **`vs`** (bold "A vs B" hero) and **`squad`** (one Strativ team sheet). Competitive games
   default to offering `vs` + `squad`; internal → `full`. **Player lists show names only —
-  no status/substitute labels** (deliberate, so nobody feels benched). Buttons visible to
-  all signed-in users, not just admins.
+  no status/substitute labels** (deliberate, so nobody feels benched). **Admin-only** —
+  buttons gated behind `admin`, and the poster routes return 401 for non-admins.
 - **Opponents need no roster:** competitive "Book a slot" now takes a free-text
   **"…or new opponent by name"** field (`session-form.tsx`) alongside the opponent Select;
   `createSession` (competitive branch) creates a name-only `external` team on the fly when

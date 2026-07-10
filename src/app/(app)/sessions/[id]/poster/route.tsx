@@ -1,6 +1,5 @@
 import { db } from "@/db";
-import { getSession } from "@/server/auth";
-import { isAllowedEmail } from "@/lib/auth/allowed";
+import { isAdmin } from "@/server/auth";
 import { renderPoster } from "@/server/poster/respond";
 import type { PosterData, PosterTeam } from "@/server/poster/poster";
 import { formatFull } from "@/lib/format";
@@ -15,8 +14,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
-  if (!session?.user || !isAllowedEmail(session.user.email)) {
+  // Admin-only (route handlers don't inherit the (app) layout auth).
+  if (!(await isAdmin())) {
     return new Response("Unauthorized", { status: 401 });
   }
 

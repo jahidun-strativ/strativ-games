@@ -131,7 +131,7 @@ export default async function MatchDetailPage({
         ) : null}
       </section>
 
-      {hasTeams ? (
+      {admin && hasTeams ? (
         <section className="mt-6 flex flex-wrap items-center gap-3">
           <PosterButton basePath={`/matches/${match.id}/poster`} variants={posterVariants} />
           <span className="text-xs text-ink-500">

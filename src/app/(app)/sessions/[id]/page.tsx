@@ -101,7 +101,7 @@ export default async function SessionDetailPage({
         ))}
       </div>
 
-      {hasTeams ? (
+      {admin && hasTeams ? (
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <PosterButton basePath={`/sessions/${session.id}/poster`} variants={posterVariants} />
           <span className="text-xs text-ink-500">
