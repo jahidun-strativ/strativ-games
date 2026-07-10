@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { matches, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
+import { getNotificationSettings } from "@/server/queries/notification-settings";
+import { notifySessionCreated } from "@/server/notify-match";
 
 function revalidateSessionPages(id?: string) {
   revalidatePath("/matches");
@@ -128,6 +130,10 @@ export async function createSession(formData: FormData) {
       status: "scheduled",
     })),
   );
+
+  // Notify subscribers (gated by the same toggle as matches) before redirecting.
+  const settings = await getNotificationSettings();
+  if (settings.notifyOnCreate) await notifySessionCreated(session.id).catch(() => {});
 
   revalidateSessionPages(session.id);
   redirect(`/sessions/${session.id}`);
