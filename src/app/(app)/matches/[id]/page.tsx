@@ -158,6 +158,11 @@ export default async function MatchDetailPage({
       {admin && hasTeams ? (
         <section className="mt-6 flex flex-wrap items-center gap-3">
           <PosterButton basePath={`/matches/${match.id}/poster`} variants={posterVariants} />
+          {match.status === "completed" ? (
+            <ButtonLink variant="secondary" href={`/result/${match.id}`}>
+              🔗 Public result page
+            </ButtonLink>
+          ) : null}
           <span className="text-xs text-ink-500">
             Shareable match-day picture with the team{match.kind === "competitive" ? "" : "s"} and player list.
           </span>

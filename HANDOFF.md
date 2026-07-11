@@ -162,8 +162,19 @@ errors linger, so trust a clean restart over the buffer.
   lists — internal games & round-robins; session route de-dups teams across fixtures),
   **`vs`** (bold "A vs B" hero) and **`squad`** (one Strativ team sheet). Competitive games
   default to offering `vs` + `squad`; internal → `full`. **Player lists show names only —
-  no status/substitute labels** (deliberate, so nobody feels benched). **Admin-only** —
-  buttons gated behind `admin`, and the poster routes return 401 for non-admins.
+  no status/substitute labels** (deliberate, so nobody feels benched). The **"Generate
+  picture" button is admin-only** (UI), but the resulting **poster image URLs are PUBLIC
+  share links** — no auth, so they open for people outside the app. `proxy.ts` bypasses
+  any path ending in `/poster`, and the route handlers no longer check `isAdmin`. Links are
+  unlisted (unguessable match/session UUID), not access-controlled.
+- **Public result page + full-time push:** `/result/[id]` (`src/app/result/[id]/page.tsx`) is a
+  **public** page (outside `(app)`, bypassed in `proxy.ts` alongside `/poster`) showing the
+  score + goals/assists grouped by side (via `getEffectiveSquad`). When `recordResult` completes
+  a match **for the first time** (prev status ≠ completed), it fires `notifyMatchResult` →
+  `sendPushToAll` ("🏁 Full-time — A 2–1 B") linking to `/result/[id]`, so tapping the push
+  opens the result **without signing in** (SW opens `data.url`). Editing an already-completed
+  result does not re-notify. Admins get a "🔗 Public result page" link on the match page once
+  completed. Best-effort: push failure never fails the result save.
 - **Opponents need no roster:** competitive "Book a slot" now takes a free-text
   **"…or new opponent by name"** field (`session-form.tsx`) alongside the opponent Select;
   `createSession` (competitive branch) creates a name-only `external` team on the fly when

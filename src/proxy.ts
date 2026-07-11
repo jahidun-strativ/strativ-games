@@ -8,6 +8,11 @@ const authMiddleware = auth.middleware({ loginUrl: "/auth/sign-in" });
 export default function proxy(request: NextRequest) {
   // Let Server Actions pass through — they do their own auth check.
   if (request.headers.has("Next-Action")) return;
+  // Public share links — no sign-in required so they open for people outside
+  // the app: match/session poster images, and the match result page (deep-linked
+  // from the full-time push). The UI that produces these stays gated.
+  const path = request.nextUrl.pathname;
+  if (path.endsWith("/poster") || path.startsWith("/result/")) return;
   return authMiddleware(request);
 }
 

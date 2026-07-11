@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { isAdmin } from "@/server/auth";
 import { renderPoster } from "@/server/poster/respond";
 import type { PosterData, PosterTeam } from "@/server/poster/poster";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
@@ -15,11 +14,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // Admin-only (route handlers don't inherit the (app) layout auth).
-  if (!(await isAdmin())) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+  // Public share link — intentionally unauthenticated (see proxy.ts). The match
+  // id is an unguessable UUID, so the poster is unlisted rather than crawlable.
   const { id } = await params;
   const match = await db.query.matches.findFirst({
     where: (m, { eq }) => eq(m.id, id),

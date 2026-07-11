@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { isAdmin } from "@/server/auth";
 import { renderPoster } from "@/server/poster/respond";
 import type { PosterData, PosterTeam } from "@/server/poster/poster";
 import { formatFull } from "@/lib/format";
@@ -14,11 +13,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // Admin-only (route handlers don't inherit the (app) layout auth).
-  if (!(await isAdmin())) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+  // Public share link — intentionally unauthenticated (see proxy.ts). The
+  // session id is an unguessable UUID, so the poster is unlisted.
   const { id } = await params;
   const slot = await db.query.sessions.findFirst({
     where: (s, { eq }) => eq(s.id, id),

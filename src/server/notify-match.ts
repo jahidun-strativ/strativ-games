@@ -50,6 +50,22 @@ export async function notifyMatchToAll(matchId: string, variant: Variant) {
   if (payload) await sendPushToAll(payload);
 }
 
+// Full-time: tell everyone the final score and deep-link to the PUBLIC result
+// page (openable without signing in).
+export async function notifyMatchResult(matchId: string) {
+  const m = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    with: { homeTeam: true, awayTeam: true },
+  });
+  if (!m || !m.homeTeam || !m.awayTeam) return;
+  const score = `${m.homeScore ?? 0}–${m.awayScore ?? 0}`;
+  await sendPushToAll({
+    title: "🏁 Full-time",
+    body: `${m.homeTeam.name} ${score} ${m.awayTeam.name} · tap for the result`,
+    url: `/result/${m.id}`,
+  });
+}
+
 // One push for a booked slot (single game or round-robin), linking to the
 // session page rather than pinging once per fixture.
 export async function notifySessionCreated(sessionId: string) {

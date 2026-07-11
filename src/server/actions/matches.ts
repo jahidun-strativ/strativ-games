@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { matches, playerMatchStats, pushSubscriptions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
-import { notifyMatchToAll } from "@/server/notify-match";
+import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
 import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 
@@ -166,6 +166,14 @@ export async function recordResult(id: string, formData: FormData) {
   const homeScore = optInt(formData, "homeScore") ?? 0;
   const awayScore = optInt(formData, "awayScore") ?? 0;
 
+  // Notify everyone only on the first time a match is completed — editing an
+  // already-final result later shouldn't re-ping.
+  const prev = await db.query.matches.findFirst({
+    where: eq(matches.id, id),
+    columns: { status: true },
+  });
+  const firstCompletion = prev?.status !== "completed";
+
   await db
     .update(matches)
     .set({ homeScore, awayScore, status: "completed" })
@@ -208,4 +216,14 @@ export async function recordResult(id: string, formData: FormData) {
 
   revalidateMatchPages(id);
   revalidatePath("/players");
+  revalidatePath(`/result/${id}`);
+
+  // Full-time push to everyone, linking to the public result page. Best-effort.
+  if (firstCompletion) {
+    try {
+      await notifyMatchResult(id);
+    } catch {
+      // ignore — result is already saved
+    }
+  }
 }
