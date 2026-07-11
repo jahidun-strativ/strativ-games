@@ -218,6 +218,11 @@ errors linger, so trust a clean restart over the buffer.
   **"➕ Add players who are in"** (`fill-squad-button.tsx` → `fillSquadFromAvailability` in
   `squads.ts`) bulk-adds every "in" player on the team to the per-match squad. The match-created
   push already deep-links to `/matches/[id]`, so tapping it lands on the RSVP control.
+  **Opt-out model:** `seedDefaultAvailability` (`server/seed-availability.ts`) defaults every
+  player on a match's teams to **"in"** — seeded on slot booking (`createSession`), match
+  create/team assignment (`createMatch`/`updateMatch`), joining a team (`assignPlayerToTeam`,
+  upcoming scheduled matches only), and being added to a match squad. Always
+  `onConflictDoNothing`, so an explicit response is never overwritten; players tap Out/Maybe.
 - **Public result page + full-time push:** `/result/[id]` (`src/app/result/[id]/page.tsx`) is a
   **public** page (outside `(app)`, bypassed in `proxy.ts` alongside `/poster`) showing the
   score + goals/assists grouped by side (via `getEffectiveSquad`). When `recordResult` completes
@@ -270,6 +275,8 @@ errors linger, so trust a clean restart over the buffer.
   `Authorization: Bearer <CRON_SECRET>`.
 
 ## Recent changes (newest first)
+- Opt-out RSVP: players default to "in" when their team is scheduled (seed-availability.ts).
+- Player emails shown in the players list (under the name / mobile card line).
 - Costs dashboard `/costs` (totals, to-settle, who-owes) + nav entry.
 - Cost split / settle-up on session pages (`session_payments`, migration 005).
 - Match availability / RSVP (in/maybe/out) + captain "add players who are in" (migration 004).
