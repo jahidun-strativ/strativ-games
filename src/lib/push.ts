@@ -49,6 +49,41 @@ export async function sendPushToAll(payload: PushPayload) {
   }
 }
 
+// Sends to every device a single user has registered (by userId). Prunes any
+// expired subscriptions it hits. Used e.g. to notify someone they've been made
+// an admin. No-op if the user has no subscriptions.
+export async function sendPushToUser(userId: string, payload: PushPayload) {
+  if (!pushConfigured) return;
+  configure();
+
+  const subs = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, userId));
+  if (subs.length === 0) return;
+
+  const data = JSON.stringify(payload);
+  const stale: string[] = [];
+
+  await Promise.all(
+    subs.map(async (s) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          data,
+        );
+      } catch (err) {
+        const code = (err as { statusCode?: number }).statusCode;
+        if (code === 404 || code === 410) stale.push(s.endpoint);
+      }
+    }),
+  );
+
+  if (stale.length > 0) {
+    await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, stale));
+  }
+}
+
 // Sends to the subscriptions of a single device/endpoint (e.g. a catch-up push
 // when a user first enables notifications).
 export async function sendPushToEndpoint(endpoint: string, payload: PushPayload) {
