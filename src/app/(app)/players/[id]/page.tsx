@@ -111,11 +111,21 @@ export default async function PlayerDetailPage({
 
       {admin ? (
         <div className="mt-8 border-t border-line pt-4">
-          <ConfirmDelete
-            action={deletePlayer.bind(null, player.id)}
-            label="Delete player"
-            confirmMessage={`Delete ${player.name} and all their match stats?`}
-          />
+          {player.teamId ? (
+            <p className="text-sm text-ink-500">
+              {player.name} is on{" "}
+              <Link href={`/teams/${player.teamId}`} className="font-semibold text-burnt-400 hover:underline">
+                {player.team?.name ?? "a team"}
+              </Link>
+              . Remove them from the team before deleting.
+            </p>
+          ) : (
+            <ConfirmDelete
+              action={deletePlayer.bind(null, player.id)}
+              label="Delete player"
+              confirmMessage={`Delete ${player.name} and all their match stats?`}
+            />
+          )}
         </div>
       ) : null}
     </div>

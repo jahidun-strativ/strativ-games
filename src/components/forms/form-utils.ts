@@ -29,7 +29,7 @@ export function toFormData(values: Record<string, unknown>): FormData {
   return fd;
 }
 
-function isNextControlFlow(err: unknown) {
+export function isNextControlFlow(err: unknown) {
   return (
     typeof err === "object" &&
     err !== null &&

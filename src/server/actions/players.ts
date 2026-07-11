@@ -34,6 +34,20 @@ export async function updatePlayer(id: string, formData: FormData) {
 
 export async function deletePlayer(id: string) {
   await requireAdmin();
+  // A player on a team can't be deleted — release them from the team first.
+  // This keeps rosters intact and avoids accidentally removing an active squad
+  // member (and, for login-linked players, deleting a record that would just be
+  // recreated on their next visit).
+  const player = await db.query.players.findFirst({
+    where: eq(players.id, id),
+    with: { team: { columns: { name: true } } },
+  });
+  if (!player) throw new Error("Player not found.");
+  if (player.teamId) {
+    throw new Error(
+      `${player.name} is on ${player.team?.name ?? "a team"}. Remove them from the team before deleting.`,
+    );
+  }
   await db.delete(players).where(eq(players.id, id));
   revalidatePath("/players");
   redirect("/players");
