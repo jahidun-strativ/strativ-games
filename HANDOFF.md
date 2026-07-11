@@ -167,6 +167,14 @@ errors linger, so trust a clean restart over the buffer.
   share links** — no auth, so they open for people outside the app. `proxy.ts` bypasses
   any path ending in `/poster`, and the route handlers no longer check `isAdmin`. Links are
   unlisted (unguessable match/session UUID), not access-controlled.
+- **Match availability / RSVP:** `match_availability` (matchId, playerId, status `in|maybe|out`;
+  migration `004`). Any signed-in user with a player sets their own RSVP via `setMyAvailability`
+  (`server/actions/availability.ts`) — an optimistic pill toggle (`availability-control.tsx`) on
+  the match page. The match page shows a per-team **In/Maybe/Out + No-reply** summary and a
+  "Guests available" list (free agents who said in). Captain shortcut on the match-lineup page:
+  **"➕ Add players who are in"** (`fill-squad-button.tsx` → `fillSquadFromAvailability` in
+  `squads.ts`) bulk-adds every "in" player on the team to the per-match squad. The match-created
+  push already deep-links to `/matches/[id]`, so tapping it lands on the RSVP control.
 - **Public result page + full-time push:** `/result/[id]` (`src/app/result/[id]/page.tsx`) is a
   **public** page (outside `(app)`, bypassed in `proxy.ts` alongside `/poster`) showing the
   score + goals/assists grouped by side (via `getEffectiveSquad`). When `recordResult` completes

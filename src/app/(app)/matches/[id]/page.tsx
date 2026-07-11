@@ -15,14 +15,34 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { NotifyButton } from "@/components/notify-button";
 import { PosterButton, type PosterVariant } from "@/components/poster-button";
+import { AvailabilityControl } from "@/components/availability-control";
 import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
-import { isAdmin, isCaptainOf } from "@/server/auth";
+import { isAdmin, isCaptainOf, getCurrentPlayer } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
+import type { AvailabilityStatus } from "@/db/schema";
 
 export const metadata = { title: "Match" };
+
+// Group a team's roster by each player's RSVP for this match.
+function groupAvailability(
+  players: { id: string; name: string }[],
+  statusByPlayer: Map<string, string>,
+) {
+  const g: Record<"in" | "maybe" | "out" | "none", string[]> = {
+    in: [],
+    maybe: [],
+    out: [],
+    none: [],
+  };
+  for (const p of players) {
+    const s = (statusByPlayer.get(p.id) ?? "none") as keyof typeof g;
+    g[s].push(p.name);
+  }
+  return g;
+}
 
 export default async function MatchDetailPage({
   params,
@@ -60,6 +80,26 @@ export default async function MatchDetailPage({
       ),
     )
   ).filter((t): t is { id: string; name: string } => t !== null);
+
+  // RSVPs for this match + the viewer's own player (to prefill their control).
+  const [availabilityRows, myPlayer] = await Promise.all([
+    db.query.matchAvailability.findMany({
+      where: (a, { eq }) => eq(a.matchId, id),
+      with: { player: { columns: { id: true, name: true, teamId: true } } },
+    }),
+    getCurrentPlayer(),
+  ]);
+  const statusByPlayer = new Map(availabilityRows.map((r) => [r.playerId, r.status]));
+  const myStatus = (myPlayer ? statusByPlayer.get(myPlayer.id) ?? null : null) as
+    | AvailabilityStatus
+    | null;
+  const internalTeams = [match.homeTeam, match.awayTeam].filter(
+    (t): t is NonNullable<typeof match.homeTeam> => Boolean(t) && t!.kind !== "external",
+  );
+  const teamIds = new Set(internalTeams.map((t) => t.id));
+  const guestsIn = availabilityRows
+    .filter((r) => r.status === "in" && (!r.player?.teamId || !teamIds.has(r.player.teamId)))
+    .map((r) => r.player?.name ?? "Unknown");
 
   // Stats are recorded against each side's per-match squad (so a guest who
   // played can be scored), falling back to the roster when not customised.
@@ -154,6 +194,55 @@ export default async function MatchDetailPage({
           <p className="mx-auto mt-4 max-w-prose text-sm text-ink-500">{match.notes}</p>
         ) : null}
       </section>
+
+      {hasTeams && match.status !== "cancelled" ? (
+        <section className="mt-8">
+          <h2 className="font-display mb-3 text-xl text-ink-900">Availability</h2>
+
+          {myPlayer ? (
+            <div className="tv-card-sm mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-ink-700">Are you playing?</p>
+              <AvailabilityControl matchId={match.id} initial={myStatus} />
+            </div>
+          ) : null}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {internalTeams.map((team) => {
+              const g = groupAvailability(team.players, statusByPlayer);
+              const line = (label: string, names: string[], cls: string) =>
+                names.length > 0 ? (
+                  <p className="text-sm">
+                    <span className={`font-semibold ${cls}`}>{label} ({names.length}):</span>{" "}
+                    <span className="text-ink-500">{names.join(", ")}</span>
+                  </p>
+                ) : null;
+              return (
+                <div key={team.id} className="tv-card-sm space-y-1.5 p-4">
+                  <p className="mb-1 font-display text-base text-ink-900">
+                    {team.name}
+                    <span className="ml-2 text-xs font-semibold text-pitch-500">
+                      {g.in.length} in
+                    </span>
+                  </p>
+                  {line("In", g.in, "text-pitch-500")}
+                  {line("Maybe", g.maybe, "text-gold-400")}
+                  {line("Out", g.out, "text-tvred-500")}
+                  {g.none.length > 0 ? (
+                    <p className="text-xs text-ink-400">No reply: {g.none.length}</p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {guestsIn.length > 0 ? (
+            <p className="mt-3 text-sm">
+              <span className="font-semibold text-sky-300">Guests available:</span>{" "}
+              <span className="text-ink-500">{guestsIn.join(", ")}</span>
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {admin && hasTeams ? (
         <section className="mt-6 flex flex-wrap items-center gap-3">

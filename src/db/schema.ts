@@ -237,6 +237,25 @@ export const matchSquadPlayers = pgTable(
   (t) => [unique().on(t.matchId, t.teamId, t.playerId)],
 );
 
+// A player's RSVP for a match: are they available to play? One row per
+// (match, player); set by the player themselves. Captains use the "in" list to
+// build the match squad.
+export const matchAvailability = pgTable(
+  "match_availability",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("in"), // in | maybe | out
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.matchId, t.playerId)],
+);
+
 // Singleton row holding which match notifications are enabled (admin-configured).
 export const notificationSettings = pgTable("notification_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -344,6 +363,11 @@ export const matchLineupsRelations = relations(matchLineups, ({ one, many }) => 
   slots: many(matchLineupSlots),
 }));
 
+export const matchAvailabilityRelations = relations(matchAvailability, ({ one }) => ({
+  match: one(matches, { fields: [matchAvailability.matchId], references: [matches.id] }),
+  player: one(players, { fields: [matchAvailability.playerId], references: [players.id] }),
+}));
+
 export const matchLineupSlotsRelations = relations(matchLineupSlots, ({ one }) => ({
   lineup: one(matchLineups, {
     fields: [matchLineupSlots.matchLineupId],
@@ -365,6 +389,10 @@ export type LineupSlot = typeof lineupSlots.$inferSelect;
 export type MatchLineup = typeof matchLineups.$inferSelect;
 export type MatchLineupSlot = typeof matchLineupSlots.$inferSelect;
 export type MatchSquadPlayer = typeof matchSquadPlayers.$inferSelect;
+export type MatchAvailability = typeof matchAvailability.$inferSelect;
+
+export const AVAILABILITY_STATUSES = ["in", "maybe", "out"] as const;
+export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type AppUser = typeof appUsers.$inferSelect;
 export type NotificationSettings = typeof notificationSettings.$inferSelect;

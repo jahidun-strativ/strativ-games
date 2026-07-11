@@ -3,7 +3,14 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { matchLineupSlots, matchLineups, matchSquadPlayers, matches, players } from "@/db/schema";
+import {
+  matchAvailability,
+  matchLineupSlots,
+  matchLineups,
+  matchSquadPlayers,
+  matches,
+  players,
+} from "@/db/schema";
 import { requireCaptainOf } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 
@@ -85,6 +92,37 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
 
   revalidatePath(`/matches/${matchId}`);
   revalidatePath(`/matches/${matchId}/lineup/${teamId}`);
+}
+
+// Add every player on this team who RSVP'd "in" to the match squad in one go.
+// Captain-only. Returns how many were added. Handy after RSVPs come in.
+export async function fillSquadFromAvailability(matchId: string, teamId: string) {
+  await requireCaptainOf(teamId);
+  await matchSide(matchId, teamId);
+
+  const rows = await db
+    .select({ playerId: matchAvailability.playerId })
+    .from(matchAvailability)
+    .innerJoin(players, eq(matchAvailability.playerId, players.id))
+    .where(
+      and(
+        eq(matchAvailability.matchId, matchId),
+        eq(matchAvailability.status, "in"),
+        eq(players.teamId, teamId),
+      ),
+    );
+
+  if (rows.length > 0) {
+    await materialize(matchId, teamId);
+    await db
+      .insert(matchSquadPlayers)
+      .values(rows.map((r) => ({ matchId, teamId, playerId: r.playerId })))
+      .onConflictDoNothing();
+  }
+
+  revalidatePath(`/matches/${matchId}`);
+  revalidatePath(`/matches/${matchId}/lineup/${teamId}`);
+  return rows.length;
 }
 
 // Drop a player from this match's squad only (roster untouched). Also clears

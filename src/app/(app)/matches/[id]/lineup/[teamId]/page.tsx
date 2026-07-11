@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { matchLineups, players as playersTable } from "@/db/schema";
 import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { MatchSquadManager } from "@/components/match-squad-manager";
+import { FillSquadButton } from "@/components/fill-squad-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
@@ -92,18 +93,21 @@ export default async function MatchLineupPage({
         actions={
           <div className="flex flex-wrap gap-2">
             {canEdit ? (
-              <MatchSquadManager
-                matchId={match.id}
-                teamId={teamId}
-                teamName={team.name}
-                initialSquadIds={squad.map((p) => p.id)}
-                candidates={sportPlayers.map((p) => ({
-                  id: p.id,
-                  name: p.name,
-                  position: p.position,
-                  teamName: p.team?.name ?? null,
-                }))}
-              />
+              <>
+                <FillSquadButton matchId={match.id} teamId={teamId} />
+                <MatchSquadManager
+                  matchId={match.id}
+                  teamId={teamId}
+                  teamName={team.name}
+                  initialSquadIds={squad.map((p) => p.id)}
+                  candidates={sportPlayers.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    position: p.position,
+                    teamName: p.team?.name ?? null,
+                  }))}
+                />
+              </>
             ) : null}
             <ButtonLink variant="secondary" href={`/matches/${match.id}`}>
               ← Back to match
