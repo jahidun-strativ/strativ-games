@@ -8,6 +8,7 @@ import { matches, playerMatchStats, pushSubscriptions, teams } from "@/db/schema
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
+import { seedDefaultAvailability } from "@/server/seed-availability";
 import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 
@@ -99,6 +100,7 @@ export async function createMatch(formData: FormData) {
   const values = await parseMatchInput(formData);
   await assertVenueFree(values.venueId, values.kickoffAt);
   const [match] = await db.insert(matches).values(values).returning();
+  await seedDefaultAvailability(match.id, [values.homeTeamId, values.awayTeamId]);
   revalidateMatchPages();
   // Notify all subscribers (admins included) if on-create notifications are on.
   const settings = await getNotificationSettings();
@@ -129,6 +131,9 @@ export async function updateMatch(id: string, formData: FormData) {
     before.venueId !== values.venueId ||
     before.kickoffAt.getTime() !== values.kickoffAt.getTime();
   await db.update(matches).set(values).where(eq(matches.id, id));
+  // Opt-out RSVP: (newly) assigned teams' players default to "in". Existing
+  // explicit responses are never overwritten (insert is do-nothing on conflict).
+  await seedDefaultAvailability(id, [values.homeTeamId, values.awayTeamId]);
   revalidateMatchPages(id);
   if (whenWhereChanged) await notifyMatchChange(id, "rescheduled");
 }

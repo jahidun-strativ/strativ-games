@@ -10,6 +10,7 @@ import { opt, optInt, str } from "@/server/form";
 import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 import { notifySessionCreated } from "@/server/notify-match";
+import { seedDefaultAvailability } from "@/server/seed-availability";
 import type { NotifyResult } from "@/server/actions/matches";
 
 // Manually (re)send a slot's notification to everyone — ignores the toggle.
@@ -144,21 +145,29 @@ export async function createSession(formData: FormData) {
     .values({ sportId, venueId, kind, title, notes, cost, paidBy, startAt, status: "scheduled" })
     .returning();
 
-  await db.insert(matches).values(
-    planned.map((f) => ({
-      sessionId: session.id,
-      orderIndex: f.orderIndex,
-      durationMin: f.durationMin,
-      breakMin: f.breakMin,
-      sportId,
-      homeTeamId: f.homeTeamId,
-      awayTeamId: f.awayTeamId,
-      kind,
-      venueId,
-      kickoffAt: new Date(startAt.getTime() + f.offsetMin * 60_000),
-      status: "scheduled",
-    })),
-  );
+  const fixtures = await db
+    .insert(matches)
+    .values(
+      planned.map((f) => ({
+        sessionId: session.id,
+        orderIndex: f.orderIndex,
+        durationMin: f.durationMin,
+        breakMin: f.breakMin,
+        sportId,
+        homeTeamId: f.homeTeamId,
+        awayTeamId: f.awayTeamId,
+        kind,
+        venueId,
+        kickoffAt: new Date(startAt.getTime() + f.offsetMin * 60_000),
+        status: "scheduled",
+      })),
+    )
+    .returning({ id: matches.id, homeTeamId: matches.homeTeamId, awayTeamId: matches.awayTeamId });
+
+  // Opt-out RSVP: everyone on the scheduled teams starts as "in".
+  for (const f of fixtures) {
+    await seedDefaultAvailability(f.id, [f.homeTeamId, f.awayTeamId]);
+  }
 
   // Notify subscribers (gated by the same toggle as matches) before redirecting.
   const settings = await getNotificationSettings();

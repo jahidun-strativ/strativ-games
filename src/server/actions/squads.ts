@@ -89,6 +89,12 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
     .insert(matchSquadPlayers)
     .values({ matchId, teamId, playerId })
     .onConflictDoNothing();
+  // Being picked for the squad implies availability — default them to "in"
+  // (kept if they already responded; they can still tap Out).
+  await db
+    .insert(matchAvailability)
+    .values({ matchId, playerId, status: "in" })
+    .onConflictDoNothing();
 
   revalidatePath(`/matches/${matchId}`);
   revalidatePath(`/matches/${matchId}/lineup/${teamId}`);

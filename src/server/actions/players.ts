@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { players, teams } from "@/db/schema";
+import { matchAvailability, players, teams } from "@/db/schema";
 import { requireAdmin, requireTeamManager } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
@@ -64,6 +64,23 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
     throw new Error("That player is already on another team.");
   }
   await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+  // Opt-out RSVP: joining a team defaults the player to "in" for that team's
+  // upcoming scheduled matches (existing responses untouched).
+  const upcoming = await db.query.matches.findMany({
+    where: (m, { and: a, or, eq: e, gte }) =>
+      a(
+        e(m.status, "scheduled"),
+        gte(m.kickoffAt, new Date()),
+        or(e(m.homeTeamId, teamId), e(m.awayTeamId, teamId)),
+      ),
+    columns: { id: true },
+  });
+  if (upcoming.length > 0) {
+    await db
+      .insert(matchAvailability)
+      .values(upcoming.map((m) => ({ matchId: m.id, playerId, status: "in" })))
+      .onConflictDoNothing();
+  }
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
 }
