@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { isAdmin } from "@/server/auth";
 import { renderPoster } from "@/server/poster/respond";
 import type { PosterData, PosterTeam } from "@/server/poster/poster";
+import { getEffectiveSquad } from "@/server/queries/match-squad";
 import { formatFull } from "@/lib/format";
 
 export const runtime = "nodejs";
@@ -23,8 +24,8 @@ export async function GET(
   const match = await db.query.matches.findFirst({
     where: (m, { eq }) => eq(m.id, id),
     with: {
-      homeTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.name) } } },
-      awayTeam: { with: { players: { orderBy: (p, { asc }) => asc(p.name) } } },
+      homeTeam: { columns: { id: true, name: true, kind: true } },
+      awayTeam: { columns: { id: true, name: true, kind: true } },
       venue: true,
       sport: true,
     },
@@ -37,9 +38,16 @@ export async function GET(
     return new Response("Assign both teams before generating a picture.", { status: 400 });
   }
 
+  // Player lists come from each side's per-match squad (falls back to the team
+  // roster when the match hasn't customised it). External opponents have none.
+  const squadNames = async (t: NonNullable<typeof home>) =>
+    t.kind === "external" ? [] : (await getEffectiveSquad(id, t.id)).players.map((p) => p.name);
+  const [homeNames, awayNames] = await Promise.all([squadNames(home), squadNames(away)]);
+  const namesFor = (t: NonNullable<typeof home>) => (t.id === home.id ? homeNames : awayNames);
+
   const toPosterTeam = (t: NonNullable<typeof home>): PosterTeam => ({
     name: t.name,
-    players: t.players.map((p) => p.name),
+    players: namesFor(t),
   });
 
   const competitive = match.kind === "competitive";

@@ -10,7 +10,8 @@ import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
 import { EditTeamButton } from "@/components/entity-modals";
 import { AddPlayerButton } from "@/components/add-player-to-team";
-import { isAdmin } from "@/server/auth";
+import { CaptainPicker } from "@/components/captain-picker";
+import { isAdmin, canManageTeam } from "@/server/auth";
 
 export const metadata = { title: "Team" };
 
@@ -25,6 +26,7 @@ export default async function TeamDetailPage({
         sport: true,
         players: { orderBy: (p, { asc }) => asc(p.name) },
         staff: true,
+        captain: { columns: { id: true, name: true } },
       },
     }),
     db.query.sports.findMany(),
@@ -37,6 +39,7 @@ export default async function TeamDetailPage({
   if (!team) notFound();
   const external = team.kind === "external";
   const admin = await isAdmin();
+  const canManage = external ? false : await canManageTeam(id);
 
   const teamMatches = await db.query.matches.findMany({
     where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
@@ -77,11 +80,12 @@ export default async function TeamDetailPage({
                 <h2 className="font-display text-xl text-ink-900">
                   Roster <span className="text-sm text-ink-500">({team.players.length})</span>
                 </h2>
-                {admin ? (
+                {canManage ? (
                   <AddPlayerButton
                     teamId={team.id}
                     teamName={team.name}
                     teamSportId={team.sportId}
+                    canCreate={admin}
                     sports={allSports}
                     teams={allTeams}
                     players={allPlayers.map((p) => ({
@@ -95,7 +99,27 @@ export default async function TeamDetailPage({
                   />
                 ) : null}
               </div>
+
+              {/* Captain — shown to everyone; only admins can (re)assign. */}
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                  Captain
+                </span>
+                {admin ? (
+                  <CaptainPicker
+                    teamId={team.id}
+                    captainId={team.captainId}
+                    players={team.players.map((p) => ({ id: p.id, name: p.name }))}
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-ink-900">
+                    {team.captain ? `🧢 ${team.captain.name}` : "Not assigned"}
+                  </span>
+                )}
+              </div>
+
               <RosterTable
+                captainId={team.captainId}
                 players={team.players.map((p) => ({
                   id: p.id,
                   name: p.name,

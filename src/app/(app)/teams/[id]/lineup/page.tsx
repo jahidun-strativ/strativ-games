@@ -4,6 +4,7 @@ import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
+import { saveLineup } from "@/server/actions/lineups";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Lineup" };
@@ -53,11 +54,11 @@ export default async function LineupPage({
         }
       />
       <PitchBuilder
-        teamId={team.id}
         roster={team.players}
         initialFormation={initialFormation}
         initialStarters={initialStarters}
         initialSubs={initialSubs}
+        onSave={saveLineup.bind(null, team.id)}
         canEdit={admin}
       />
     </div>

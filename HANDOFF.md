@@ -95,6 +95,40 @@ errors linger, so trust a clean restart over the buffer.
   Dashboard monthly top-scorer/assist race.
 - **Formation builder:** 5–11 players, per-size formations, subs. Fresh teams default to
   **6-a-side (2-2-1)** (`DEFAULT_FORMATION`). Picker is a bottom-sheet Drawer on mobile.
+  `PitchBuilder` is now generic — takes an `onSave(formation, squadSize, slots)` prop
+  instead of hard-wiring `saveLineup`, so it serves both the team default lineup and
+  per-match lineups.
+- **Team captains (per-team role):** `teams.captainId` → a player on the team; that
+  player's linked login gets captain powers. **Admin-assigned** via a `CaptainPicker`
+  (`captain-picker.tsx`) on the team page; a 🧢 C badge marks them in the roster. Auth
+  helpers in `server/auth.ts`: `getCurrentPlayer()`, `isCaptainOf(teamId)`,
+  `canManageTeam(teamId)` (admin || captain), `requireTeamManager(teamId)`. Captains can:
+  **(1)** manage their team's **roster** — add existing free agents / remove players
+  (`assignPlayerToTeam`/`removePlayerFromTeam` now use `requireTeamManager`; creating a
+  brand-new player stays admin-only via `AddPlayerButton canCreate`), and **(2)** set
+  **per-match lineups**. Setting the captain notifies them (push). Releasing the captain
+  from the team clears `captainId`. The team **default** lineup stays admin-only.
+- **Per-match lineups:** `match_lineups` + `match_lineup_slots` tables (one per
+  match×team, own formation + slots). Builder at `/matches/[id]/lineup/[teamId]`
+  (reuses `PitchBuilder`; prefills from the team default when the match has none yet).
+  Match page shows a **"Match line-ups"** section with a link per internal team ("🧢 Set"
+  if you can edit, else "View"). Save action `saveMatchLineup` (`server/actions/lineups.ts`),
+  gated by `requireTeamManager`. Migration: `scripts/migrations/002-captain-and-match-lineups.sql`
+  (applied).
+- **Per-match squads (team is unique per match):** `match_squad_players` (matchId, teamId,
+  playerId; migration `003`). Who's fielded for a team **in one match**, independent of the
+  roster (`players.teamId`) and the default lineup. **No rows for a (match,team) = use the
+  live roster**; the first add/remove **materialises** the roster into rows, so each match
+  becomes its own snapshot (`server/actions/squads.ts` → `materialize`). Effective squad via
+  `server/queries/match-squad.ts` `getEffectiveSquad(matchId, teamId)` → `{ players, customized }`.
+  Actions `addMatchSquadPlayer`/`removeMatchSquadPlayer` (admin or captain): add a **guest**
+  (free agent OR borrowed from another team, same sport) **without** changing their `teamId`;
+  removing also clears them from that match's lineup slots. Edge cases handled: can't add a
+  player already in the opponent's squad for that match; sport must match; player delete /
+  match delete cascade the squad rows. Managed via `MatchSquadManager` (👥 button on the
+  match-lineup page). The **match-lineup pitch builder**, the **match poster** player lists,
+  and the **result form** (stat candidates) all read the effective squad, so guests appear
+  everywhere for that match. Team roster page + team default lineup are untouched.
 - **PWA + push:** manifest (`src/app/manifest.ts`), SW `public/sw.js` (cache `ssm-v4`).
   Notifies on: **create (match + session/slot)**, time/venue change, reschedule, cancel
   — gated by `notify_on_create`. **Manual force-send** "📣 Send notification" button on

@@ -11,7 +11,13 @@ export type RosterRow = {
   status: string;
 };
 
-export function RosterTable({ players }: { players: RosterRow[] }) {
+export function RosterTable({
+  players,
+  captainId,
+}: {
+  players: RosterRow[];
+  captainId?: string | null;
+}) {
   return (
     <div className="tv-card overflow-hidden">
       <Table<RosterRow>
@@ -25,8 +31,19 @@ export function RosterTable({ players }: { players: RosterRow[] }) {
             title: "Player",
             dataIndex: "name",
             render: (name: string, p) => (
-              <Link href={`/players/${p.id}`} className="font-bold hover:text-burnt-400">
+              <Link
+                href={`/players/${p.id}`}
+                className="inline-flex items-center gap-2 font-semibold !text-ink-900 hover:!text-burnt-400"
+              >
                 {name}
+                {captainId && p.id === captainId ? (
+                  <span
+                    title="Captain"
+                    className="rounded bg-burnt-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-burnt-400"
+                  >
+                    🧢 C
+                  </span>
+                ) : null}
               </Link>
             ),
           },

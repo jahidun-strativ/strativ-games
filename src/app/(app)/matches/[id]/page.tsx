@@ -9,7 +9,7 @@ import {
   resendMatchNotification,
 } from "@/server/actions/matches";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Scoreboard } from "@/components/ui/scoreboard";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
@@ -19,7 +19,8 @@ import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
-import { isAdmin } from "@/server/auth";
+import { isAdmin, canManageTeam } from "@/server/auth";
+import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 export const metadata = { title: "Match" };
 
@@ -46,6 +47,28 @@ export default async function MatchDetailPage({
 
   const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
+
+  // Internal teams in this match whose lineup the viewer may set/view, with
+  // whether they can edit (admin or that team's captain).
+  const lineupTeams = (
+    await Promise.all(
+      [match.homeTeam, match.awayTeam].map(async (t) =>
+        t && t.kind !== "external"
+          ? { id: t.id, name: t.name, canEdit: await canManageTeam(t.id) }
+          : null,
+      ),
+    )
+  ).filter((t): t is { id: string; name: string; canEdit: boolean } => t !== null);
+
+  // Stats are recorded against each side's per-match squad (so a guest who
+  // played can be scored), falling back to the roster when not customised.
+  const [homeSquad, awaySquad] =
+    hasTeams && match.homeTeamId && match.awayTeamId
+      ? await Promise.all([
+          getEffectiveSquad(id, match.homeTeamId),
+          getEffectiveSquad(id, match.awayTeamId),
+        ])
+      : [{ players: [] }, { players: [] }];
   const posterVariants: PosterVariant[] =
     match.kind === "competitive"
       ? [
@@ -140,6 +163,26 @@ export default async function MatchDetailPage({
         </section>
       ) : null}
 
+      {hasTeams && lineupTeams.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="font-display mb-3 text-xl text-ink-900">Match line-ups</h2>
+          <div className="flex flex-wrap gap-3">
+            {lineupTeams.map((t) => (
+              <ButtonLink
+                key={t.id}
+                variant="secondary"
+                href={`/matches/${match.id}/lineup/${t.id}`}
+              >
+                {t.canEdit ? "🧢 Set" : "View"} {t.name} lineup
+              </ButtonLink>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink-500">
+            Formation and starting XI for this match — set by an admin or the team captain.
+          </p>
+        </section>
+      ) : null}
+
       {admin && match.status !== "cancelled" ? (
         <section className="mt-8">
           <h2 className="font-display mb-3 text-xl text-ink-900">
@@ -150,8 +193,8 @@ export default async function MatchDetailPage({
               action={recordResult.bind(null, match.id)}
               homeTeamName={match.homeTeam!.name}
               awayTeamName={match.awayTeam!.name}
-              homeSquad={match.homeTeam!.players}
-              awaySquad={match.awayTeam!.players}
+              homeSquad={homeSquad.players}
+              awaySquad={awaySquad.players}
               stats={match.playerStats}
               homeScore={match.homeScore}
               awayScore={match.awayScore}

@@ -29,6 +29,10 @@ export const teams = pgTable("teams", {
   kind: text("kind").notNull().default("internal"),
   league: text("league"),
   formation: text("formation").notNull().default("4-4-2"),
+  // The team's captain (a player on this team). Whichever registered user that
+  // player is linked to gets captain powers for this team: editing per-match
+  // lineups and managing the roster. Admin-assigned; null = no captain yet.
+  captainId: uuid("captain_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -174,6 +178,65 @@ export const lineupSlots = pgTable(
   (t) => [unique().on(t.lineupId, t.role, t.slotIndex)],
 );
 
+// A team's lineup for one specific match — its own formation and slot
+// assignments, independent of the team's default lineup. One row per
+// (match, team); created/edited by the team's captain or an admin.
+export const matchLineups = pgTable(
+  "match_lineups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    formation: text("formation").notNull().default("4-4-2"),
+    squadSize: integer("squad_size").notNull().default(11),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.matchId, t.teamId)],
+);
+
+export const matchLineupSlots = pgTable(
+  "match_lineup_slots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchLineupId: uuid("match_lineup_id")
+      .notNull()
+      .references(() => matchLineups.id, { onDelete: "cascade" }),
+    role: text("role").notNull().default("starter"),
+    slotIndex: integer("slot_index").notNull(),
+    positionLabel: text("position_label").notNull(),
+    playerId: uuid("player_id").references(() => players.id, { onDelete: "set null" }),
+  },
+  (t) => [unique().on(t.matchLineupId, t.role, t.slotIndex)],
+);
+
+// Per-match squad membership for a team — who's playing in THIS match,
+// independent of the persistent team roster (players.teamId) and the team's
+// default lineup. Lets a captain field a guest for one match or drop a regular
+// without touching the roster. Absence of any rows for a (match, team) means
+// "use the team's current roster as-is"; the first add/remove materialises the
+// roster into rows and edits from there (so each match is its own snapshot).
+export const matchSquadPlayers = pgTable(
+  "match_squad_players",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.matchId, t.teamId, t.playerId)],
+);
+
 // Singleton row holding which match notifications are enabled (admin-configured).
 export const notificationSettings = pgTable("notification_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -215,6 +278,7 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
   players: many(players),
   staff: many(staff),
   lineup: one(lineups, { fields: [teams.id], references: [lineups.teamId] }),
+  captain: one(players, { fields: [teams.captainId], references: [players.id] }),
   homeMatches: many(matches, { relationName: "homeTeam" }),
   awayMatches: many(matches, { relationName: "awayTeam" }),
 }));
@@ -256,6 +320,7 @@ export const matchesRelations = relations(matches, ({ one, many }) => ({
   }),
   venue: one(venues, { fields: [matches.venueId], references: [venues.id] }),
   playerStats: many(playerMatchStats),
+  lineups: many(matchLineups),
 }));
 
 export const playerMatchStatsRelations = relations(playerMatchStats, ({ one }) => ({
@@ -273,6 +338,20 @@ export const lineupSlotsRelations = relations(lineupSlots, ({ one }) => ({
   player: one(players, { fields: [lineupSlots.playerId], references: [players.id] }),
 }));
 
+export const matchLineupsRelations = relations(matchLineups, ({ one, many }) => ({
+  match: one(matches, { fields: [matchLineups.matchId], references: [matches.id] }),
+  team: one(teams, { fields: [matchLineups.teamId], references: [teams.id] }),
+  slots: many(matchLineupSlots),
+}));
+
+export const matchLineupSlotsRelations = relations(matchLineupSlots, ({ one }) => ({
+  lineup: one(matchLineups, {
+    fields: [matchLineupSlots.matchLineupId],
+    references: [matchLineups.id],
+  }),
+  player: one(players, { fields: [matchLineupSlots.playerId], references: [players.id] }),
+}));
+
 export type Sport = typeof sports.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
@@ -283,6 +362,9 @@ export type Match = typeof matches.$inferSelect;
 export type PlayerMatchStat = typeof playerMatchStats.$inferSelect;
 export type Lineup = typeof lineups.$inferSelect;
 export type LineupSlot = typeof lineupSlots.$inferSelect;
+export type MatchLineup = typeof matchLineups.$inferSelect;
+export type MatchLineupSlot = typeof matchLineupSlots.$inferSelect;
+export type MatchSquadPlayer = typeof matchSquadPlayers.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type AppUser = typeof appUsers.$inferSelect;
 export type NotificationSettings = typeof notificationSettings.$inferSelect;

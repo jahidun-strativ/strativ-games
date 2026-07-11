@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/server";
 import { isAllowedEmail } from "@/lib/auth/allowed";
 import { db } from "@/db";
-import { type Role } from "@/db/schema";
+import { players, teams, type Role } from "@/db/schema";
 
 // Deduped per request: the layout, isAdmin(), and page guards all share one
 // session validation and one role lookup instead of repeating them.
@@ -40,4 +40,39 @@ export async function requireAdmin() {
     throw new Error("Only admins can make changes.");
   }
   return user;
+}
+
+// The player record for the signed-in user (auto-created at sign-in), or null.
+// Used to resolve team-captain powers, which are tied to a player, not a role.
+export const getCurrentPlayer = cache(async () => {
+  const session = await getSession();
+  if (!session?.user) return null;
+  const row = await db.query.players.findFirst({
+    where: eq(players.userId, session.user.id),
+    columns: { id: true, teamId: true },
+  });
+  return row ?? null;
+});
+
+// True if the signed-in user captains this team. Captain = the player set as
+// the team's captainId. Never throws — safe for UI gating.
+export async function isCaptainOf(teamId: string): Promise<boolean> {
+  const [player, team] = await Promise.all([
+    getCurrentPlayer(),
+    db.query.teams.findFirst({ where: eq(teams.id, teamId), columns: { captainId: true } }),
+  ]);
+  return Boolean(player && team?.captainId && team.captainId === player.id);
+}
+
+// True if the user may manage this team (admin, or its captain). UI gating.
+export async function canManageTeam(teamId: string): Promise<boolean> {
+  return (await isAdmin()) || (await isCaptainOf(teamId));
+}
+
+// Guards team-scoped mutations (per-match lineups, roster): admin or captain.
+export async function requireTeamManager(teamId: string) {
+  const user = await requireUser();
+  if ((await getRole(user.id)) === "admin") return user;
+  if (await isCaptainOf(teamId)) return user;
+  throw new Error("Only an admin or this team's captain can do that.");
 }

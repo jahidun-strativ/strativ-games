@@ -27,6 +27,7 @@ export function AddPlayerButton({
   players,
   sports,
   teams,
+  canCreate = true,
 }: {
   teamId: string;
   teamName: string;
@@ -34,6 +35,9 @@ export function AddPlayerButton({
   players: AssignablePlayer[];
   sports: Sport[];
   teams: Team[];
+  // Whether to offer creating a brand-new player (admin-only action). Captains
+  // can add/remove existing players but not create new records.
+  canCreate?: boolean;
 }) {
   return (
     <FormModal title={`${teamName} — roster`} triggerLabel="+ Add / remove players" width={560}>
@@ -44,6 +48,7 @@ export function AddPlayerButton({
           players={players}
           sports={sports}
           teams={teams}
+          canCreate={canCreate}
           onDone={close}
         />
       )}
@@ -57,6 +62,7 @@ function AddPlayerBody({
   players,
   sports,
   teams,
+  canCreate,
   onDone,
 }: {
   teamId: string;
@@ -64,6 +70,7 @@ function AddPlayerBody({
   players: AssignablePlayer[];
   sports: Sport[];
   teams: Team[];
+  canCreate: boolean;
   onDone: () => void;
 }) {
   const { message } = App.useApp();
@@ -168,22 +175,24 @@ function AddPlayerBody({
         </ul>
       )}
 
-      <details className="mt-5 border-t border-line pt-4">
-        <summary className="cursor-pointer text-sm font-semibold text-burnt-400">
-          Or add a brand-new player
-        </summary>
-        <div className="mt-3">
-          <PlayerForm
-            action={createPlayer}
-            sports={sports}
-            teams={teams}
-            submitLabel="Add player"
-            onSuccess={onDone}
-            defaultSportId={teamSportId}
-            defaultTeamId={teamId}
-          />
-        </div>
-      </details>
+      {canCreate ? (
+        <details className="mt-5 border-t border-line pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-burnt-400">
+            Or add a brand-new player
+          </summary>
+          <div className="mt-3">
+            <PlayerForm
+              action={createPlayer}
+              sports={sports}
+              teams={teams}
+              submitLabel="Add player"
+              onSuccess={onDone}
+              defaultSportId={teamSportId}
+              defaultTeamId={teamId}
+            />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

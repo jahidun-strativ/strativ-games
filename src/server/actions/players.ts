@@ -1,11 +1,11 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { players } from "@/db/schema";
-import { requireAdmin } from "@/server/auth";
+import { players, teams } from "@/db/schema";
+import { requireAdmin, requireTeamManager } from "@/server/auth";
 import { opt, str } from "@/server/form";
 
 function playerValues(formData: FormData) {
@@ -54,9 +54,10 @@ export async function deletePlayer(id: string) {
 }
 
 // Assign an existing (unassigned) player to a team — used by the team page's
-// "Add player" modal. Refuses to poach a player already on another team.
+// "Add player" modal. Admin or the team's captain. Refuses to poach a player
+// already on another team.
 export async function assignPlayerToTeam(playerId: string, teamId: string) {
-  await requireAdmin();
+  await requireTeamManager(teamId);
   const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
   if (!player) throw new Error("Player not found.");
   if (player.teamId && player.teamId !== teamId) {
@@ -67,10 +68,15 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
   revalidatePath(`/teams/${teamId}`);
 }
 
-// Release a player from a team (back to free agent).
+// Release a player from a team (back to free agent). Admin or the team's
+// captain. If the released player was the captain, the captaincy is cleared.
 export async function removePlayerFromTeam(playerId: string, teamId: string) {
-  await requireAdmin();
+  await requireTeamManager(teamId);
   await db.update(players).set({ teamId: null }).where(eq(players.id, playerId));
+  await db
+    .update(teams)
+    .set({ captainId: null })
+    .where(and(eq(teams.id, teamId), eq(teams.captainId, playerId)));
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
 }

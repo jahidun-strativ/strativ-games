@@ -11,26 +11,27 @@ import {
   formationsForSize,
   squadSizeOf,
 } from "@/lib/formations";
-import { saveLineup, type LineupSlotInput } from "@/server/actions/lineups";
+import { type LineupSlotInput } from "@/server/actions/lineups";
 import type { Player } from "@/db/schema";
 
 type Active = { kind: "starter"; index: number } | { kind: "sub"; index: number } | null;
 
 export function PitchBuilder({
-  teamId,
   roster,
   initialFormation,
   initialStarters,
   initialSubs,
+  onSave,
   canEdit = true,
 }: {
-  teamId: string;
   roster: Player[];
   initialFormation: string;
   // playerId keyed by starter slot index
   initialStarters: Record<number, string | null>;
   // ordered bench playerIds
   initialSubs: (string | null)[];
+  // Persists the built lineup. Provided by the caller (team-default vs per-match).
+  onSave: (formation: string, squadSize: number, slots: LineupSlotInput[]) => Promise<void>;
   canEdit?: boolean;
 }) {
   const { message } = App.useApp();
@@ -127,7 +128,7 @@ export function PitchBuilder({
     ];
     startTransition(async () => {
       try {
-        await saveLineup(teamId, formation, size, payload);
+        await onSave(formation, size, payload);
         setSaved(true);
         message.success("Lineup saved.");
       } catch (err) {
@@ -203,7 +204,7 @@ export function PitchBuilder({
         {/* Controls */}
         {!canEdit ? (
           <div className="tv-card-sm mb-4 px-4 py-3 text-sm text-ink-500">
-            Viewing {formation} ({size}-a-side). Only admins can edit the lineup.
+            Viewing {formation} ({size}-a-side). Only an admin or the team captain can edit it.
           </div>
         ) : null}
         <div className={`mb-4 flex flex-wrap items-end gap-3 ${canEdit ? "" : "hidden"}`}>
