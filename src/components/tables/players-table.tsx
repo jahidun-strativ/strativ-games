@@ -12,6 +12,7 @@ export type PlayerRow = {
   teamId: string | null;
   teamName: string | null;
   sportName: string;
+  email: string | null;
 };
 
 // Two initials from a name (or email local-part), for the avatar chip.
@@ -55,10 +56,17 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
               render: (name: string, p) => (
                 <Link
                   href={`/players/${p.id}`}
-                  className="flex items-center gap-3 font-semibold !text-ink-900 transition-colors hover:!text-burnt-400"
+                  className="group flex items-center gap-3 font-semibold !text-ink-900 transition-colors hover:!text-burnt-400"
                 >
                   <Avatar name={name} />
-                  <span className="truncate">{name}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{name}</span>
+                    {p.email ? (
+                      <span className="block truncate text-xs font-normal !text-ink-500">
+                        {p.email}
+                      </span>
+                    ) : null}
+                  </span>
                 </Link>
               ),
             },
@@ -111,6 +119,9 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
               <Avatar name={p.name} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold !text-ink-900">{p.name}</p>
+                {p.email ? (
+                  <p className="truncate text-xs text-ink-500">{p.email}</p>
+                ) : null}
                 <p className="truncate text-xs text-ink-500">
                   {p.teamName ?? "Free agent"}
                   {p.position && p.position !== "TBD" ? ` · ${p.position}` : ""}

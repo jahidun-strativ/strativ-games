@@ -83,6 +83,7 @@ async function PlayersContent({
             teamId: p.teamId,
             teamName: p.team?.name ?? null,
             sportName: p.sport.name,
+            email: p.email,
           }))}
         />
       )}
