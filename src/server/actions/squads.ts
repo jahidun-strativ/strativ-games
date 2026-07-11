@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { matchLineupSlots, matchLineups, matchSquadPlayers, matches, players } from "@/db/schema";
-import { requireTeamManager } from "@/server/auth";
+import { requireCaptainOf } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 // Loads a match and the side (home/away) that `teamId` plays, plus the opposing
@@ -57,7 +57,7 @@ async function materialize(matchId: string, teamId: string) {
 // or a guest (free agent / borrowed) who is NOT added to the roster. Admin or
 // the team's captain.
 export async function addMatchSquadPlayer(matchId: string, teamId: string, playerId: string) {
-  await requireTeamManager(teamId);
+  await requireCaptainOf(teamId);
   const { team, opponentId } = await matchSide(matchId, teamId);
 
   const player = await db.query.players.findFirst({
@@ -91,7 +91,7 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
 // them from this match's saved lineup so the lineup can't reference a
 // non-squad player. Admin or the team's captain.
 export async function removeMatchSquadPlayer(matchId: string, teamId: string, playerId: string) {
-  await requireTeamManager(teamId);
+  await requireCaptainOf(teamId);
   await matchSide(matchId, teamId);
 
   await materialize(matchId, teamId);

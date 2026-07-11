@@ -23,6 +23,7 @@ export function PitchBuilder({
   initialSubs,
   onSave,
   canEdit = true,
+  editorLabel = "an admin",
 }: {
   roster: Player[];
   initialFormation: string;
@@ -33,6 +34,9 @@ export function PitchBuilder({
   // Persists the built lineup. Provided by the caller (team-default vs per-match).
   onSave: (formation: string, squadSize: number, slots: LineupSlotInput[]) => Promise<void>;
   canEdit?: boolean;
+  // Who may edit, shown in the read-only banner (team default = admin,
+  // per-match = captain).
+  editorLabel?: string;
 }) {
   const { message } = App.useApp();
   const [formation, setFormation] = useState(initialFormation);
@@ -204,7 +208,7 @@ export function PitchBuilder({
         {/* Controls */}
         {!canEdit ? (
           <div className="tv-card-sm mb-4 px-4 py-3 text-sm text-ink-500">
-            Viewing {formation} ({size}-a-side). Only an admin or the team captain can edit it.
+            Viewing {formation} ({size}-a-side). Only {editorLabel} can edit it.
           </div>
         ) : null}
         <div className={`mb-4 flex flex-wrap items-end gap-3 ${canEdit ? "" : "hidden"}`}>

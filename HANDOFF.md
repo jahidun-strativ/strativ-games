@@ -108,20 +108,24 @@ errors linger, so trust a clean restart over the buffer.
   brand-new player stays admin-only via `AddPlayerButton canCreate`), and **(2)** set
   **per-match lineups**. Setting the captain notifies them (push). Releasing the captain
   from the team clears `captainId`. The team **default** lineup stays admin-only.
-- **Per-match lineups:** `match_lineups` + `match_lineup_slots` tables (one per
+- **Per-match lineups (CAPTAIN-ONLY):** `match_lineups` + `match_lineup_slots` tables (one per
   match×team, own formation + slots). Builder at `/matches/[id]/lineup/[teamId]`
   (reuses `PitchBuilder`; prefills from the team default when the match has none yet).
   Match page shows a **"Match line-ups"** section with a link per internal team ("🧢 Set"
-  if you can edit, else "View"). Save action `saveMatchLineup` (`server/actions/lineups.ts`),
-  gated by `requireTeamManager`. Migration: `scripts/migrations/002-captain-and-match-lineups.sql`
-  (applied).
+  if you're the captain, else "View"). Save action `saveMatchLineup` (`server/actions/lineups.ts`)
+  is gated by **`requireCaptainOf`** — **admins cannot edit match line-ups/squads**; they only
+  assign the captain. (`requireCaptainOf` passes if the admin *is* the captain.) UI edit-gating
+  uses `isCaptainOf`, not `canManageTeam`. `PitchBuilder` read-only banner text is set via its
+  `editorLabel` prop (team default = "an admin", per-match = "the team captain"). Migration:
+  `scripts/migrations/002-captain-and-match-lineups.sql` (applied).
 - **Per-match squads (team is unique per match):** `match_squad_players` (matchId, teamId,
   playerId; migration `003`). Who's fielded for a team **in one match**, independent of the
   roster (`players.teamId`) and the default lineup. **No rows for a (match,team) = use the
   live roster**; the first add/remove **materialises** the roster into rows, so each match
   becomes its own snapshot (`server/actions/squads.ts` → `materialize`). Effective squad via
   `server/queries/match-squad.ts` `getEffectiveSquad(matchId, teamId)` → `{ players, customized }`.
-  Actions `addMatchSquadPlayer`/`removeMatchSquadPlayer` (admin or captain): add a **guest**
+  Actions `addMatchSquadPlayer`/`removeMatchSquadPlayer` (**captain-only**, `requireCaptainOf`):
+  add a **guest**
   (free agent OR borrowed from another team, same sport) **without** changing their `teamId`;
   removing also clears them from that match's lineup slots. Edge cases handled: can't add a
   player already in the opponent's squad for that match; sport must match; player delete /

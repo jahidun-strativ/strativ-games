@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
 import { saveMatchLineup } from "@/server/actions/lineups";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
-import { canManageTeam } from "@/server/auth";
+import { isCaptainOf } from "@/server/auth";
 import { formatFull } from "@/lib/format";
 
 export const metadata = { title: "Match lineup" };
@@ -40,7 +40,8 @@ export default async function MatchLineupPage({
         : null;
   if (!team || team.kind === "external") notFound();
 
-  const canEdit = await canManageTeam(teamId);
+  // Match line-ups are captain-only — admins assign the captain, not the lineup.
+  const canEdit = await isCaptainOf(teamId);
 
   // The pool for this match: the per-match squad (own snapshot if customised,
   // else the current roster). This is what the pitch builder assigns from.
@@ -112,11 +113,13 @@ export default async function MatchLineupPage({
       />
 
       <p className="mb-4 text-sm text-ink-500">
-        {customized
-          ? `This match uses its own squad (${squad.length}) — edit it with "Manage match squad". Changes here don't affect the team roster or default lineup.`
-          : !existing && teamDefault
-            ? `Prefilled from ${team.name}'s default lineup — adjust it for this match and save.`
-            : `Fielding ${team.name}'s current roster. Add a guest or drop someone for just this match with "Manage match squad".`}
+        {!canEdit
+          ? `Viewing ${team.name}'s line-up for this match. Only the team captain can change it — an admin can assign one on the team page.`
+          : customized
+            ? `This match uses its own squad (${squad.length}) — edit it with "Manage match squad". Changes here don't affect the team roster or default lineup.`
+            : !existing && teamDefault
+              ? `Prefilled from ${team.name}'s default lineup — adjust it for this match and save.`
+              : `Fielding ${team.name}'s current roster. Add a guest or drop someone for just this match with "Manage match squad".`}
       </p>
 
       <PitchBuilder
@@ -126,6 +129,7 @@ export default async function MatchLineupPage({
         initialSubs={initialSubs}
         onSave={saveMatchLineup.bind(null, match.id, teamId)}
         canEdit={canEdit}
+        editorLabel="the team captain"
       />
     </div>
   );

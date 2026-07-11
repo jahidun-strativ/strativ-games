@@ -69,10 +69,20 @@ export async function canManageTeam(teamId: string): Promise<boolean> {
   return (await isAdmin()) || (await isCaptainOf(teamId));
 }
 
-// Guards team-scoped mutations (per-match lineups, roster): admin or captain.
+// Guards team-scoped mutations that admins may also do (roster add/remove):
+// admin or the team's captain.
 export async function requireTeamManager(teamId: string) {
   const user = await requireUser();
   if ((await getRole(user.id)) === "admin") return user;
   if (await isCaptainOf(teamId)) return user;
   throw new Error("Only an admin or this team's captain can do that.");
+}
+
+// Guards match line-ups + match squads: the team's CAPTAIN only. Admins do not
+// get in here (they set the captain instead). If the admin is also the captain
+// of this team, they pass — because they're the captain, not because they're an admin.
+export async function requireCaptainOf(teamId: string) {
+  await requireUser();
+  if (await isCaptainOf(teamId)) return;
+  throw new Error("Only this team's captain can set match line-ups. An admin can assign one.");
 }

@@ -19,7 +19,7 @@ import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
-import { isAdmin, canManageTeam } from "@/server/auth";
+import { isAdmin, isCaptainOf } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 export const metadata = { title: "Match" };
@@ -54,7 +54,7 @@ export default async function MatchDetailPage({
     await Promise.all(
       [match.homeTeam, match.awayTeam].map(async (t) =>
         t && t.kind !== "external"
-          ? { id: t.id, name: t.name, canEdit: await canManageTeam(t.id) }
+          ? { id: t.id, name: t.name, canEdit: await isCaptainOf(t.id) }
           : null,
       ),
     )
@@ -178,7 +178,8 @@ export default async function MatchDetailPage({
             ))}
           </div>
           <p className="mt-2 text-xs text-ink-500">
-            Formation and starting XI for this match — set by an admin or the team captain.
+            Formation and starting XI for this match — set by the team captain (assign one on
+            the team page).
           </p>
         </section>
       ) : null}
