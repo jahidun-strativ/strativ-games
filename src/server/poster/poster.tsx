@@ -22,6 +22,8 @@ export type PosterData = {
   sport?: string | null;
 };
 
+// Instagram / Facebook portrait feed size (4:5, 1080×1350) — the standard
+// upload size for both. Type is scaled for this canvas so it reads at feed size.
 export const POSTER_SIZE = { width: 1080, height: 1350 };
 
 // Per-team accent colours (burnt → pitch → sky → gold), cycled.
@@ -36,7 +38,7 @@ const BASE = "#080b11";
 const TURF =
   "repeating-linear-gradient(118deg, rgba(255,255,255,0.022) 0px, rgba(255,255,255,0.022) 2px, transparent 2px, transparent 46px)";
 
-function Monogram({ size = 60 }: { size?: number }) {
+function Monogram({ size = 46 }: { size?: number }) {
   return (
     <div
       style={{
@@ -46,13 +48,13 @@ function Monogram({ size = 60 }: { size?: number }) {
         borderRadius: size * 0.26,
         background: "linear-gradient(180deg,#182238,#0a0e15)",
         border: "1px solid rgba(255,255,255,0.14)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
         alignItems: "center",
         justifyContent: "center",
         fontFamily: "Oswald",
         fontWeight: 700,
         fontSize: size * 0.6,
-        letterSpacing: -2,
+        letterSpacing: -1.5,
       }}
     >
       <span style={{ color: "#f97316" }}>S</span>
@@ -61,22 +63,22 @@ function Monogram({ size = 60 }: { size?: number }) {
   );
 }
 
-// Bold match-day header: brand row + giant headline + chevron accent.
+// Bold match-day header: brand row + big headline + chevron accent.
 function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <Monogram size={58} />
+          <Monogram size={46} />
           <div
             style={{
               display: "flex",
               fontFamily: "Oswald",
               fontWeight: 700,
-              fontSize: 34,
-              letterSpacing: 3,
+              fontSize: 27,
+              letterSpacing: 2,
               color: INK_900,
-              marginLeft: 16,
+              marginLeft: 14,
             }}
           >
             STRATIV GAME
@@ -89,14 +91,14 @@ function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null
               alignItems: "center",
               fontFamily: "Archivo",
               fontWeight: 600,
-              fontSize: 20,
+              fontSize: 15,
               letterSpacing: 2,
               textTransform: "uppercase",
               color: INK_700,
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: 999,
-              padding: "8px 20px",
+              padding: "6px 16px",
             }}
           >
             {sport}
@@ -104,17 +106,17 @@ function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null
         ) : null}
       </div>
 
-      {/* Giant headline */}
-      <div style={{ display: "flex", alignItems: "flex-start", marginTop: 30 }}>
+      {/* Headline */}
+      <div style={{ display: "flex", alignItems: "flex-start", marginTop: 26 }}>
         <div
           style={{
             display: "flex",
-            width: 12,
+            width: 9,
             alignSelf: "stretch",
-            borderRadius: 6,
-            marginRight: 24,
-            marginTop: 6,
-            marginBottom: 6,
+            borderRadius: 5,
+            marginRight: 18,
+            marginTop: 4,
+            marginBottom: 4,
             background: "linear-gradient(180deg,#f97316,#f5b81f)",
           }}
         />
@@ -123,7 +125,7 @@ function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null
             display: "flex",
             fontFamily: "Oswald",
             fontWeight: 700,
-            fontSize: 104,
+            fontSize: 74,
             lineHeight: 0.92,
             letterSpacing: -1,
             textTransform: "uppercase",
@@ -145,16 +147,16 @@ function MetaChips({ venue, when }: { venue: string; when: string }) {
         alignItems: "center",
         background: "rgba(255,255,255,0.05)",
         border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 14,
-        padding: "16px 26px",
+        borderRadius: 12,
+        padding: "12px 20px",
         fontFamily: "Archivo",
         fontWeight: 600,
-        fontSize: 27,
+        fontSize: 20,
         color: INK_700,
-        marginRight: 16,
+        marginRight: 12,
       }}
     >
-      <span style={{ marginRight: 12 }}>{icon}</span>
+      <span style={{ marginRight: 10 }}>{icon}</span>
       {text}
     </div>
   );
@@ -174,15 +176,15 @@ function Footer() {
           display: "flex",
           fontFamily: "Oswald",
           fontWeight: 500,
-          fontSize: 22,
-          letterSpacing: 4,
+          fontSize: 17,
+          letterSpacing: 3,
           textTransform: "uppercase",
           color: INK_500,
         }}
       >
         Strativ Sports Manager
       </div>
-      <div style={{ display: "flex", fontFamily: "Archivo", fontWeight: 600, fontSize: 22, color: "#fb8b4c" }}>
+      <div style={{ display: "flex", fontFamily: "Archivo", fontWeight: 600, fontSize: 17, color: "#fb8b4c" }}>
         strativ.se
       </div>
     </div>
@@ -200,14 +202,14 @@ function NumberBadge({ n, accent, size }: { n: number; accent: string; size: num
         height: size,
         borderRadius: size * 0.24,
         background: accent,
-        boxShadow: `0 4px 14px ${accent}55`,
+        boxShadow: `0 4px 12px ${accent}55`,
         alignItems: "center",
         justifyContent: "center",
         fontFamily: "Oswald",
         fontWeight: 700,
         fontSize: size * 0.52,
         color: BASE,
-        marginRight: 18,
+        marginRight: 14,
       }}
     >
       {n}
@@ -217,9 +219,9 @@ function NumberBadge({ n, accent, size }: { n: number; accent: string; size: num
 
 // One team column: angled accent header + jersey-numbered line-up.
 function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: string; compact: boolean }) {
-  const nameSize = compact ? 42 : 56;
-  const playerSize = compact ? 27 : 33;
-  const badge = compact ? 40 : 48;
+  const nameSize = compact ? 34 : 44;
+  const playerSize = compact ? 22 : 26;
+  const badge = compact ? 34 : 40;
   return (
     <div
       style={{
@@ -228,9 +230,9 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
         flex: 1,
         background: "linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))",
         border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: 24,
+        borderRadius: 20,
         overflow: "hidden",
-        marginRight: 22,
+        marginRight: 18,
       }}
     >
       {/* Angled colour band header */}
@@ -238,9 +240,9 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
         style={{
           display: "flex",
           flexDirection: "column",
-          padding: compact ? "26px 26px 22px" : "32px 34px 26px",
+          padding: compact ? "20px 22px 18px" : "24px 26px 20px",
           background: `linear-gradient(120deg, ${accent} 0%, ${accent}00 78%)`,
-          borderBottom: `4px solid ${accent}`,
+          borderBottom: `3px solid ${accent}`,
         }}
       >
         <div
@@ -262,11 +264,11 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
             display: "flex",
             fontFamily: "Archivo",
             fontWeight: 600,
-            fontSize: 19,
-            letterSpacing: 3,
+            fontSize: 15,
+            letterSpacing: 2,
             textTransform: "uppercase",
             color: "rgba(255,255,255,0.85)",
-            marginTop: 10,
+            marginTop: 8,
           }}
         >
           Line-up · {team.players.length} player{team.players.length === 1 ? "" : "s"}
@@ -274,7 +276,7 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
       </div>
 
       {/* Line-up */}
-      <div style={{ display: "flex", flexDirection: "column", padding: compact ? "20px 26px" : "26px 34px" }}>
+      <div style={{ display: "flex", flexDirection: "column", padding: compact ? "16px 22px" : "20px 26px" }}>
         {team.players.map((p, i) => (
           <div
             key={i}
@@ -285,7 +287,7 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
               fontWeight: 600,
               fontSize: playerSize,
               color: INK_700,
-              marginBottom: compact ? 12 : 16,
+              marginBottom: compact ? 9 : 12,
             }}
           >
             <NumberBadge n={i + 1} accent={accent} size={badge} />
@@ -318,7 +320,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        padding: 64,
+        padding: 56,
         background: `linear-gradient(160deg,#0d1420 0%,${BASE} 60%,${BASE} 100%)`,
         position: "relative",
         overflow: "hidden",
@@ -400,18 +402,18 @@ export function Poster(data: PosterData) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0 30px",
+          padding: "0 24px",
         }}
       >
         <div
           style={{
             display: "flex",
-            width: 78,
-            height: 78,
-            borderRadius: 20,
+            width: 58,
+            height: 58,
+            borderRadius: 16,
             background: accent,
-            boxShadow: `0 10px 30px ${accent}66`,
-            marginBottom: 34,
+            boxShadow: `0 8px 22px ${accent}66`,
+            marginBottom: 26,
           }}
         />
         <div
@@ -419,7 +421,7 @@ export function Poster(data: PosterData) {
             display: "flex",
             fontFamily: "Oswald",
             fontWeight: 700,
-            fontSize: 88,
+            fontSize: 60,
             textTransform: "uppercase",
             letterSpacing: -1,
             color: INK_900,
@@ -442,7 +444,7 @@ export function Poster(data: PosterData) {
           width: "100%",
           position: "relative",
           overflow: "hidden",
-          borderRadius: 28,
+          borderRadius: 24,
           border: "1px solid rgba(255,255,255,0.08)",
           background: "linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))",
         }}
@@ -483,14 +485,14 @@ export function Poster(data: PosterData) {
             position: "absolute",
             top: "50%",
             left: "50%",
-            width: 168,
-            height: 168,
-            marginLeft: -84,
-            marginTop: -84,
-            borderRadius: 84,
+            width: 128,
+            height: 128,
+            marginLeft: -64,
+            marginTop: -64,
+            borderRadius: 64,
             background: `linear-gradient(150deg,${BASE},#141d2e)`,
             border: "3px solid rgba(255,255,255,0.14)",
-            boxShadow: "0 16px 44px rgba(0,0,0,0.55)",
+            boxShadow: "0 12px 34px rgba(0,0,0,0.55)",
           }}
         >
           <div
@@ -498,7 +500,7 @@ export function Poster(data: PosterData) {
               display: "flex",
               fontFamily: "Oswald",
               fontWeight: 700,
-              fontSize: 84,
+              fontSize: 60,
               color: "#fb8b4c",
               lineHeight: 1,
             }}
@@ -525,8 +527,8 @@ export function Poster(data: PosterData) {
   return (
     <PageShell>
       <Header kindLabel={kindLabel} sport={sport} />
-      <div style={{ display: "flex", flex: 1, width: "100%", marginTop: 40, marginBottom: 36 }}>{body}</div>
-      <div style={{ display: "flex", width: "100%", marginBottom: 30 }}>
+      <div style={{ display: "flex", flex: 1, width: "100%", marginTop: 32, marginBottom: 30 }}>{body}</div>
+      <div style={{ display: "flex", width: "100%", marginBottom: 26 }}>
         <MetaChips venue={venue} when={when} />
       </div>
       <Footer />
