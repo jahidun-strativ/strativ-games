@@ -9,7 +9,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { deleteSession, resendSessionNotification } from "@/server/actions/sessions";
 import { NotifyButton } from "@/components/notify-button";
 import { PosterButton, type PosterVariant } from "@/components/poster-button";
-import { isAdmin } from "@/server/auth";
+import { CostSplit } from "@/components/cost-split";
+import { isAdmin, getCurrentPlayer } from "@/server/auth";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 
 export const metadata = { title: "Session" };
@@ -32,6 +33,30 @@ export default async function SessionDetailPage({
   });
   if (!session) notFound();
   const admin = await isAdmin();
+
+  // Cost-split data: who's chipping in for this slot, and candidates to add.
+  const [payments, candidateRows, myPlayer] = await Promise.all([
+    db.query.sessionPayments.findMany({
+      where: (p, { eq }) => eq(p.sessionId, id),
+      with: { player: { columns: { id: true, name: true } } },
+    }),
+    session.sportId
+      ? db.query.players.findMany({
+          where: (p, { eq }) => eq(p.sportId, session.sportId!),
+          orderBy: (p, { asc }) => asc(p.name),
+          with: { team: { columns: { name: true } } },
+        })
+      : Promise.resolve([]),
+    getCurrentPlayer(),
+  ]);
+  const payers = payments
+    .map((pm) => ({ id: pm.playerId, name: pm.player?.name ?? "Unknown", paid: pm.paid }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const candidates = candidateRows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    teamName: p.team?.name ?? null,
+  }));
 
   const external = session.kind === "competitive";
   const gameCount = session.fixtures.length;
@@ -100,6 +125,26 @@ export default async function SessionDetailPage({
           </div>
         ))}
       </div>
+
+      {session.cost != null ? (
+        <section className="mt-8">
+          <h2 className="font-display mb-3 text-xl text-ink-900">Cost split</h2>
+          {session.paidBy === "office" ? (
+            <div className="tv-card-sm p-5 text-sm text-ink-500">
+              Covered by the office ({formatBdt(session.cost)}) — nothing to split.
+            </div>
+          ) : (
+            <CostSplit
+              sessionId={session.id}
+              cost={session.cost}
+              payers={payers}
+              candidates={candidates}
+              currentPlayerId={myPlayer?.id ?? null}
+              canManage={admin}
+            />
+          )}
+        </section>
+      ) : null}
 
       {admin && hasTeams ? (
         <div className="mt-6 flex flex-wrap items-center gap-3">

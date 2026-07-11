@@ -237,6 +237,26 @@ export const matchSquadPlayers = pgTable(
   (t) => [unique().on(t.matchId, t.teamId, t.playerId)],
 );
 
+// Splits a booked slot's cost among players who chip in ("self"-paid slots).
+// One row per (session, player); `paid` tracks who has settled up. The per-head
+// share is the session cost ÷ number of payers, computed for display.
+export const sessionPayments = pgTable(
+  "session_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    paid: boolean("paid").notNull().default(false),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.sessionId, t.playerId)],
+);
+
 // A player's RSVP for a match: are they available to play? One row per
 // (match, player); set by the player themselves. Captains use the "in" list to
 // build the match squad.
@@ -363,6 +383,11 @@ export const matchLineupsRelations = relations(matchLineups, ({ one, many }) => 
   slots: many(matchLineupSlots),
 }));
 
+export const sessionPaymentsRelations = relations(sessionPayments, ({ one }) => ({
+  session: one(sessions, { fields: [sessionPayments.sessionId], references: [sessions.id] }),
+  player: one(players, { fields: [sessionPayments.playerId], references: [players.id] }),
+}));
+
 export const matchAvailabilityRelations = relations(matchAvailability, ({ one }) => ({
   match: one(matches, { fields: [matchAvailability.matchId], references: [matches.id] }),
   player: one(players, { fields: [matchAvailability.playerId], references: [players.id] }),
@@ -390,6 +415,7 @@ export type MatchLineup = typeof matchLineups.$inferSelect;
 export type MatchLineupSlot = typeof matchLineupSlots.$inferSelect;
 export type MatchSquadPlayer = typeof matchSquadPlayers.$inferSelect;
 export type MatchAvailability = typeof matchAvailability.$inferSelect;
+export type SessionPayment = typeof sessionPayments.$inferSelect;
 
 export const AVAILABILITY_STATUSES = ["in", "maybe", "out"] as const;
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];

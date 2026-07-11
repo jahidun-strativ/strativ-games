@@ -167,6 +167,14 @@ errors linger, so trust a clean restart over the buffer.
   share links** — no auth, so they open for people outside the app. `proxy.ts` bypasses
   any path ending in `/poster`, and the route handlers no longer check `isAdmin`. Links are
   unlisted (unguessable match/session UUID), not access-controlled.
+- **Cost split / settle-up:** `session_payments` (sessionId, playerId, paid, paidAt; migration
+  `005`). On the **session page**, a "Cost split" card divides `session.cost` equally among the
+  payers and tracks who's settled — total / per-head / collected / outstanding, plus a "You owe
+  ৳X" / "settled" line for the signed-in user. Actions in `server/actions/payments.ts`
+  (**admin-only**): `addSessionPayer`, `removeSessionPayer`, `setPaymentPaid`, and
+  `fillSessionPayersFromTeams` (seed from the internal teams' rosters). Shown only when
+  `session.cost != null`; if `paidBy === "office"` it just says the office covered it. Component
+  `cost-split.tsx` (read-only for non-admins). Per-head = round(cost / payers).
 - **Match availability / RSVP:** `match_availability` (matchId, playerId, status `in|maybe|out`;
   migration `004`). Any signed-in user with a player sets their own RSVP via `setMyAvailability`
   (`server/actions/availability.ts`) — an optimistic pill toggle (`availability-control.tsx`) on
