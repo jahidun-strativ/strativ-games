@@ -342,6 +342,7 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   venue: one(venues, { fields: [sessions.venueId], references: [venues.id] }),
   sport: one(sports, { fields: [sessions.sportId], references: [sports.id] }),
   fixtures: many(matches),
+  payments: many(sessionPayments),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({

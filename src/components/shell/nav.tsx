@@ -16,6 +16,7 @@ import {
   SettingOutlined,
   TrophyOutlined,
   UserOutlined,
+  WalletOutlined,
 } from "@ant-design/icons";
 import type { ReactNode } from "react";
 
@@ -36,6 +37,7 @@ const links: NavLink[] = [
   { href: "/staff", label: "Staff", icon: <IdcardOutlined /> },
   { href: "/sports", label: "Sports", icon: <DribbbleOutlined /> },
   { href: "/venues", label: "Venues", icon: <EnvironmentOutlined /> },
+  { href: "/costs", label: "Costs", icon: <WalletOutlined /> },
   { href: "/members", label: "Members", icon: <SafetyOutlined />, adminOnly: true },
 ];
 

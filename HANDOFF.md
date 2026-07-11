@@ -3,13 +3,15 @@
 > Living doc for picking up work in a new session. Update the **Open items** and
 > **Recent changes** sections at the end of any substantial task.
 
-_Last updated: 2026-07-11_
+_Last updated: 2026-07-12_
 
 ## What this is
 A sports team manager for Strativ: sports, teams, players, staff, venues,
-matches/fixtures, stats/standings, formation & lineup builder, booking costs.
-Auth-gated, role-based, installable PWA with push notifications. Dark "stadium
-night" theme with athletic (Oswald) headings.
+matches/fixtures, stats/standings, formation & lineup builder (team default +
+per-match), team captains, per-match squads with guests, RSVP/availability,
+booking costs + cost split, match-day posters, public result pages. Auth-gated,
+role-based (admin / member / per-team captain), installable PWA with push
+notifications. Dark "stadium night" theme with athletic (Oswald) headings.
 
 **Working dir:** `strativ-sports-manager/`
 
@@ -54,7 +56,12 @@ errors linger, so trust a clean restart over the buffer.
 - Mutations = **server actions** in `src/server/actions/*` with `requireAdmin()`
   (or `requireUser()` for self-scoped things). Then `revalidatePath`.
 - Auth/role helpers: `src/server/auth.ts` — `getSession()`, `getRole()`, `isAdmin()`,
-  `requireAdmin()` (deduped per request via React `cache()`).
+  `requireAdmin()`, plus captain-scoped: `getCurrentPlayer()`, `isCaptainOf(teamId)`,
+  `canManageTeam(teamId)` (admin || captain), `requireTeamManager(teamId)` (roster),
+  `requireCaptainOf(teamId)` (match line-ups/squads — admins NOT allowed). Deduped per
+  request via React `cache()`.
+- **Public (no-auth) surfaces**, bypassed in `proxy.ts`: `*/poster` images and
+  `/result/[id]` — unlisted by UUID, not access-controlled. Everything else is gated.
 - Create/edit UIs are launcher buttons in `src/components/entity-modals.tsx`:
   most open an antd **modal** (`form-modal.tsx`); tall ones open a right-side
   **drawer** (`form-drawer.tsx`) — e.g. "Book a slot".
@@ -71,7 +78,9 @@ errors linger, so trust a clean restart over the buffer.
   w/ live stats. Account at `/account/[path]` (email locked, delete-account on).
 - **Roles (RBAC):** `admin` vs `member`, `app_users` table. `requireAdmin()` on all
   mutations. **jahidun.nur@strativ.se = admin** (+ `ADMIN_EMAILS` env; first user
-  auto-admin if none). `/members` (admin-only) = role management.
+  auto-admin if none). `/members` (admin-only) = role management. Promoting member →
+  admin sends that user a push ("You're now an admin 🛡️", `setUserRole` in
+  `server/actions/members.ts`) — only on the transition, never on re-save; best-effort.
 - **Scheduling = "Book a slot" (sessions):** the only scheduling entry (the "Single
   match" button was removed). A **session** (`sessions` table) is a booked slot
   (venue/time/kind/cost/paidBy) holding 1+ **fixtures** (`matches.sessionId`):
@@ -89,6 +98,12 @@ errors linger, so trust a clean restart over the buffer.
   left dormant). Team page has a **roster manager** modal (`add-player-to-team.tsx`):
   add existing free agents, **remove** to free agent, or create new — stays open,
   updates live. Player↔team assignment: `assignPlayerToTeam` / `removePlayerFromTeam`.
+  **Delete guard:** `deletePlayer` refuses while the player is on a team (release first);
+  the player page swaps the delete button for guidance + a team link when assigned.
+  ⚠️ Deleting a **login-linked** player doesn't stick anyway — `ensurePlayerForUser`
+  recreates it on their next visit; use status `inactive` for real members instead.
+  `ConfirmDelete` (`ui/confirm-delete.tsx`) catches action errors and shows them as a
+  toast (reuses `isNextControlFlow` so redirects still bubble) — benefits all deletes.
 - **Teams:** slimmed create form (name + sport; league only for opponents; formation/
   stadium/squad-number removed). `formation`/`stadium` columns dormant.
 - **Stats:** player leaderboards; internal-league standings + competitive record.
@@ -135,8 +150,12 @@ errors linger, so trust a clean restart over the buffer.
   and the **result form** (stat candidates) all read the effective squad, so guests appear
   everywhere for that match. Team roster page + team default lineup are untouched.
 - **PWA + push:** manifest (`src/app/manifest.ts`), SW `public/sw.js` (cache `ssm-v4`).
+  Send helpers in `src/lib/push.ts`: `sendPushToAll`, **`sendPushToUser(userId, …)`**
+  (all of one user's devices; used for admin-promotion + captain-appointment pushes),
+  `sendPushToEndpoint`; all prune stale (404/410) subscriptions.
   Notifies on: **create (match + session/slot)**, time/venue change, reschedule, cancel
-  — gated by `notify_on_create`. **Manual force-send** "📣 Send notification" button on
+  — gated by `notify_on_create` — plus **full-time result** (see Public result page),
+  **admin promotion**, and **captain appointment**. **Manual force-send** "📣 Send notification" button on
   match + session pages (`notify-button.tsx`, `resend*Notification`) — reports device
   count / warns if VAPID missing. Day + same-day reminders via `/api/cron/reminders`.
   Bell toggle (`push-toggle.tsx`): green filled = on, orange **slashed** = off; syncs via
@@ -148,6 +167,12 @@ errors linger, so trust a clean restart over the buffer.
   **Text selection/copy disabled globally** (inputs excepted) in `globals.css`.
   `experimental.staleTimes {dynamic:30, static:180}` in `next.config.ts`. Mobile bottom
   nav = 4 tabs + **"More" drawer** (`shell/nav.tsx`).
+  **App shell is viewport-pinned** (`(app)/layout.tsx`: `h-screen overflow-hidden`; only
+  the content column scrolls, sidebar has its own `overflow-y-auto`) — a plain `sticky`
+  sidebar broke because an ancestor's `overflow-x-hidden` made it the scroll container.
+  **PlayersTable** (`tables/players-table.tsx`) is responsive: desktop = antd table with
+  initials-avatar chips, white names (orange on hover only), position chips; mobile =
+  stacked card list (no horizontal scroll). `RosterTable` shows a 🧢 C captain badge.
 - **Icons:** favicon "SG" monogram `src/app/icon.svg`; wordmark PWA icons + notification
   tray icon (`notification-192.png`, from favicon) + monochrome badge (`badge-96.png`,
   white "SG"), all via `scripts/gen-icons.mjs`, URLs versioned `?v=3`.
@@ -157,8 +182,12 @@ errors linger, so trust a clean restart over the buffer.
   Satori-safe JSX, flexbox-only; `fonts.ts` fetches Oswald+Archivo from Google Fonts at
   request time, module-cached, graceful fallback; `respond.tsx` = shared builder,
   `?download=1` forces a file download). Routes: `/matches/[id]/poster` and
-  `/sessions/[id]/poster` (`route.tsx`, `runtime=nodejs`, `force-dynamic`, gated by
-  `getSession`+`isAllowedEmail`). Three `?variant=`s: **`full`** (all teams + full player
+  `/sessions/[id]/poster` (`route.tsx`, `runtime=nodejs`, `force-dynamic`, **no auth** — see
+  below). Match poster player lists come from the **per-match squad** (`getEffectiveSquad`),
+  so guests appear. ⚠️ `fonts.ts` resolves TTF URLs via the Google Fonts **CSS API with a
+  very old User-Agent** (`Mozilla/4.0`) — hard-coded gstatic URLs rot when Google bumps font
+  versions; each face loads independently so one failure only drops that weight.
+  Three `?variant=`s: **`full`** (all teams + full player
   lists — internal games & round-robins; session route de-dups teams across fixtures),
   **`vs`** (bold "A vs B" hero) and **`squad`** (one Strativ team sheet). Competitive games
   default to offering `vs` + `squad`; internal → `full`. **Player lists show names only —
@@ -175,6 +204,12 @@ errors linger, so trust a clean restart over the buffer.
   `fillSessionPayersFromTeams` (seed from the internal teams' rosters). Shown only when
   `session.cost != null`; if `paidBy === "office"` it just says the office covered it. Component
   `cost-split.tsx` (read-only for non-admins). Per-head = round(cost / payers).
+- **Costs dashboard:** `/costs` (in nav for everyone, "The books"). Tiles: total / office /
+  we-paid / **outstanding**, this-month total (Dhaka-time month buckets), a **"To settle"**
+  list (self-paid slots with uncollected money — per-head, unpaid names, links to the slot;
+  a costed self-paid slot with **no payers yet counts as fully outstanding**), and an
+  aggregated **"Who owes"** list (per-head × unpaid rows summed per player). Includes legacy
+  standalone-match costs in totals. Needs the `sessions.payments` many-relation (added).
 - **Match availability / RSVP:** `match_availability` (matchId, playerId, status `in|maybe|out`;
   migration `004`). Any signed-in user with a player sets their own RSVP via `setMyAvailability`
   (`server/actions/availability.ts`) — an optimistic pill toggle (`availability-control.tsx`) on
@@ -211,8 +246,15 @@ errors linger, so trust a clean restart over the buffer.
    `ALTER TABLE app_users ADD CONSTRAINT app_users_user_id_unique UNIQUE (user_id);`.
 4. **Sessions Phase 2/3** (see Scheduling): per-session participation + standings/reminders.
 5. **Dormant columns** to optionally drop later: `teams.formation`, `teams.stadium`,
-   `players.squad_number` (kept for non-destructive removal). `sessions` + cost columns
-   were applied via `scripts/migrations/001-sessions-and-costs.sql`.
+   `players.squad_number` (kept for non-destructive removal). Applied migrations:
+   `001` sessions+costs, `002` captains+match lineups, `003` match squads,
+   `004` availability/RSVP, `005` session payments (all in `scripts/migrations/`).
+6. **All recent work is uncommitted** (captains, match lineups/squads, RSVP, cost split,
+   public result page, poster/public-link changes, HANDOFF updates) — commit before
+   further work.
+7. **Nice-to-haves discussed, not built:** uneven/custom cost-split amounts; RSVP "in"
+   count seeding the cost split; leaderboard as a public share page; MOTM voting;
+   auto-balanced teams; admin read-only view of both teams' match line-ups.
 
 ## Production deploy checklist
 - Set env on Vercel (Production): `DATABASE_URL`/`DB_URL`, `NEON_AUTH_BASE_URL`,
@@ -228,6 +270,21 @@ errors linger, so trust a clean restart over the buffer.
   `Authorization: Bearer <CRON_SECRET>`.
 
 ## Recent changes (newest first)
+- Costs dashboard `/costs` (totals, to-settle, who-owes) + nav entry.
+- Cost split / settle-up on session pages (`session_payments`, migration 005).
+- Match availability / RSVP (in/maybe/out) + captain "add players who are in" (migration 004).
+- Result page redesigned (crests, winner-gold score, goal/assist chips).
+- Public result page `/result/[id]` + one-time full-time push (test push delivered 2/2).
+- Poster + result links made **public** (proxy bypass); poster font loader fixed (CSS-API
+  TTF resolution — old gstatic URLs had rotted to 404).
+- Match-page lineup buttons: only the team(s) you captain (no more View/Set pair).
+- Match line-ups + match squads made **captain-only** (`requireCaptainOf`); admins assign captains.
+- Per-match squads w/ guests (`match_squad_players`, migration 003) feeding lineup/poster/result form.
+- Team captains (`teams.captainId`, migration 002) + per-match lineups (`match_lineups`).
+- Player delete guard (blocked while on a team); `ConfirmDelete` error toasts.
+- Admin-promotion push (`sendPushToUser`); captain-appointment push.
+- PlayersTable responsive redesign (avatars / mobile cards); viewport-pinned sidebar.
+- Match-day posters (next/og, 3 variants, IG/FB 4:5); opponent-by-name in Book a slot.
 - Manual "Send notification" force-send button (match + session pages).
 - Notify on booking a slot / session; notify on time-venue change, reschedule, cancel.
 - "Book a slot" opens a right-side drawer; removed the redundant "Single match" button.
