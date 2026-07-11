@@ -111,8 +111,9 @@ errors linger, so trust a clean restart over the buffer.
 - **Per-match lineups (CAPTAIN-ONLY):** `match_lineups` + `match_lineup_slots` tables (one per
   match×team, own formation + slots). Builder at `/matches/[id]/lineup/[teamId]`
   (reuses `PitchBuilder`; prefills from the team default when the match has none yet).
-  Match page shows a **"Match line-ups"** section with a link per internal team ("🧢 Set"
-  if you're the captain, else "View"). Save action `saveMatchLineup` (`server/actions/lineups.ts`)
+  Match page shows a **"Your match line-up"** section with a "🧢 Set … lineup" link **only for
+  the team(s) the viewer captains** (team A's captain never sees B's button; admins who aren't
+  a captain see none). Save action `saveMatchLineup` (`server/actions/lineups.ts`)
   is gated by **`requireCaptainOf`** — **admins cannot edit match line-ups/squads**; they only
   assign the captain. (`requireCaptainOf` passes if the admin *is* the captain.) UI edit-gating
   uses `isCaptainOf`, not `canManageTeam`. `PitchBuilder` read-only banner text is set via its

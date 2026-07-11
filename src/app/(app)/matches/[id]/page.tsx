@@ -48,17 +48,18 @@ export default async function MatchDetailPage({
   const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
 
-  // Internal teams in this match whose lineup the viewer may set/view, with
-  // whether they can edit (admin or that team's captain).
+  // Only the team(s) the viewer captains — a captain manages just their own
+  // side's line-up, so team A's captain never sees team B's button (and admins
+  // who aren't a captain see none; they assign captains instead).
   const lineupTeams = (
     await Promise.all(
       [match.homeTeam, match.awayTeam].map(async (t) =>
-        t && t.kind !== "external"
-          ? { id: t.id, name: t.name, canEdit: await isCaptainOf(t.id) }
+        t && t.kind !== "external" && (await isCaptainOf(t.id))
+          ? { id: t.id, name: t.name }
           : null,
       ),
     )
-  ).filter((t): t is { id: string; name: string; canEdit: boolean } => t !== null);
+  ).filter((t): t is { id: string; name: string } => t !== null);
 
   // Stats are recorded against each side's per-match squad (so a guest who
   // played can be scored), falling back to the roster when not customised.
@@ -165,7 +166,7 @@ export default async function MatchDetailPage({
 
       {hasTeams && lineupTeams.length > 0 ? (
         <section className="mt-8">
-          <h2 className="font-display mb-3 text-xl text-ink-900">Match line-ups</h2>
+          <h2 className="font-display mb-3 text-xl text-ink-900">Your match line-up</h2>
           <div className="flex flex-wrap gap-3">
             {lineupTeams.map((t) => (
               <ButtonLink
@@ -173,13 +174,12 @@ export default async function MatchDetailPage({
                 variant="secondary"
                 href={`/matches/${match.id}/lineup/${t.id}`}
               >
-                {t.canEdit ? "🧢 Set" : "View"} {t.name} lineup
+                🧢 Set {t.name} lineup
               </ButtonLink>
             ))}
           </div>
           <p className="mt-2 text-xs text-ink-500">
-            Formation and starting XI for this match — set by the team captain (assign one on
-            the team page).
+            Set your team&apos;s formation and starting XI for this match.
           </p>
         </section>
       ) : null}
