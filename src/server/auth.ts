@@ -78,7 +78,7 @@ export async function requireTeamManager(teamId: string) {
   throw new Error("Only an admin or this team's captain can do that.");
 }
 
-// Guards match line-ups + match squads: the team's CAPTAIN only. Admins do not
+// Guards match line-ups: the team's CAPTAIN only. Admins do not
 // get in here (they set the captain instead). If the admin is also the captain
 // of this team, they pass — because they're the captain, not because they're an admin.
 export async function requireCaptainOf(teamId: string) {

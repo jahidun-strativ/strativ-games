@@ -11,7 +11,7 @@ import {
   matches,
   players,
 } from "@/db/schema";
-import { requireCaptainOf } from "@/server/auth";
+import { requireTeamManager } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 // Loads a match and the side (home/away) that `teamId` plays, plus the opposing
@@ -64,7 +64,7 @@ async function materialize(matchId: string, teamId: string) {
 // or a guest (free agent / borrowed) who is NOT added to the roster. Admin or
 // the team's captain.
 export async function addMatchSquadPlayer(matchId: string, teamId: string, playerId: string) {
-  await requireCaptainOf(teamId);
+  await requireTeamManager(teamId);
   const { team, opponentId } = await matchSide(matchId, teamId);
 
   const player = await db.query.players.findFirst({
@@ -101,9 +101,9 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
 }
 
 // Add every player on this team who RSVP'd "in" to the match squad in one go.
-// Captain-only. Returns how many were added. Handy after RSVPs come in.
+// Admin or the team's captain. Returns how many were added. Handy after RSVPs come in.
 export async function fillSquadFromAvailability(matchId: string, teamId: string) {
-  await requireCaptainOf(teamId);
+  await requireTeamManager(teamId);
   await matchSide(matchId, teamId);
 
   const rows = await db
@@ -135,7 +135,7 @@ export async function fillSquadFromAvailability(matchId: string, teamId: string)
 // them from this match's saved lineup so the lineup can't reference a
 // non-squad player. Admin or the team's captain.
 export async function removeMatchSquadPlayer(matchId: string, teamId: string, playerId: string) {
-  await requireCaptainOf(teamId);
+  await requireTeamManager(teamId);
   await matchSide(matchId, teamId);
 
   await materialize(matchId, teamId);

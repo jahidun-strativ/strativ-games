@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
 import { saveMatchLineup } from "@/server/actions/lineups";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
-import { isCaptainOf } from "@/server/auth";
+import { canManageTeam, isCaptainOf } from "@/server/auth";
 import { formatFull } from "@/lib/format";
 
 export const metadata = { title: "Match lineup" };
@@ -42,7 +42,11 @@ export default async function MatchLineupPage({
   if (!team || team.kind === "external") notFound();
 
   // Match line-ups are captain-only — admins assign the captain, not the lineup.
-  const canEdit = await isCaptainOf(teamId);
+  // Match squads (who's available to field) are admin-or-captain.
+  const [canEdit, canManageSquad] = await Promise.all([
+    isCaptainOf(teamId),
+    canManageTeam(teamId),
+  ]);
 
   // The pool for this match: the per-match squad (own snapshot if customised,
   // else the current roster). This is what the pitch builder assigns from.
@@ -92,7 +96,7 @@ export default async function MatchLineupPage({
         title={`${team.name} — ${match.homeTeam?.name ?? "TBD"} v ${match.awayTeam?.name ?? "TBD"}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            {canEdit ? (
+            {canManageSquad ? (
               <>
                 <FillSquadButton matchId={match.id} teamId={teamId} />
                 <MatchSquadManager
