@@ -69,18 +69,19 @@ export default async function MatchDetailPage({
   const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
 
-  // Only the team(s) the viewer captains — a captain manages just their own
-  // side's line-up, so team A's captain never sees team B's button (and admins
-  // who aren't a captain see none; they assign captains instead).
+  // Team(s) the viewer can open the lineup page for: their own side as captain,
+  // or ANY internal side as admin (admins manage match squads for both teams,
+  // even though the starting XI itself stays captain-only on that page).
   const lineupTeams = (
     await Promise.all(
-      [match.homeTeam, match.awayTeam].map(async (t) =>
-        t && t.kind !== "external" && (await isCaptainOf(t.id))
-          ? { id: t.id, name: t.name }
-          : null,
-      ),
+      [match.homeTeam, match.awayTeam].map(async (t) => {
+        if (!t || t.kind === "external") return null;
+        const captain = await isCaptainOf(t.id);
+        if (!captain && !admin) return null;
+        return { id: t.id, name: t.name, captain };
+      }),
     )
-  ).filter((t): t is { id: string; name: string } => t !== null);
+  ).filter((t): t is { id: string; name: string; captain: boolean } => t !== null);
 
   // RSVPs for this match + the viewer's own player (to prefill their control).
   const [availabilityRows, myPlayer] = await Promise.all([
@@ -261,7 +262,9 @@ export default async function MatchDetailPage({
 
       {hasTeams && lineupTeams.length > 0 ? (
         <section className="mt-8">
-          <h2 className="font-display mb-3 text-xl text-ink-900">Your match line-up</h2>
+          <h2 className="font-display mb-3 text-xl text-ink-900">
+            {admin ? "Match line-ups & squads" : "Your match line-up"}
+          </h2>
           <div className="flex flex-wrap gap-3">
             {lineupTeams.map((t) => (
               <ButtonLink
@@ -269,12 +272,14 @@ export default async function MatchDetailPage({
                 variant="secondary"
                 href={`/matches/${match.id}/lineup/${t.id}`}
               >
-                🧢 Set {t.name} lineup
+                {t.captain ? `🧢 Set ${t.name} lineup` : `👥 Manage ${t.name} squad`}
               </ButtonLink>
             ))}
           </div>
           <p className="mt-2 text-xs text-ink-500">
-            Set your team&apos;s formation and starting XI for this match.
+            {admin
+              ? "Manage each team's match squad (who's available to field). The starting XI stays captain-only."
+              : "Set your team's formation and starting XI for this match."}
           </p>
         </section>
       ) : null}
