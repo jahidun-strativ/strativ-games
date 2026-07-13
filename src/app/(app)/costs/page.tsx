@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { formatBdt, formatDate } from "@/lib/format";
 import { APP_TIMEZONE } from "@/lib/timezone";
+import { deriveSessionPayers } from "@/server/queries/session-costs";
 
 export const metadata = { title: "Costs" };
 
@@ -38,8 +39,19 @@ async function CostsContent() {
       orderBy: (s, { desc }) => desc(s.startAt),
       with: {
         venue: { columns: { name: true } },
-        payments: { with: { player: { columns: { name: true } } } },
-        fixtures: { with: { homeTeam: true, awayTeam: true }, columns: { id: true } },
+        payments: { columns: { playerId: true, paid: true } },
+        fixtures: {
+          columns: { id: true },
+          with: {
+            homeTeam: true,
+            awayTeam: true,
+            // Who actually played each game — the split is built from these.
+            playerStats: {
+              columns: { playerId: true, played: true },
+              with: { player: { columns: { name: true } } },
+            },
+          },
+        },
       },
     }),
     db.query.matches.findMany({
@@ -65,9 +77,11 @@ async function CostsContent() {
   const settle = slots
     .filter((s) => s.paidBy === "self" && (s.cost ?? 0) > 0)
     .map((s) => {
-      const n = s.payments.length;
+      // Split members = players who actually played this slot's games.
+      const payers = deriveSessionPayers(s.fixtures, s.payments);
+      const n = payers.length;
       const perHead = n ? Math.round((s.cost ?? 0) / n) : 0;
-      const unpaid = s.payments.filter((p) => !p.paid);
+      const unpaid = payers.filter((p) => !p.paid);
       const collected = n ? Math.round(((s.cost ?? 0) * (n - unpaid.length)) / n) : 0;
       const label =
         s.title ||
@@ -85,7 +99,7 @@ async function CostsContent() {
         perHead,
         collected,
         outstanding: Math.max((s.cost ?? 0) - collected, 0),
-        unpaidNames: unpaid.map((p) => p.player?.name ?? "Unknown"),
+        unpaidNames: unpaid.map((p) => p.name),
       };
     });
   const toSettle = settle.filter((s) => s.outstanding > 0);
@@ -134,7 +148,7 @@ async function CostsContent() {
               </p>
               <p className="mt-2 text-xs text-ink-500">
                 {s.n === 0 ? (
-                  "No payers added yet — open the slot to start the split."
+                  "No players recorded as played yet — record the result to build the split."
                 ) : (
                   <>
                     <span className="font-semibold text-tvred-500">

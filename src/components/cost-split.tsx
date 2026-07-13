@@ -1,33 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { App, Input } from "antd";
+import { App } from "antd";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-  addSessionPayer,
-  fillSessionPayersFromTeams,
-  removeSessionPayer,
-  setPaymentPaid,
-} from "@/server/actions/payments";
+import { setPaymentPaid } from "@/server/actions/payments";
 import { formatBdt } from "@/lib/format";
 
 type Payer = { id: string; name: string; paid: boolean };
-type Candidate = { id: string; name: string; teamName: string | null };
 
-// Splits a slot's cost equally among the payers and tracks who has settled.
+// Splits a slot's cost equally among the players who PLAYED its games and tracks
+// who has settled. The payer list is derived from the match results, not managed
+// here — editing a squad / result updates it automatically.
 export function CostSplit({
   sessionId,
   cost,
   payers,
-  candidates,
   currentPlayerId,
   canManage,
 }: {
   sessionId: string;
   cost: number;
   payers: Payer[];
-  candidates: Candidate[];
   currentPlayerId: string | null;
   canManage: boolean;
 }) {
@@ -35,7 +28,6 @@ export function CostSplit({
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const [q, setQ] = useState("");
 
   const n = payers.length;
   const perHead = n ? Math.round(cost / n) : 0;
@@ -59,11 +51,6 @@ export function CostSplit({
       }
     });
   }
-
-  const payerIds = new Set(payers.map((p) => p.id));
-  const available = candidates
-    .filter((c) => !payerIds.has(c.id))
-    .filter((c) => c.name.toLowerCase().includes(q.trim().toLowerCase()));
 
   return (
     <div className="tv-card-sm p-5">
@@ -107,7 +94,10 @@ export function CostSplit({
       {/* Payers */}
       <ul className="mt-4 space-y-1.5">
         {payers.length === 0 ? (
-          <li className="text-sm text-ink-500">No one added yet.</li>
+          <li className="text-sm text-ink-500">
+            No players recorded as played yet — record the match result and the split fills in
+            automatically.
+          </li>
         ) : (
           payers.map((p) => {
             const busy = pendingId === p.id;
@@ -127,30 +117,20 @@ export function CostSplit({
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="text-xs text-ink-500">{formatBdt(perHead)}</span>
                   {canManage ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          run(p.id, () => setPaymentPaid(sessionId, p.id, !p.paid))
-                        }
-                        className={`rounded-md px-2 py-0.5 text-xs font-bold disabled:opacity-50 ${
-                          p.paid
-                            ? "text-pitch-500 hover:bg-pitch-600/15"
-                            : "text-ink-500 hover:bg-cream-200"
-                        }`}
-                      >
-                        {p.paid ? "✓ Paid" : "Mark paid"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => run(p.id, () => removeSessionPayer(sessionId, p.id))}
-                        className="rounded-md px-1.5 py-0.5 text-xs font-bold text-tvred-500 hover:bg-tvred-500/10 disabled:opacity-50"
-                      >
-                        ✕
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        run(p.id, () => setPaymentPaid(sessionId, p.id, !p.paid))
+                      }
+                      className={`rounded-md px-2 py-0.5 text-xs font-bold disabled:opacity-50 ${
+                        p.paid
+                          ? "text-pitch-500 hover:bg-pitch-600/15"
+                          : "text-ink-500 hover:bg-cream-200"
+                      }`}
+                    >
+                      {p.paid ? "✓ Paid" : "Mark paid"}
+                    </button>
                   ) : (
                     <span
                       className={`rounded-md px-2 py-0.5 text-xs font-bold ${
@@ -167,64 +147,12 @@ export function CostSplit({
         )}
       </ul>
 
-      {/* Add players */}
       {canManage ? (
-        <div className="mt-5 border-t border-line pt-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Button
-              variant="secondary"
-              disabled={pendingId === "fill"}
-              onClick={() =>
-                run(
-                  "fill",
-                  async () => {
-                    await fillSessionPayersFromTeams(sessionId);
-                  },
-                  "Added players from the teams.",
-                )
-              }
-            >
-              ➕ Add everyone from the teams
-            </Button>
-          </div>
-          <Input
-            allowClear
-            placeholder="Search a player to add…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="mb-2"
-          />
-          {available.length === 0 ? (
-            <p className="text-sm text-ink-500">No other players to add.</p>
-          ) : (
-            <ul className="max-h-56 space-y-1.5 overflow-y-auto">
-              {available.map((c) => {
-                const busy = pendingId === c.id;
-                return (
-                  <li
-                    key={c.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-line bg-cream-50 px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 truncate font-semibold">
-                      {c.name}
-                      <span className="ml-2 text-xs font-normal text-ink-500">
-                        {c.teamName ?? "Free agent"}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => run(c.id, () => addSessionPayer(sessionId, c.id))}
-                      className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold text-burnt-400 hover:bg-burnt-500/10 disabled:opacity-50"
-                    >
-                      + Add
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+        <p className="mt-5 border-t border-line pt-4 text-xs text-ink-500">
+          The split is everyone who played this slot&apos;s games. To change who&apos;s in it, edit
+          the match squad or tick/untick “Played” on the match result — it updates here
+          automatically.
+        </p>
       ) : null}
     </div>
   );

@@ -175,7 +175,7 @@ export async function reopenMatch(id: string, clearResult: boolean) {
   await requireAdmin();
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, id),
-    columns: { status: true },
+    columns: { status: true, sessionId: true },
   });
   if (!match) throw new Error("Match not found.");
   if (match.status !== "completed") throw new Error("Only a completed match can be reopened.");
@@ -195,6 +195,11 @@ export async function reopenMatch(id: string, clearResult: boolean) {
   revalidateMatchPages(id);
   revalidatePath("/players");
   revalidatePath(`/result/${id}`);
+  // Clearing the result changes who "played" — refresh the derived cost split.
+  if (clearResult) {
+    revalidatePath("/costs");
+    if (match.sessionId) revalidatePath(`/sessions/${match.sessionId}`);
+  }
 }
 
 export async function recordResult(id: string, formData: FormData) {
@@ -206,7 +211,7 @@ export async function recordResult(id: string, formData: FormData) {
   // already-final result later shouldn't re-ping.
   const prev = await db.query.matches.findFirst({
     where: eq(matches.id, id),
-    columns: { status: true },
+    columns: { status: true, sessionId: true },
   });
   const firstCompletion = prev?.status !== "completed";
 
@@ -253,6 +258,9 @@ export async function recordResult(id: string, formData: FormData) {
   revalidateMatchPages(id);
   revalidatePath("/players");
   revalidatePath(`/result/${id}`);
+  // The cost split is derived from who played — keep costs & the slot in sync.
+  revalidatePath("/costs");
+  if (prev?.sessionId) revalidatePath(`/sessions/${prev.sessionId}`);
 
   // Full-time push to everyone, linking to the public result page. Best-effort.
   if (firstCompletion) {

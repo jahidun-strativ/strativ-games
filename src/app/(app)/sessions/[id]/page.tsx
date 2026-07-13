@@ -11,6 +11,7 @@ import { NotifyButton } from "@/components/notify-button";
 import { PosterButton, type PosterVariant } from "@/components/poster-button";
 import { CostSplit } from "@/components/cost-split";
 import { isAdmin, getCurrentPlayer } from "@/server/auth";
+import { deriveSessionPayers } from "@/server/queries/session-costs";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 
 export const metadata = { title: "Session" };
@@ -27,36 +28,32 @@ export default async function SessionDetailPage({
       venue: true,
       fixtures: {
         orderBy: (f, { asc }) => asc(f.orderIndex),
-        with: { homeTeam: true, awayTeam: true, venue: true },
+        with: {
+          homeTeam: true,
+          awayTeam: true,
+          venue: true,
+          // Who played each game — the cost split is derived from these.
+          playerStats: {
+            columns: { playerId: true, played: true },
+            with: { player: { columns: { name: true } } },
+          },
+        },
       },
     },
   });
   if (!session) notFound();
   const admin = await isAdmin();
 
-  // Cost-split data: who's chipping in for this slot, and candidates to add.
-  const [payments, candidateRows, myPlayer] = await Promise.all([
+  // Cost-split members are exactly the players who played this slot's games;
+  // sessionPayments only carries paid/unpaid status.
+  const [payments, myPlayer] = await Promise.all([
     db.query.sessionPayments.findMany({
       where: (p, { eq }) => eq(p.sessionId, id),
-      with: { player: { columns: { id: true, name: true } } },
+      columns: { playerId: true, paid: true },
     }),
-    session.sportId
-      ? db.query.players.findMany({
-          where: (p, { eq }) => eq(p.sportId, session.sportId!),
-          orderBy: (p, { asc }) => asc(p.name),
-          with: { team: { columns: { name: true } } },
-        })
-      : Promise.resolve([]),
     getCurrentPlayer(),
   ]);
-  const payers = payments
-    .map((pm) => ({ id: pm.playerId, name: pm.player?.name ?? "Unknown", paid: pm.paid }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const candidates = candidateRows.map((p) => ({
-    id: p.id,
-    name: p.name,
-    teamName: p.team?.name ?? null,
-  }));
+  const payers = deriveSessionPayers(session.fixtures, payments);
 
   const external = session.kind === "competitive";
   const gameCount = session.fixtures.length;
@@ -138,7 +135,6 @@ export default async function SessionDetailPage({
               sessionId={session.id}
               cost={session.cost}
               payers={payers}
-              candidates={candidates}
               currentPlayerId={myPlayer?.id ?? null}
               canManage={admin}
             />
