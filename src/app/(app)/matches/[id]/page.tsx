@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { NotifyButton } from "@/components/notify-button";
 import { PosterButton, type PosterVariant } from "@/components/poster-button";
+import { ReopenMatchButton } from "@/components/reopen-match-button";
 import { AvailabilityControl } from "@/components/availability-control";
 import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
@@ -324,6 +325,14 @@ export default async function MatchDetailPage({
               action={resendMatchNotification.bind(null, match.id)}
               label="📣 Send notification"
             />
+            {match.status === "completed" ? (
+              <div className="flex flex-col gap-1">
+                <ReopenMatchButton matchId={match.id} />
+                <p className="text-xs text-ink-500">
+                  Put the match back to scheduled to fix its data — silent, no notification.
+                </p>
+              </div>
+            ) : null}
             {match.status !== "cancelled" ? (
               <form action={cancelMatch.bind(null, match.id)}>
                 <Button type="submit" variant="secondary">

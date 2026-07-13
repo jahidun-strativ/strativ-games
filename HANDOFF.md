@@ -231,6 +231,12 @@ errors linger, so trust a clean restart over the buffer.
   opens the result **without signing in** (SW opens `data.url`). Editing an already-completed
   result does not re-notify. Admins get a "🔗 Public result page" link on the match page once
   completed. Best-effort: push failure never fails the result save.
+  **Fixing ended-match data:** "Edit result" (same form, prefilled) for score/stats — untick
+  played + zero the numbers to delete a stat row. **"↩️ Reopen match"** (Admin card, completed
+  only; `reopenMatch` in `matches.ts` + `reopen-match-button.tsx`) silently sets status back to
+  `scheduled` — dropdown choice keeps or wipes score+stats. Unlike **reschedule** (which also
+  re-opens but pushes "rescheduled" to everyone), reopen sends nothing; re-completing later
+  fires the full-time push again (corrected final = new announcement).
 - **Opponents need no roster:** competitive "Book a slot" now takes a free-text
   **"…or new opponent by name"** field (`session-form.tsx`) alongside the opponent Select;
   `createSession` (competitive branch) creates a name-only `external` team on the fly when
@@ -275,6 +281,7 @@ errors linger, so trust a clean restart over the buffer.
   `Authorization: Bearer <CRON_SECRET>`.
 
 ## Recent changes (newest first)
+- "↩️ Reopen match" admin action (silent revert to scheduled, keep/clear result).
 - Opt-out RSVP: players default to "in" when their team is scheduled (seed-availability.ts).
 - Player emails shown in the players list (under the name / mobile card line).
 - Costs dashboard `/costs` (totals, to-settle, who-owes) + nav entry.

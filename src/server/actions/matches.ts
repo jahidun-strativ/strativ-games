@@ -166,6 +166,37 @@ export async function deleteMatch(id: string) {
   redirect("/matches");
 }
 
+// Quietly put a completed match back to "scheduled" so its data can be fixed —
+// sends no push (unlike reschedule). Optionally wipes the recorded score +
+// player stats for a clean do-over; otherwise they stay prefilled in the form.
+// Re-completing afterwards fires the full-time push again (scheduled→completed
+// transition) — deliberate: a corrected final is worth announcing.
+export async function reopenMatch(id: string, clearResult: boolean) {
+  await requireAdmin();
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, id),
+    columns: { status: true },
+  });
+  if (!match) throw new Error("Match not found.");
+  if (match.status !== "completed") throw new Error("Only a completed match can be reopened.");
+
+  await db
+    .update(matches)
+    .set(
+      clearResult
+        ? { status: "scheduled", homeScore: null, awayScore: null }
+        : { status: "scheduled" },
+    )
+    .where(eq(matches.id, id));
+  if (clearResult) {
+    await db.delete(playerMatchStats).where(eq(playerMatchStats.matchId, id));
+  }
+
+  revalidateMatchPages(id);
+  revalidatePath("/players");
+  revalidatePath(`/result/${id}`);
+}
+
 export async function recordResult(id: string, formData: FormData) {
   await requireAdmin();
   const homeScore = optInt(formData, "homeScore") ?? 0;
