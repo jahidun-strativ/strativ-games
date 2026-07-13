@@ -41,6 +41,11 @@ export default async function MatchLineupPage({
         : null;
   if (!team || team.kind === "external") notFound();
 
+  // The other side of this match. A player already in the opponent's squad for
+  // THIS match can't also be fielded here (they can for a different match), so
+  // they're excluded from the candidate list below.
+  const opponentId = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
+
   // Match line-ups are captain-only — admins assign the captain, not the lineup.
   // Match squads (who's available to field) are admin-or-captain.
   const [canEdit, canManageSquad] = await Promise.all([
@@ -52,7 +57,7 @@ export default async function MatchLineupPage({
   // else the current roster). This is what the pitch builder assigns from.
   const { players: squad, customized } = await getEffectiveSquad(id, teamId);
 
-  const [existing, teamDefault, sportPlayers] = await Promise.all([
+  const [existing, teamDefault, sportPlayers, opponentSquad] = await Promise.all([
     db.query.matchLineups.findFirst({
       where: and(eq(matchLineups.matchId, id), eq(matchLineups.teamId, teamId)),
       with: { slots: true },
@@ -68,7 +73,13 @@ export default async function MatchLineupPage({
       orderBy: asc(playersTable.name),
       with: { team: { columns: { name: true } } },
     }),
+    // Players already committed to the opponent's squad for this match.
+    opponentId ? getEffectiveSquad(id, opponentId) : Promise.resolve({ players: [] }),
   ]);
+
+  // Can't field a player who's already in the opponent's squad for this match.
+  const opponentSquadIds = new Set(opponentSquad.players.map((p) => p.id));
+  const candidatePlayers = sportPlayers.filter((p) => !opponentSquadIds.has(p.id));
 
   const source = existing ?? teamDefault ?? null;
 
@@ -104,7 +115,7 @@ export default async function MatchLineupPage({
                   teamId={teamId}
                   teamName={team.name}
                   initialSquadIds={squad.map((p) => p.id)}
-                  candidates={sportPlayers.map((p) => ({
+                  candidates={candidatePlayers.map((p) => ({
                     id: p.id,
                     name: p.name,
                     position: p.position,
