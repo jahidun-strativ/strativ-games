@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { App, Badge, Button, Popover, Spin } from "antd";
 import { BellOutlined } from "@ant-design/icons";
+import { PushToggle } from "@/components/pwa/push-toggle";
 import {
   getUnreadCount,
   listNotifications,
@@ -137,6 +138,11 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
           ))}
         </ul>
       )}
+
+      {/* Device push control lives here so there's a single bell in the UI. */}
+      <div className="mt-3 border-t border-line pt-3">
+        <PushToggle />
+      </div>
     </div>
   );
 
