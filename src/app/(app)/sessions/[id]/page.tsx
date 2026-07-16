@@ -58,6 +58,12 @@ export default async function SessionDetailPage({
   const external = session.kind === "competitive";
   const gameCount = session.fixtures.length;
   const hasTeams = session.fixtures.some((f) => f.homeTeamId && f.awayTeamId);
+  // A "remind about the game" push only makes sense before it happens — hide it
+  // once every game is done/cancelled or the slot is in the past.
+  const finished =
+    (gameCount > 0 &&
+      session.fixtures.every((f) => f.status === "completed" || f.status === "cancelled")) ||
+    session.startAt < new Date();
   const posterVariants: PosterVariant[] = external
     ? [
         { label: "Match poster", variant: "vs", hint: "Strativ vs opponent" },
@@ -153,10 +159,12 @@ export default async function SessionDetailPage({
 
       {admin ? (
         <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-4">
-          <NotifyButton
-            action={resendSessionNotification.bind(null, session.id)}
-            label="📣 Send notification"
-          />
+          {!finished ? (
+            <NotifyButton
+              action={resendSessionNotification.bind(null, session.id)}
+              label="📣 Send notification"
+            />
+          ) : null}
           <ConfirmDelete
             action={deleteSession.bind(null, session.id)}
             label="Delete slot"
