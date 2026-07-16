@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { loadPosterFonts } from "./fonts";
-import { Poster, POSTER_SIZE, type PosterData } from "./poster";
+import { Poster, POSTER_WIDTH, posterHeight, type PosterData } from "./poster";
 
 // Builds the PNG response for a poster. `filename` (when given) makes the
 // browser download the image instead of displaying it inline.
@@ -16,7 +16,8 @@ export async function renderPoster(
     headers["Content-Disposition"] = `attachment; filename="${filename}"`;
   }
   return new ImageResponse(<Poster {...data} />, {
-    ...POSTER_SIZE,
+    width: POSTER_WIDTH,
+    height: posterHeight(data),
     fonts: fonts.length ? fonts : undefined,
     headers,
   });

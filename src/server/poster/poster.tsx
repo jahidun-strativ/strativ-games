@@ -22,9 +22,31 @@ export type PosterData = {
   sport?: string | null;
 };
 
-// Instagram / Facebook portrait feed size (4:5, 1080×1350) — the standard
-// upload size for both. Type is scaled for this canvas so it reads at feed size.
-export const POSTER_SIZE = { width: 1080, height: 1350 };
+// Fixed feed width (Instagram / Facebook portrait). The HEIGHT is computed from
+// the content (see posterHeight) so the canvas hugs the line-ups instead of
+// leaving dead space below a short squad.
+export const POSTER_WIDTH = 1080;
+
+// Estimate the canvas height so the columns fill it with little/no dead space.
+// The "chrome" (header + meta + footer + padding) is roughly constant; the team
+// columns grow with the longest line-up. We slightly overestimate on purpose —
+// a few px of breathing room at the bottom beats clipping a player's name.
+export function posterHeight(data: PosterData): number {
+  // The "vs" hero has no line-ups; keep it a tall, centred poster.
+  if (data.variant === "vs") return 1080;
+
+  const compact = data.teams.length >= 3;
+  const maxPlayers = Math.max(1, ...data.teams.map((t) => t.players.length));
+
+  const rowH = compact ? 44 : 53; // one player row incl. its bottom margin
+  const teamHeaderH = compact ? 104 : 120; // accent band with team name
+  const listPadV = compact ? 32 : 40; // line-up top + bottom padding
+  const bodyH = teamHeaderH + listPadV + maxPlayers * rowH;
+
+  // padding(112) + header(150) + body margins(62) + meta(48+26) + footer(24).
+  const chrome = 422;
+  return Math.max(640, Math.round(chrome + bodyH));
+}
 
 // Per-team accent colours (burnt → pitch → sky → gold), cycled.
 const ACCENTS = ["#f97316", "#10b981", "#38bdf8", "#f5b81f"];
