@@ -4,7 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { matches, pushSubscriptions, sessions, teams } from "@/db/schema";
+import { appUsers, matches, pushSubscriptions, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { pushConfigured } from "@/lib/push";
@@ -14,11 +14,15 @@ import { seedDefaultAvailability } from "@/server/seed-availability";
 import type { NotifyResult } from "@/server/actions/matches";
 
 // Manually (re)send a slot's notification to everyone — ignores the toggle.
+// Fires both the PWA push (subscribed devices) and the in-app inbox (all users).
 export async function resendSessionNotification(id: string): Promise<NotifyResult> {
   await requireAdmin();
-  const sent = await db.$count(pushSubscriptions);
+  const [sent, inApp] = await Promise.all([
+    db.$count(pushSubscriptions),
+    db.$count(appUsers),
+  ]);
   await notifySessionCreated(id);
-  return { sent, configured: pushConfigured };
+  return { sent, inApp, configured: pushConfigured };
 }
 
 function revalidateSessionPages(id?: string) {

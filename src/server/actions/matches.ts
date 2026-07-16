@@ -4,7 +4,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { matches, playerMatchStats, pushSubscriptions, sessions, teams } from "@/db/schema";
+import { appUsers, matches, playerMatchStats, pushSubscriptions, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
@@ -13,14 +13,19 @@ import { seedDefaultAvailability } from "@/server/seed-availability";
 import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 
-export type NotifyResult = { sent: number; configured: boolean };
+// `sent` = push devices reached; `inApp` = app users who got an in-app row.
+export type NotifyResult = { sent: number; inApp: number; configured: boolean };
 
 // Manually (re)send a match's notification to everyone — ignores the toggle.
+// Fires both the PWA push (subscribed devices) and the in-app inbox (all users).
 export async function resendMatchNotification(id: string): Promise<NotifyResult> {
   await requireAdmin();
-  const sent = await db.$count(pushSubscriptions);
+  const [sent, inApp] = await Promise.all([
+    db.$count(pushSubscriptions),
+    db.$count(appUsers),
+  ]);
   await notifyMatchToAll(id, "announce");
-  return { sent, configured: pushConfigured };
+  return { sent, inApp, configured: pushConfigured };
 }
 
 function revalidateMatchPages(id?: string) {

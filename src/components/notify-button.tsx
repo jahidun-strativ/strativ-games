@@ -5,8 +5,8 @@ import { App } from "antd";
 import { Button } from "@/components/ui/button";
 import type { NotifyResult } from "@/server/actions/matches";
 
-// Force-sends a match/slot notification to all subscribers and reports how many
-// devices it reached. Use when a push didn't arrive or you want to re-nudge.
+// Force-sends a match/slot notification: a PWA push to subscribed devices AND an
+// in-app inbox notification to every user. Reports both counts.
 export function NotifyButton({
   action,
   label = "Send notification now",
@@ -21,12 +21,19 @@ export function NotifyButton({
     startTransition(async () => {
       try {
         const res = await action();
-        if (!res.configured) {
-          message.error("Push isn't configured on the server (missing VAPID keys).");
-        } else if (res.sent === 0) {
-          message.warning("No devices are subscribed to notifications yet.");
+        const parts: string[] = [];
+        if (res.configured && res.sent > 0) {
+          parts.push(`${res.sent} device${res.sent === 1 ? "" : "s"} (push)`);
+        }
+        if (res.inApp > 0) {
+          parts.push(`${res.inApp} user${res.inApp === 1 ? "" : "s"} in-app`);
+        }
+        if (parts.length > 0) {
+          message.success(`Notification sent — ${parts.join(" · ")}.`);
+        } else if (!res.configured) {
+          message.warning("Push isn't configured (missing VAPID keys) and no users to notify.");
         } else {
-          message.success(`Notification sent to ${res.sent} device${res.sent === 1 ? "" : "s"}.`);
+          message.warning("No one to notify yet.");
         }
       } catch {
         message.error("Couldn't send the notification.");
