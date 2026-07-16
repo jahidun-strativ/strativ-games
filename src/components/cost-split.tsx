@@ -178,9 +178,11 @@ export function CostSplit({
             disabled={pendingId === "remind" || unpaidCount === 0}
             onClick={remind}
           >
-            {unpaidCount > 0
-              ? `💸 Remind ${unpaidCount} unpaid player${unpaidCount === 1 ? "" : "s"}`
-              : "💸 Everyone has paid"}
+            {n === 0
+              ? "💸 No one has played yet"
+              : unpaidCount > 0
+                ? `💸 Remind ${unpaidCount} unpaid player${unpaidCount === 1 ? "" : "s"}`
+                : "💸 Everyone has paid"}
           </Button>
           <p className="mt-3 text-xs text-ink-500">
             Sends a payment reminder (push + in-app) only to players who played but haven&apos;t

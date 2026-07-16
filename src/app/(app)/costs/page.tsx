@@ -163,7 +163,7 @@ async function CostsContent() {
                 )}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                {admin ? (
+                {admin && s.n > 0 ? (
                   <RemindUnpaidButton sessionId={s.id} count={s.unpaidNames.length} />
                 ) : null}
                 <Link
