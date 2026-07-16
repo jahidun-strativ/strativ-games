@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matchAvailability, players, teams } from "@/db/schema";
 import { requireAdmin, requireTeamManager } from "@/server/auth";
+import { notifyPlayers } from "@/server/notifications";
 import { opt, str } from "@/server/form";
 
 function playerValues(formData: FormData) {
@@ -64,6 +65,16 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
     throw new Error("That player is already on another team.");
   }
   await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+  const team = await db.query.teams.findFirst({
+    where: eq(teams.id, teamId),
+    columns: { name: true },
+  });
+  await notifyPlayers([playerId], {
+    type: "assignment",
+    title: "👥 Added to a team",
+    body: `You've been added to ${team?.name ?? "a team"}.`,
+    url: `/teams/${teamId}`,
+  });
   // Opt-out RSVP: joining a team defaults the player to "in" for that team's
   // upcoming scheduled matches (existing responses untouched).
   const upcoming = await db.query.matches.findMany({

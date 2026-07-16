@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matches, sessions } from "@/db/schema";
 import { sendPushToAll, sendPushToEndpoint, type PushPayload } from "@/lib/push";
+import { notifyAllUsers } from "@/server/notifications";
 import { formatFull } from "@/lib/format";
 
 type Variant =
@@ -44,10 +45,13 @@ export async function buildMatchPayload(
   };
 }
 
-// Push a match notification to every subscribed device.
+// Push a match notification to every subscribed device, and drop it in every
+// user's in-app inbox so there's a history even without push enabled.
 export async function notifyMatchToAll(matchId: string, variant: Variant) {
   const payload = await buildMatchPayload(matchId, variant);
-  if (payload) await sendPushToAll(payload);
+  if (!payload) return;
+  await sendPushToAll(payload);
+  await notifyAllUsers({ type: "match", title: payload.title, body: payload.body, url: payload.url });
 }
 
 // Full-time: tell everyone the final score and deep-link to the PUBLIC result
@@ -59,11 +63,11 @@ export async function notifyMatchResult(matchId: string) {
   });
   if (!m || !m.homeTeam || !m.awayTeam) return;
   const score = `${m.homeScore ?? 0}–${m.awayScore ?? 0}`;
-  await sendPushToAll({
-    title: "🏁 Full-time",
-    body: `${m.homeTeam.name} ${score} ${m.awayTeam.name} · tap for the result`,
-    url: `/result/${m.id}`,
-  });
+  const title = "🏁 Full-time";
+  const body = `${m.homeTeam.name} ${score} ${m.awayTeam.name} · tap for the result`;
+  const url = `/result/${m.id}`;
+  await sendPushToAll({ title, body, url });
+  await notifyAllUsers({ type: "result", title, body, url });
 }
 
 // One push for a booked slot (single game or round-robin), linking to the
@@ -92,11 +96,10 @@ export async function notifySessionCreated(sessionId: string) {
     body = `${teamNames.join(", ")} · ${when}`;
   }
 
-  await sendPushToAll({
-    title: games > 1 ? "⚽ New round-robin scheduled" : "⚽ New match scheduled",
-    body,
-    url: `/sessions/${sessionId}`,
-  });
+  const title = games > 1 ? "⚽ New round-robin scheduled" : "⚽ New match scheduled";
+  const url = `/sessions/${sessionId}`;
+  await sendPushToAll({ title, body, url });
+  await notifyAllUsers({ type: "match", title, body, url });
 }
 
 // Catch-up: push upcoming scheduled matches to a single newly-subscribed device.

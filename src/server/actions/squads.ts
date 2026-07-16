@@ -12,6 +12,7 @@ import {
   players,
 } from "@/db/schema";
 import { requireTeamManager } from "@/server/auth";
+import { notifyPlayers } from "@/server/notifications";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 // Loads a match and the side (home/away) that `teamId` plays, plus the opposing
@@ -21,8 +22,8 @@ async function matchSide(matchId: string, teamId: string) {
     where: eq(matches.id, matchId),
     columns: { id: true, homeTeamId: true, awayTeamId: true },
     with: {
-      homeTeam: { columns: { id: true, kind: true, sportId: true } },
-      awayTeam: { columns: { id: true, kind: true, sportId: true } },
+      homeTeam: { columns: { id: true, name: true, kind: true, sportId: true } },
+      awayTeam: { columns: { id: true, name: true, kind: true, sportId: true } },
     },
   });
   if (!match) throw new Error("Match not found.");
@@ -95,6 +96,13 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
     .insert(matchAvailability)
     .values({ matchId, playerId, status: "in" })
     .onConflictDoNothing();
+
+  await notifyPlayers([playerId], {
+    type: "assignment",
+    title: "✅ Picked for a match",
+    body: `You've been added to the squad for ${team.name}.`,
+    url: `/matches/${matchId}`,
+  });
 
   revalidatePath(`/matches/${matchId}`);
   revalidatePath(`/matches/${matchId}/lineup/${teamId}`);

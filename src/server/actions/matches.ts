@@ -4,10 +4,11 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { matches, playerMatchStats, pushSubscriptions, teams } from "@/db/schema";
+import { matches, playerMatchStats, pushSubscriptions, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
+import { notifyPlayers } from "@/server/notifications";
 import { seedDefaultAvailability } from "@/server/seed-availability";
 import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
@@ -223,6 +224,7 @@ export async function recordResult(id: string, formData: FormData) {
   // Per-player stat rows come in as stat-<playerId>-goals / -assists / -played.
   const statements = [];
   const playerIds = new Set<string>();
+  const playedIds: string[] = [];
   for (const key of formData.keys()) {
     const m = key.match(/^stat-(.+)-(goals|assists|played)$/);
     if (m) playerIds.add(m[1]);
@@ -231,6 +233,7 @@ export async function recordResult(id: string, formData: FormData) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
     const played = formData.get(`stat-${playerId}-played`) === "on";
+    if (played) playedIds.push(playerId);
     if (!played && goals === 0 && assists === 0) {
       statements.push(
         db
@@ -268,6 +271,23 @@ export async function recordResult(id: string, formData: FormData) {
       await notifyMatchResult(id);
     } catch {
       // ignore — result is already saved
+    }
+
+    // Cost due: if this match sits in a self-paid slot with a bill, nudge the
+    // players who played to settle their share on the slot page.
+    if (prev?.sessionId && playedIds.length > 0) {
+      const slot = await db.query.sessions.findFirst({
+        where: eq(sessions.id, prev.sessionId),
+        columns: { id: true, cost: true, paidBy: true },
+      });
+      if (slot && slot.paidBy === "self" && (slot.cost ?? 0) > 0) {
+        await notifyPlayers(playedIds, {
+          type: "cost",
+          title: "💸 Payment due",
+          body: "You played a slot that's split between players — tap to settle your share.",
+          url: `/sessions/${slot.id}`,
+        });
+      }
     }
   }
 }

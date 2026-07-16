@@ -6,6 +6,7 @@ import { ensurePlayerForUser } from "@/server/ensure-player";
 import { ensureAppUser } from "@/server/ensure-user";
 import { SidebarNav, BottomTabs } from "@/components/shell/nav";
 import { AppUserButton } from "@/components/shell/user-button";
+import { NotificationBell } from "@/components/shell/notification-bell";
 import { PushToggle } from "@/components/pwa/push-toggle";
 import { PushAutoPrompt } from "@/components/pwa/push-auto-prompt";
 
@@ -43,6 +44,7 @@ export default async function AppLayout({
         </Link>
         <SidebarNav admin={admin} />
         <div className="mt-auto space-y-3 border-t border-line pt-4">
+          <NotificationBell />
           <PushToggle />
           <AppUserButton />
         </div>
@@ -55,6 +57,7 @@ export default async function AppLayout({
             STRATIV <span className="text-ink-900">GAMES</span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
+            <NotificationBell compact />
             <PushToggle compact />
             <AppUserButton compact />
           </div>

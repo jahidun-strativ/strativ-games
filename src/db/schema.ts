@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   pgTable,
   text,
@@ -295,6 +296,25 @@ export const appUsers = pgTable("app_users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// In-app notification inbox — one row per (recipient, event). `userId` is the
+// Neon Auth user id (same key as pushSubscriptions / players.userId). Broadcast
+// events fan out to one row per app user so read state is per-recipient.
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    // "match" | "result" | "assignment" | "cost" — groups + picks the icon.
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    url: text("url"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt)],
+);
+
 // Web Push subscriptions — one row per browser/device a user has enabled.
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -423,6 +443,7 @@ export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type AppUser = typeof appUsers.$inferSelect;
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 
 export const ROLES = ["admin", "member"] as const;
 export type Role = (typeof ROLES)[number];
