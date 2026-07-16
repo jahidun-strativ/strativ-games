@@ -12,8 +12,11 @@ type Settings = {
 
 const ROWS: { key: keyof Settings; label: string; hint: string }[] = [
   { key: "notifyOnCreate", label: "When a match is scheduled", hint: "Notify everyone as soon as a match is created." },
-  { key: "notifyDayBefore", label: "1 day before kickoff", hint: "A reminder the day before the match." },
-  { key: "notifyHourBefore", label: "1 hour before kickoff", hint: "A final reminder an hour before kickoff." },
+  {
+    key: "notifyHourBefore",
+    label: "On match day (afternoon)",
+    hint: "A reminder at 2 PM on the day of the match — a few hours before kickoff.",
+  },
 ];
 
 export function NotificationSettingsCard({

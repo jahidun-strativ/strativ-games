@@ -13,7 +13,8 @@ type Variant =
   | "cancelled"
   | "announce"
   | "day"
-  | "hour";
+  | "hour"
+  | "today";
 
 const TITLES: Record<Variant, string> = {
   created: "⚽ New match scheduled",
@@ -23,6 +24,7 @@ const TITLES: Record<Variant, string> = {
   announce: "📢 Match reminder",
   day: "📅 Match tomorrow",
   hour: "⏰ Match starting soon",
+  today: "⚽ Match today",
 };
 
 export async function buildMatchPayload(

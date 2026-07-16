@@ -7,8 +7,13 @@ import { notifyMatchToAll } from "@/server/notify-match";
 
 export const dynamic = "force-dynamic";
 
-// Called once daily (Vercel Hobby limit) to send day-before and same-day
-// match reminders. Protected by CRON_SECRET. Schedule: 08:00 Bangladesh time.
+// Dhaka is a fixed UTC+6 (no DST), so we can shift by a constant offset instead
+// of pulling in a tz library just to find "end of today" in local time.
+const BD_OFFSET_MS = 6 * 60 * 60 * 1000;
+
+// Called once daily; scheduled at 08:00 UTC = 14:00 (2 PM) Bangladesh time.
+// Sends ONE reminder for every match happening later THAT day — so for a typical
+// evening kickoff it lands ~5-6 hours ahead. Protected by CRON_SECRET.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided =
@@ -19,57 +24,47 @@ export async function GET(request: NextRequest) {
   }
 
   const settings = await getNotificationSettings();
+  if (!settings.notifyHourBefore) {
+    return NextResponse.json({ ok: true, sent: 0, skipped: "match-day reminder off" });
+  }
+
   const now = new Date();
-  const h = (n: number) => new Date(now.getTime() + n * 60 * 60 * 1000);
+  // End of today in Bangladesh time, expressed as a UTC instant.
+  const bdNow = new Date(now.getTime() + BD_OFFSET_MS);
+  const bdEndOfDay = Date.UTC(
+    bdNow.getUTCFullYear(),
+    bdNow.getUTCMonth(),
+    bdNow.getUTCDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+  const endOfTodayUtc = new Date(bdEndOfDay - BD_OFFSET_MS);
 
-  let dayCount = 0;
-  let hourCount = 0;
+  // Match-day reminder: scheduled matches with kickoff still ahead but before
+  // midnight (BD) today. `remindedHourBefore` dedupes if the cron runs again.
+  const due = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(
+      and(
+        eq(matches.status, "scheduled"),
+        eq(matches.remindedHourBefore, false),
+        gt(matches.kickoffAt, now),
+        lte(matches.kickoffAt, endOfTodayUtc),
+      ),
+    );
 
-  // Same-day reminder: kickoff within the next 12 hours (runs at 08:00 BD).
-  if (settings.notifyHourBefore) {
-    const due = await db
-      .select({ id: matches.id })
-      .from(matches)
-      .where(
-        and(
-          eq(matches.status, "scheduled"),
-          eq(matches.remindedHourBefore, false),
-          gt(matches.kickoffAt, now),
-          lte(matches.kickoffAt, h(12)),
-        ),
-      );
-    for (const m of due) {
-      await notifyMatchToAll(m.id, "hour").catch(() => {});
-      await db
-        .update(matches)
-        .set({ remindedHourBefore: true, remindedDayBefore: true })
-        .where(eq(matches.id, m.id));
-      hourCount++;
-    }
+  let sent = 0;
+  for (const m of due) {
+    await notifyMatchToAll(m.id, "today").catch(() => {});
+    await db
+      .update(matches)
+      .set({ remindedHourBefore: true, remindedDayBefore: true })
+      .where(eq(matches.id, m.id));
+    sent++;
   }
 
-  // Day-before reminder: kickoff roughly 20–28 hours ahead (tomorrow ~same time).
-  if (settings.notifyDayBefore) {
-    const due = await db
-      .select({ id: matches.id })
-      .from(matches)
-      .where(
-        and(
-          eq(matches.status, "scheduled"),
-          eq(matches.remindedDayBefore, false),
-          gt(matches.kickoffAt, h(12)),
-          lte(matches.kickoffAt, h(28)),
-        ),
-      );
-    for (const m of due) {
-      await notifyMatchToAll(m.id, "day").catch(() => {});
-      await db
-        .update(matches)
-        .set({ remindedDayBefore: true })
-        .where(eq(matches.id, m.id));
-      dayCount++;
-    }
-  }
-
-  return NextResponse.json({ ok: true, dayReminders: dayCount, hourReminders: hourCount });
+  return NextResponse.json({ ok: true, sent });
 }
