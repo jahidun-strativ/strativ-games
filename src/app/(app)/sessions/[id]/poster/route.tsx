@@ -83,10 +83,9 @@ export async function GET(
     };
     name = `${teamRows.slice(0, 2).map((t) => slug(t.name)).join("-vs-")}.png`;
   } else {
-    const roundRobin = teamRows.length >= 3;
     data = {
       variant: "full",
-      kindLabel: roundRobin ? "Round-robin" : "Match day",
+      kindLabel: "Match day",
       teams: teamRows.map(toPosterTeam),
       venue,
       when,
