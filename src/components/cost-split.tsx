@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { App } from "antd";
 import { useRouter } from "next/navigation";
-import { setPaymentPaid } from "@/server/actions/payments";
+import { Button } from "@/components/ui/button";
+import { remindUnpaidPayers, setPaymentPaid } from "@/server/actions/payments";
 import { formatBdt } from "@/lib/format";
 
 type Payer = { id: string; name: string; paid: boolean };
@@ -36,6 +37,29 @@ export function CostSplit({
   const outstanding = Math.max(cost - collected, 0);
 
   const me = currentPlayerId ? payers.find((p) => p.id === currentPlayerId) : undefined;
+  const unpaidCount = payers.filter((p) => !p.paid).length;
+
+  function remind() {
+    setPendingId("remind");
+    startTransition(async () => {
+      try {
+        const res = await remindUnpaidPayers(sessionId);
+        if (res.reminded > 0) {
+          message.success(
+            `Reminder sent to ${res.reminded} unpaid player${res.reminded === 1 ? "" : "s"}.`,
+          );
+        } else if (res.alreadySettled) {
+          message.info("Everyone has paid — no reminders sent.");
+        } else {
+          message.info("No one to remind yet.");
+        }
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : "Couldn't send reminders.");
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
 
   function run(key: string, fn: () => Promise<unknown>, ok?: string) {
     setPendingId(key);
@@ -148,11 +172,22 @@ export function CostSplit({
       </ul>
 
       {canManage ? (
-        <p className="mt-5 border-t border-line pt-4 text-xs text-ink-500">
-          The split is everyone who played this slot&apos;s games. To change who&apos;s in it, edit
-          the match squad or tick/untick “Played” on the match result — it updates here
-          automatically.
-        </p>
+        <div className="mt-5 border-t border-line pt-4">
+          <Button
+            variant="secondary"
+            disabled={pendingId === "remind" || unpaidCount === 0}
+            onClick={remind}
+          >
+            {unpaidCount > 0
+              ? `💸 Remind ${unpaidCount} unpaid player${unpaidCount === 1 ? "" : "s"}`
+              : "💸 Everyone has paid"}
+          </Button>
+          <p className="mt-3 text-xs text-ink-500">
+            Sends a payment reminder (push + in-app) only to players who played but haven&apos;t
+            paid. The split is everyone who played this slot&apos;s games — to change who&apos;s in
+            it, edit the match squad or the “Played” ticks on the result.
+          </p>
+        </div>
       ) : null}
     </div>
   );

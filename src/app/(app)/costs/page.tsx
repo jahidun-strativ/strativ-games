@@ -8,6 +8,8 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { formatBdt, formatDate } from "@/lib/format";
 import { APP_TIMEZONE } from "@/lib/timezone";
 import { deriveSessionPayers } from "@/server/queries/session-costs";
+import { isAdmin } from "@/server/auth";
+import { RemindUnpaidButton } from "@/components/remind-unpaid-button";
 
 export const metadata = { title: "Costs" };
 
@@ -59,6 +61,8 @@ async function CostsContent() {
       columns: { cost: true, paidBy: true, kickoffAt: true },
     }),
   ]);
+
+  const admin = await isAdmin();
 
   const rows = [
     ...slots.map((s) => ({ cost: s.cost ?? 0, paidBy: s.paidBy, at: s.startAt })),
@@ -135,7 +139,7 @@ async function CostsContent() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {toSettle.map((s) => (
-            <Link key={s.id} href={`/sessions/${s.id}`} className="tv-card-sm block p-4 transition-colors hover:border-burnt-500/40">
+            <div key={s.id} className="tv-card-sm p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="min-w-0 truncate font-display text-base text-ink-900">{s.label}</p>
                 <p className="scoreboard shrink-0 font-bold text-gold-400">
@@ -158,7 +162,18 @@ async function CostsContent() {
                   </>
                 )}
               </p>
-            </Link>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {admin ? (
+                  <RemindUnpaidButton sessionId={s.id} count={s.unpaidNames.length} />
+                ) : null}
+                <Link
+                  href={`/sessions/${s.id}`}
+                  className="text-xs font-semibold text-burnt-400 hover:underline"
+                >
+                  Open slot →
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
       )}
