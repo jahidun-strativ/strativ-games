@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { players, sessionPayments, sessions } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
-import { deriveSessionPayers } from "@/server/queries/session-costs";
+import { deriveSessionPayers, slotTotal } from "@/server/queries/session-costs";
 import { notifyPlayers } from "@/server/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { formatBdt } from "@/lib/format";
@@ -34,6 +34,23 @@ export async function setPaymentPaid(sessionId: string, playerId: string, paid: 
   revalidatePath("/costs");
 }
 
+// Set (or clear) a slot's additional cost + note. Adds to the total bill and
+// the per-head split. Admin-only. Pass amount <= 0 / null to clear it.
+export async function setSessionExtraCost(
+  sessionId: string,
+  amount: number | null,
+  note: string | null,
+) {
+  await requireAdmin();
+  const clean = amount != null && amount > 0 ? Math.round(amount) : null;
+  await db
+    .update(sessions)
+    .set({ extraCost: clean, extraCostNote: clean ? note?.trim() || null : null })
+    .where(eq(sessions.id, sessionId));
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath("/costs");
+}
+
 export type RemindResult = { reminded: number; alreadySettled: boolean };
 
 // Nudge only the players who played this slot but haven't paid their share yet.
@@ -43,7 +60,7 @@ export async function remindUnpaidPayers(sessionId: string): Promise<RemindResul
   await requireAdmin();
   const slot = await db.query.sessions.findFirst({
     where: eq(sessions.id, sessionId),
-    columns: { id: true, cost: true, paidBy: true },
+    columns: { id: true, cost: true, extraCost: true, paidBy: true },
     with: {
       payments: { columns: { playerId: true, paid: true } },
       fixtures: {
@@ -58,7 +75,8 @@ export async function remindUnpaidPayers(sessionId: string): Promise<RemindResul
     },
   });
   if (!slot) throw new Error("Slot not found.");
-  if (slot.paidBy !== "self" || (slot.cost ?? 0) <= 0) {
+  const total = slotTotal(slot);
+  if (slot.paidBy !== "self" || total <= 0) {
     return { reminded: 0, alreadySettled: false };
   }
 
@@ -68,7 +86,7 @@ export async function remindUnpaidPayers(sessionId: string): Promise<RemindResul
   const unpaid = payers.filter((p) => !p.paid);
   if (unpaid.length === 0) return { reminded: 0, alreadySettled: true };
 
-  const perHead = Math.round((slot.cost ?? 0) / payers.length);
+  const perHead = Math.round(total / payers.length);
   const unpaidIds = unpaid.map((p) => p.id);
   const title = "💸 Payment reminder";
   const body = `You still owe ${formatBdt(perHead)} for a match slot. Tap to settle up.`;

@@ -283,9 +283,9 @@ export async function recordResult(id: string, formData: FormData) {
     if (prev?.sessionId && playedIds.length > 0) {
       const slot = await db.query.sessions.findFirst({
         where: eq(sessions.id, prev.sessionId),
-        columns: { id: true, cost: true, paidBy: true },
+        columns: { id: true, cost: true, extraCost: true, paidBy: true },
       });
-      if (slot && slot.paidBy === "self" && (slot.cost ?? 0) > 0) {
+      if (slot && slot.paidBy === "self" && (slot.cost ?? 0) + (slot.extraCost ?? 0) > 0) {
         await notifyPlayers(playedIds, {
           type: "cost",
           title: "💸 Payment due",

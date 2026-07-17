@@ -15,12 +15,18 @@ type Payer = { id: string; name: string; paid: boolean };
 export function CostSplit({
   sessionId,
   cost,
+  bookingCost,
+  extraCost = 0,
+  extraNote,
   payers,
   currentPlayerId,
   canManage,
 }: {
   sessionId: string;
-  cost: number;
+  cost: number; // total bill = booking + extra
+  bookingCost?: number;
+  extraCost?: number;
+  extraNote?: string | null;
   payers: Payer[];
   currentPlayerId: string | null;
   canManage: boolean;
@@ -83,6 +89,12 @@ export function CostSplit({
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-500">Total</p>
           <p className="font-score text-2xl font-bold text-ink-900">{formatBdt(cost)}</p>
+          {extraCost > 0 && bookingCost != null ? (
+            <p className="mt-0.5 text-[11px] text-ink-500">
+              {formatBdt(bookingCost)} booking + {formatBdt(extraCost)} extra
+              {extraNote ? ` (${extraNote})` : ""}
+            </p>
+          ) : null}
         </div>
         <div>
           <p className="text-xs uppercase tracking-wider text-ink-500">Per head</p>

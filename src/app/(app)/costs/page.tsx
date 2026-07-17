@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { formatBdt, formatDate } from "@/lib/format";
 import { APP_TIMEZONE } from "@/lib/timezone";
-import { deriveSessionPayers } from "@/server/queries/session-costs";
+import { deriveSessionPayers, slotTotal } from "@/server/queries/session-costs";
 import { isAdmin } from "@/server/auth";
 import { RemindUnpaidButton } from "@/components/remind-unpaid-button";
 
@@ -65,7 +65,7 @@ async function CostsContent() {
   const admin = await isAdmin();
 
   const rows = [
-    ...slots.map((s) => ({ cost: s.cost ?? 0, paidBy: s.paidBy, at: s.startAt })),
+    ...slots.map((s) => ({ cost: slotTotal(s), paidBy: s.paidBy, at: s.startAt })),
     ...legacy.map((m) => ({ cost: m.cost ?? 0, paidBy: m.paidBy, at: m.kickoffAt })),
   ];
 
@@ -79,14 +79,15 @@ async function CostsContent() {
 
   // Settle-up state per self-paid slot with a cost split.
   const settle = slots
-    .filter((s) => s.paidBy === "self" && (s.cost ?? 0) > 0)
+    .filter((s) => s.paidBy === "self" && slotTotal(s) > 0)
     .map((s) => {
+      const total = slotTotal(s);
       // Split members = players who actually played this slot's games.
       const payers = deriveSessionPayers(s.fixtures, s.payments);
       const n = payers.length;
-      const perHead = n ? Math.round((s.cost ?? 0) / n) : 0;
+      const perHead = n ? Math.round(total / n) : 0;
       const unpaid = payers.filter((p) => !p.paid);
-      const collected = n ? Math.round(((s.cost ?? 0) * (n - unpaid.length)) / n) : 0;
+      const collected = n ? Math.round((total * (n - unpaid.length)) / n) : 0;
       const label =
         s.title ||
         s.fixtures
@@ -98,11 +99,11 @@ async function CostsContent() {
         label,
         at: s.startAt,
         venue: s.venue.name,
-        cost: s.cost ?? 0,
+        cost: total,
         n,
         perHead,
         collected,
-        outstanding: Math.max((s.cost ?? 0) - collected, 0),
+        outstanding: Math.max(total - collected, 0),
         unpaidNames: unpaid.map((p) => p.name),
       };
     });

@@ -5,6 +5,12 @@
 
 export type SessionPayer = { id: string; name: string; paid: boolean };
 
+// A slot's total bill = the booking cost plus any additional charges. Every
+// cost calculation (split per-head, totals, outstanding) should use this.
+export function slotTotal(s: { cost: number | null; extraCost: number | null }): number {
+  return (s.cost ?? 0) + (s.extraCost ?? 0);
+}
+
 type StatRow = {
   playerId: string;
   played: boolean;

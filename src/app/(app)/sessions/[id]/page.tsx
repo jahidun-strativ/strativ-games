@@ -11,7 +11,8 @@ import { NotifyButton } from "@/components/notify-button";
 import { PosterButton, type PosterVariant } from "@/components/poster-button";
 import { CostSplit } from "@/components/cost-split";
 import { isAdmin, getCurrentPlayer } from "@/server/auth";
-import { deriveSessionPayers } from "@/server/queries/session-costs";
+import { deriveSessionPayers, slotTotal } from "@/server/queries/session-costs";
+import { ExtraCostControl } from "@/components/extra-cost-control";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
 
 export const metadata = { title: "Session" };
@@ -54,6 +55,8 @@ export default async function SessionDetailPage({
     getCurrentPlayer(),
   ]);
   const payers = deriveSessionPayers(session.fixtures, payments);
+  const total = slotTotal(session);
+  const hasExtra = (session.extraCost ?? 0) > 0;
 
   const external = session.kind === "competitive";
   const gameCount = session.fixtures.length;
@@ -101,7 +104,10 @@ export default async function SessionDetailPage({
         </span>
         {session.cost != null ? (
           <span className="tv-card-sm px-3 py-1.5">
-            {formatBdt(session.cost)}
+            {formatBdt(total)}
+            {hasExtra ? (
+              <span className="text-ink-400"> (incl. {formatBdt(session.extraCost ?? 0)} extra)</span>
+            ) : null}
             <span className="text-ink-400"> · </span>
             {paidByLabel(session.paidBy)}
           </span>
@@ -134,17 +140,29 @@ export default async function SessionDetailPage({
           <h2 className="font-display mb-3 text-xl text-ink-900">Cost split</h2>
           {session.paidBy === "office" ? (
             <div className="tv-card-sm p-5 text-sm text-ink-500">
-              Covered by the office ({formatBdt(session.cost)}) — nothing to split.
+              Covered by the office ({formatBdt(total)}
+              {hasExtra ? `, incl. ${formatBdt(session.extraCost ?? 0)} extra` : ""}) — nothing to
+              split.
             </div>
           ) : (
             <CostSplit
               sessionId={session.id}
-              cost={session.cost}
+              cost={total}
+              bookingCost={session.cost}
+              extraCost={session.extraCost ?? 0}
+              extraNote={session.extraCostNote}
               payers={payers}
               currentPlayerId={myPlayer?.id ?? null}
               canManage={admin}
             />
           )}
+          {admin ? (
+            <ExtraCostControl
+              sessionId={session.id}
+              extraCost={session.extraCost ?? 0}
+              extraNote={session.extraCostNote}
+            />
+          ) : null}
         </section>
       ) : null}
 

@@ -92,6 +92,10 @@ export const sessions = pgTable("sessions", {
   title: text("title"),
   notes: text("notes"),
   cost: integer("cost"),
+  // Extra charges on top of the booking (water, extra time, a ball…). Added to
+  // the slot's total bill and therefore the per-head split.
+  extraCost: integer("extra_cost"),
+  extraCostNote: text("extra_cost_note"),
   paidBy: text("paid_by").notNull().default("office"),
   startAt: timestamp("start_at", { withTimezone: true }).notNull(),
   status: text("status").notNull().default("scheduled"),
