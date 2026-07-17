@@ -16,7 +16,7 @@ export const auth = createNeonAuth({
     // round-trips, and a timed-out one bounced people to login early. This is a
     // cache TTL only — the real session length is set in the Neon Console, and
     // this can't extend a session past that token's actual expiry.
-    sessionDataTtl: 300000,
+    sessionDataTtl: 900000,
     // "lax" so the session cookie is still sent on the top-level navigation a
     // PWA fires when relaunched from the home screen. With the default "strict"
     // that first request carries no cookie, so the app reads "no session" and
