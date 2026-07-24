@@ -13,14 +13,34 @@
 
 export type PosterTeam = { name: string; players: string[] };
 
-export type PosterData = {
-  variant: "full" | "vs" | "squad";
-  kindLabel: string; // "Match day" · "Competitive" · "Round-robin"…
-  teams: PosterTeam[];
-  venue: string;
-  when: string;
-  sport?: string | null;
+// One booked slot on the "fixtures" poster: a date badge plus where & when it's
+// played and how many games it holds (team names are intentionally omitted).
+export type PosterFixture = {
+  weekday: string; // "SUN"
+  day: string; // "26"
+  month: string; // "JUL"
+  time: string; // "3:30 PM"
+  venue: string; // "Offside Mirpur, Dhaka"
+  kindLabel: string; // "Round-robin · 3 games" · "Competitive" · "Match"
 };
+
+export type PosterData =
+  | {
+      variant: "full" | "vs" | "squad";
+      kindLabel: string; // "Match day" · "Competitive" · "Round-robin"…
+      teams: PosterTeam[];
+      venue: string;
+      when: string;
+      sport?: string | null;
+    }
+  | {
+      // A schedule of every upcoming slot in one image.
+      variant: "fixtures";
+      kindLabel: string; // headline, e.g. "Upcoming"
+      subtitle?: string | null; // "5 sessions · 15 games"
+      fixtures: PosterFixture[];
+      sport?: string | null;
+    };
 
 // Fixed feed width (Instagram / Facebook portrait). The HEIGHT is computed from
 // the content (see posterHeight) so the canvas hugs the line-ups instead of
@@ -32,6 +52,15 @@ export const POSTER_WIDTH = 1080;
 // columns grow with the longest line-up. We slightly overestimate on purpose —
 // a few px of breathing room at the bottom beats clipping a player's name.
 export function posterHeight(data: PosterData): number {
+  // The fixtures schedule stacks one card per slot; its height grows with the
+  // number of slots (and the tallest team line inside each).
+  if (data.variant === "fixtures") {
+    const cardsH = data.fixtures.length * FIXTURE_CARD_HEIGHT;
+    const gaps = Math.max(0, data.fixtures.length - 1) * FIXTURE_GAP;
+    // padding(112) + header(150) + subtitle(46) + body margins(62) + footer(24).
+    const chrome = 394;
+    return Math.max(720, Math.round(chrome + cardsH + gaps));
+  }
   // The "vs" hero has no line-ups; keep it a tall, centred poster.
   if (data.variant === "vs") return 1080;
 
@@ -59,6 +88,12 @@ const BASE = "#080b11";
 // Faint diagonal turf pinstripes across the whole poster.
 const TURF =
   "repeating-linear-gradient(118deg, rgba(255,255,255,0.022) 0px, rgba(255,255,255,0.022) 2px, transparent 2px, transparent 46px)";
+
+// Vertical gap between fixture cards on the schedule poster.
+const FIXTURE_GAP = 16;
+
+// Fixed height of one fixture card (date badge · session type · time · venue).
+const FIXTURE_CARD_HEIGHT = 150;
 
 function Monogram({ size = 46 }: { size?: number }) {
   return (
@@ -334,6 +369,83 @@ function TeamColumn({ team, accent, compact }: { team: PosterTeam; accent: strin
   );
 }
 
+// One slot on the schedule poster: an accent date badge beside the session
+// type, kick-off time and venue. Team names are intentionally left off.
+function FixtureCard({ fx, accent, mb }: { fx: PosterFixture; accent: string; mb: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        height: FIXTURE_CARD_HEIGHT,
+        marginBottom: mb,
+        alignItems: "stretch",
+        background: "linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 18,
+        overflow: "hidden",
+      }}
+    >
+      {/* Accent date badge */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          width: 128,
+          alignItems: "center",
+          justifyContent: "center",
+          background: `linear-gradient(160deg, ${accent} 0%, ${accent}22 100%)`,
+          borderRight: `3px solid ${accent}`,
+        }}
+      >
+        <div style={{ display: "flex", fontFamily: "Archivo", fontWeight: 600, fontSize: 17, letterSpacing: 2, color: "rgba(255,255,255,0.88)" }}>
+          {fx.weekday}
+        </div>
+        <div style={{ display: "flex", fontFamily: "Oswald", fontWeight: 700, fontSize: 62, lineHeight: 1, color: "#ffffff" }}>
+          {fx.day}
+        </div>
+        <div style={{ display: "flex", fontFamily: "Archivo", fontWeight: 600, fontSize: 17, letterSpacing: 2, color: "rgba(255,255,255,0.88)" }}>
+          {fx.month}
+        </div>
+      </div>
+
+      {/* Session type + venue */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", padding: "0 28px" }}>
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Archivo",
+            fontWeight: 700,
+            fontSize: 16,
+            letterSpacing: 1.5,
+            textTransform: "uppercase",
+            color: accent,
+            marginBottom: 12,
+          }}
+        >
+          {fx.kindLabel}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", fontFamily: "Archivo", fontWeight: 700, fontSize: 27, color: INK_900 }}>
+          <span style={{ marginRight: 10 }}>📍</span>
+          {fx.venue}
+        </div>
+      </div>
+
+      {/* Kick-off time */}
+      <div style={{ display: "flex", flexDirection: "column", flexShrink: 0, alignItems: "flex-end", justifyContent: "center", padding: "0 28px" }}>
+        <div style={{ display: "flex", fontFamily: "Archivo", fontWeight: 600, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", color: INK_500, marginBottom: 6 }}>
+          Kick-off
+        </div>
+        <div style={{ display: "flex", alignItems: "center", fontFamily: "Oswald", fontWeight: 700, fontSize: 34, color: INK_900 }}>
+          <span style={{ marginRight: 9 }}>🕒</span>
+          {fx.time}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -409,6 +521,60 @@ function PageShell({ children }: { children: React.ReactNode }) {
 }
 
 export function Poster(data: PosterData) {
+  // Schedule poster: a stack of date-badged slot cards. Handled first so the
+  // match-only fields (teams/venue/when) never need to exist on this variant.
+  if (data.variant === "fixtures") {
+    const { fixtures, kindLabel, subtitle, sport } = data;
+    return (
+      <PageShell>
+        <Header kindLabel={kindLabel} sport={sport} />
+        {subtitle ? (
+          <div
+            style={{
+              display: "flex",
+              marginTop: 16,
+              fontFamily: "Archivo",
+              fontWeight: 600,
+              fontSize: 22,
+              letterSpacing: 0.5,
+              color: INK_700,
+            }}
+          >
+            {subtitle}
+          </div>
+        ) : null}
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, width: "100%", marginTop: 26, marginBottom: 28 }}>
+          {fixtures.length === 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "Archivo",
+                fontStyle: "italic",
+                fontSize: 28,
+                color: INK_500,
+              }}
+            >
+              No upcoming fixtures scheduled.
+            </div>
+          ) : (
+            fixtures.map((fx, i) => (
+              <FixtureCard
+                key={i}
+                fx={fx}
+                accent={ACCENTS[i % ACCENTS.length]}
+                mb={i === fixtures.length - 1 ? 0 : FIXTURE_GAP}
+              />
+            ))
+          )}
+        </div>
+        <Footer />
+      </PageShell>
+    );
+  }
+
   const { variant, kindLabel, teams, venue, when, sport } = data;
 
   let body: React.ReactNode;

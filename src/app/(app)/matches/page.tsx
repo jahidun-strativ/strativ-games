@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewSessionButton } from "@/components/entity-modals";
+import { PosterButton } from "@/components/poster-button";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Matches" };
@@ -122,7 +123,18 @@ async function MatchesContent({
       />
 
       <section>
-        <h2 className="font-display mb-3 text-xl text-ink-900">Upcoming fixtures</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-display text-xl text-ink-900">Upcoming fixtures</h2>
+          {upcoming.length > 0 ? (
+            <PosterButton
+              basePath="/matches/poster"
+              label="🖼️ Upcoming picture"
+              variants={[
+                { label: "Upcoming fixtures", variant: "fixtures", hint: "All scheduled games in one image" },
+              ]}
+            />
+          ) : null}
+        </div>
         {upcoming.length === 0 ? (
           <EmptyState
             title="Nothing scheduled"

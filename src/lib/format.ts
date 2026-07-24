@@ -26,6 +26,12 @@ const fullFmt = new Intl.DateTimeFormat("en-GB", {
   timeZone: APP_TIMEZONE,
 });
 
+// Date-badge parts for the fixtures poster (weekday / day / month), each in
+// Bangladesh time so they line up with the rest of the app.
+const weekdayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: APP_TIMEZONE });
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: APP_TIMEZONE });
+const monthAbbrFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: APP_TIMEZONE });
+
 // Renders parts, forcing the am/pm marker to uppercase (en-GB emits lowercase).
 function render(fmt: Intl.DateTimeFormat, d: Date) {
   return fmt
@@ -37,6 +43,10 @@ function render(fmt: Intl.DateTimeFormat, d: Date) {
 export const formatDate = (d: Date) => render(dateFmt, d);
 export const formatTime = (d: Date) => render(timeFmt, d);
 export const formatFull = (d: Date) => render(fullFmt, d);
+
+export const formatWeekday = (d: Date) => render(weekdayFmt, d).toUpperCase();
+export const formatDayNum = (d: Date) => render(dayFmt, d);
+export const formatMonthAbbr = (d: Date) => render(monthAbbrFmt, d).toUpperCase();
 
 // Money — all amounts are Bangladeshi Taka (whole taka, no decimals).
 const bdtFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
