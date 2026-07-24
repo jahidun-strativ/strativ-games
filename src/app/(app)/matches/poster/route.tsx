@@ -18,8 +18,6 @@ export async function GET(req: Request) {
     where: (m, { and, gte, eq }) => and(gte(m.kickoffAt, now), eq(m.status, "scheduled")),
     orderBy: (m, { asc }) => [asc(m.kickoffAt), asc(m.orderIndex)],
     with: {
-      homeTeam: { columns: { name: true } },
-      awayTeam: { columns: { name: true } },
       venue: { columns: { name: true, city: true } },
       sport: { columns: { name: true } },
     },
@@ -42,29 +40,13 @@ export async function GET(req: Request) {
 
   const toFixture = (games: Row[]): PosterFixture => {
     const first = games[0];
-    // Distinct teams across the slot's games — >2 means a round-robin.
-    const teamNames = new Set<string>();
-    for (const g of games) {
-      if (g.homeTeam?.name) teamNames.add(g.homeTeam.name);
-      if (g.awayTeam?.name) teamNames.add(g.awayTeam.name);
-    }
-    const roundRobin = teamNames.size > 2;
-    const competitive = games.some((g) => g.kind === "competitive");
-    const kindLabel = roundRobin
-      ? `Round-robin · ${games.length} game${games.length === 1 ? "" : "s"}`
-      : competitive
-        ? "Competitive"
-        : "Match";
-
     const venue = `${first.venue.name}${first.venue.city ? `, ${first.venue.city}` : ""}`;
-
     return {
       weekday: formatWeekday(first.kickoffAt),
       day: formatDayNum(first.kickoffAt),
       month: formatMonthAbbr(first.kickoffAt),
       time: formatTime(first.kickoffAt),
       venue,
-      kindLabel,
     };
   };
 

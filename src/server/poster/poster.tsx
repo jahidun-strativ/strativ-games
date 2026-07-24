@@ -14,14 +14,13 @@
 export type PosterTeam = { name: string; players: string[] };
 
 // One booked slot on the "fixtures" poster: a date badge plus where & when it's
-// played and how many games it holds (team names are intentionally omitted).
+// played (team names and session type are intentionally omitted).
 export type PosterFixture = {
   weekday: string; // "SUN"
   day: string; // "26"
   month: string; // "JUL"
   time: string; // "3:30 PM"
   venue: string; // "Offside Mirpur, Dhaka"
-  kindLabel: string; // "Round-robin · 3 games" · "Competitive" · "Match"
 };
 
 export type PosterData =
@@ -410,23 +409,9 @@ function FixtureCard({ fx, accent, mb }: { fx: PosterFixture; accent: string; mb
         </div>
       </div>
 
-      {/* Session type + venue */}
+      {/* Venue */}
       <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", padding: "0 28px" }}>
-        <div
-          style={{
-            display: "flex",
-            fontFamily: "Archivo",
-            fontWeight: 700,
-            fontSize: 16,
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-            color: accent,
-            marginBottom: 12,
-          }}
-        >
-          {fx.kindLabel}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", fontFamily: "Archivo", fontWeight: 700, fontSize: 27, color: INK_900 }}>
+        <div style={{ display: "flex", alignItems: "center", fontFamily: "Archivo", fontWeight: 700, fontSize: 29, color: INK_900 }}>
           <span style={{ marginRight: 10 }}>📍</span>
           {fx.venue}
         </div>
