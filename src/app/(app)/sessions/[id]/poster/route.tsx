@@ -37,16 +37,16 @@ export async function GET(
   // round-robin repeats each team across pairings — we want each once).
   type TeamRow = NonNullable<(typeof slot.fixtures)[number]["homeTeam"]>;
   const byId = new Map<string, TeamRow>();
-  // Collect the fixtures each team appears in — the poster should show who
-  // actually played, and a team can field a different squad per fixture.
-  const matchIdsByTeam = new Map<string, string[]>();
+  // First fixture each team appears in — its squad there is what the poster
+  // shows. Squads are per-match, so a team's squad can differ between its
+  // fixtures; we use the first (same list its match page shows) rather than
+  // merging them, which would list players who only played a different match.
+  const firstMatchByTeam = new Map<string, string>();
   for (const f of slot.fixtures) {
     for (const t of [f.homeTeam, f.awayTeam]) {
       if (!t) continue;
       if (!byId.has(t.id)) byId.set(t.id, t);
-      const ids = matchIdsByTeam.get(t.id) ?? [];
-      ids.push(f.id);
-      matchIdsByTeam.set(t.id, ids);
+      if (!firstMatchByTeam.has(t.id)) firstMatchByTeam.set(t.id, f.id);
     }
   }
   const teamRows = [...byId.values()];
@@ -54,16 +54,18 @@ export async function GET(
     return new Response("Add teams to this slot before generating a picture.", { status: 400 });
   }
 
-  // Effective squad per team = union of the fielded players across its fixtures
-  // (per-match squad rows if customised, else the team roster). Names sorted.
+  // Effective squad per team from its first fixture (per-match squad rows if
+  // customised, else the team roster). Names sorted.
   const squadNamesByTeam = new Map<string, string[]>();
   for (const t of teamRows) {
-    const seen = new Map<string, string>();
-    for (const matchId of matchIdsByTeam.get(t.id) ?? []) {
-      const { players } = await getEffectiveSquad(matchId, t.id);
-      for (const p of players) seen.set(p.id, p.name);
-    }
-    squadNamesByTeam.set(t.id, [...seen.values()].sort((a, b) => a.localeCompare(b)));
+    const matchId = firstMatchByTeam.get(t.id);
+    const { players } = matchId
+      ? await getEffectiveSquad(matchId, t.id)
+      : { players: [] };
+    squadNamesByTeam.set(
+      t.id,
+      players.map((p) => p.name).sort((a, b) => a.localeCompare(b)),
+    );
   }
 
   const toPosterTeam = (t: TeamRow): PosterTeam => ({
