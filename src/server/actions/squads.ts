@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
@@ -10,10 +10,10 @@ import {
   matchSquadPlayers,
   matches,
   players,
+  teams,
 } from "@/db/schema";
 import { requireTeamManager } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
-import { getEffectiveSquad } from "@/server/queries/match-squad";
 
 // Loads a match and the side (home/away) that `teamId` plays, plus the opposing
 // team id. Throws if the team isn't in this match.
@@ -37,6 +37,46 @@ async function matchSide(matchId: string, teamId: string) {
   if (team.kind === "external") throw new Error("Opponent teams don't have a squad.");
   const opponentId = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
   return { team, opponentId };
+}
+
+// Whether `playerId` is already explicitly picked by a DIFFERENT team anywhere
+// in this match's slot (session). A slot is several matches (round-robin), so a
+// pick in a sibling match must block too. Only explicit match_squad_players rows
+// count — roster membership doesn't, so a player can still guest for another
+// team without being locked to his home side. Returns the blocking team's name,
+// or null. Falls back to just this match for legacy sessionless matches.
+async function pickedByAnotherTeamInSlot(
+  matchId: string,
+  teamId: string,
+  playerId: string,
+): Promise<string | null> {
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    columns: { sessionId: true },
+  });
+
+  const slotMatchIds = match?.sessionId
+    ? (
+        await db
+          .select({ id: matches.id })
+          .from(matches)
+          .where(eq(matches.sessionId, match.sessionId))
+      ).map((m) => m.id)
+    : [matchId];
+
+  const clash = await db
+    .select({ name: teams.name })
+    .from(matchSquadPlayers)
+    .innerJoin(teams, eq(matchSquadPlayers.teamId, teams.id))
+    .where(
+      and(
+        inArray(matchSquadPlayers.matchId, slotMatchIds),
+        eq(matchSquadPlayers.playerId, playerId),
+        ne(matchSquadPlayers.teamId, teamId),
+      ),
+    )
+    .limit(1);
+  return clash[0]?.name ?? null;
 }
 
 // Copy the team's current roster into the match squad the first time it's
@@ -66,7 +106,7 @@ async function materialize(matchId: string, teamId: string) {
 // the team's captain.
 export async function addMatchSquadPlayer(matchId: string, teamId: string, playerId: string) {
   await requireTeamManager(teamId);
-  const { team, opponentId } = await matchSide(matchId, teamId);
+  const { team } = await matchSide(matchId, teamId);
 
   const player = await db.query.players.findFirst({
     where: eq(players.id, playerId),
@@ -77,12 +117,10 @@ export async function addMatchSquadPlayer(matchId: string, teamId: string, playe
     throw new Error("Player plays a different sport.");
   }
 
-  // A player can't be in both squads of the same match.
-  if (opponentId) {
-    const opposing = await getEffectiveSquad(matchId, opponentId);
-    if (opposing.players.some((p) => p.id === playerId)) {
-      throw new Error("That player is already in the opponent's squad for this match.");
-    }
+  // A player can only be picked by one team in the whole slot (session).
+  const clashTeam = await pickedByAnotherTeamInSlot(matchId, teamId, playerId);
+  if (clashTeam) {
+    throw new Error(`That player is already in ${clashTeam}'s squad for this slot.`);
   }
 
   await materialize(matchId, teamId);
@@ -126,17 +164,23 @@ export async function fillSquadFromAvailability(matchId: string, teamId: string)
       ),
     );
 
-  if (rows.length > 0) {
+  // Skip anyone already picked by another team in this slot (one player, one team).
+  const eligible: typeof rows = [];
+  for (const r of rows) {
+    if (!(await pickedByAnotherTeamInSlot(matchId, teamId, r.playerId))) eligible.push(r);
+  }
+
+  if (eligible.length > 0) {
     await materialize(matchId, teamId);
     await db
       .insert(matchSquadPlayers)
-      .values(rows.map((r) => ({ matchId, teamId, playerId: r.playerId })))
+      .values(eligible.map((r) => ({ matchId, teamId, playerId: r.playerId })))
       .onConflictDoNothing();
   }
 
   revalidatePath(`/matches/${matchId}`);
   revalidatePath(`/matches/${matchId}/lineup/${teamId}`);
-  return rows.length;
+  return eligible.length;
 }
 
 // Drop a player from this match's squad only (roster untouched). Also clears

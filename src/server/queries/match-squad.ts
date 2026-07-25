@@ -1,7 +1,7 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { matchSquadPlayers, players, type Player } from "@/db/schema";
+import { matchSquadPlayers, matches, players, type Player } from "@/db/schema";
 
 // The players fielded for a team in a specific match. If the squad has been
 // customised (any match_squad_players rows exist) those rows are authoritative;
@@ -27,4 +27,38 @@ export async function getEffectiveSquad(
     orderBy: asc(players.name),
   });
   return { players: roster, customized: false };
+}
+
+// Player ids explicitly picked by a DIFFERENT team anywhere in this match's slot
+// (session). Used to stop the same player being fielded by two teams in one
+// slot. Only explicit squad rows count — roster membership doesn't lock a player
+// to his home team, so he can still guest elsewhere. Empty for legacy
+// sessionless matches (nothing to span).
+export async function pickedByOtherTeamsInSlot(
+  matchId: string,
+  teamId: string,
+): Promise<Set<string>> {
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    columns: { sessionId: true },
+  });
+  if (!match?.sessionId) return new Set();
+
+  const slotMatchIds = (
+    await db
+      .select({ id: matches.id })
+      .from(matches)
+      .where(eq(matches.sessionId, match.sessionId))
+  ).map((m) => m.id);
+
+  const rows = await db
+    .select({ playerId: matchSquadPlayers.playerId })
+    .from(matchSquadPlayers)
+    .where(
+      and(
+        inArray(matchSquadPlayers.matchId, slotMatchIds),
+        ne(matchSquadPlayers.teamId, teamId),
+      ),
+    );
+  return new Set(rows.map((r) => r.playerId));
 }
