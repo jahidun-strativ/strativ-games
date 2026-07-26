@@ -21,12 +21,14 @@ export function MatchSquadManager({
   teamName,
   initialSquadIds,
   candidates,
+  blockedIds = [],
 }: {
   matchId: string;
   teamId: string;
   teamName: string;
   initialSquadIds: string[];
   candidates: SquadCandidate[]; // all players of this sport
+  blockedIds?: string[]; // picked by another team in this slot — can't be added
 }) {
   return (
     <FormModal title={`${teamName} — match squad`} triggerLabel="👥 Manage match squad" width={560}>
@@ -36,6 +38,7 @@ export function MatchSquadManager({
           teamId={teamId}
           initialSquadIds={initialSquadIds}
           candidates={candidates}
+          blockedIds={blockedIds}
         />
       )}
     </FormModal>
@@ -47,11 +50,13 @@ function Body({
   teamId,
   initialSquadIds,
   candidates,
+  blockedIds,
 }: {
   matchId: string;
   teamId: string;
   initialSquadIds: string[];
   candidates: SquadCandidate[];
+  blockedIds: string[];
 }) {
   const { message } = App.useApp();
   const [squad, setSquad] = useState<Set<string>>(() => new Set(initialSquadIds));
@@ -63,8 +68,10 @@ function Body({
   const inSquad = [...squad].map((id) => byId.get(id)).filter(Boolean) as SquadCandidate[];
   inSquad.sort((a, b) => a.name.localeCompare(b.name));
 
+  const blocked = useMemo(() => new Set(blockedIds), [blockedIds]);
   const available = candidates
     .filter((c) => !squad.has(c.id))
+    .filter((c) => !blocked.has(c.id))
     .filter((c) => c.name.toLowerCase().includes(q.trim().toLowerCase()));
 
   function add(id: string) {

@@ -72,9 +72,6 @@ export default async function MatchLineupPage({
     pickedByOtherTeamsInSlot(id, teamId),
   ]);
 
-  // One player, one team per slot — hide anyone already picked by another team.
-  const candidatePlayers = sportPlayers.filter((p) => !pickedElsewhere.has(p.id));
-
   const source = existing ?? teamDefault ?? null;
 
   const savedFormation = source?.formation;
@@ -109,12 +106,13 @@ export default async function MatchLineupPage({
                   teamId={teamId}
                   teamName={team.name}
                   initialSquadIds={squad.map((p) => p.id)}
-                  candidates={candidatePlayers.map((p) => ({
+                  candidates={sportPlayers.map((p) => ({
                     id: p.id,
                     name: p.name,
                     position: p.position,
                     teamName: p.team?.name ?? null,
                   }))}
+                  blockedIds={[...pickedElsewhere]}
                 />
               </>
             ) : null}

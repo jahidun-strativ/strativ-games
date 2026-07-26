@@ -22,11 +22,16 @@ export async function getEffectiveSquad(
     return { players: rows.map((r) => r.player), customized: true };
   }
 
-  const roster = await db.query.players.findMany({
-    where: eq(players.teamId, teamId),
-    orderBy: asc(players.name),
-  });
-  return { players: roster, customized: false };
+  // Roster default — but drop anyone already picked by another team in this
+  // slot, so a player guesting elsewhere doesn't also show as fielded here.
+  const [roster, pickedElsewhere] = await Promise.all([
+    db.query.players.findMany({
+      where: eq(players.teamId, teamId),
+      orderBy: asc(players.name),
+    }),
+    pickedByOtherTeamsInSlot(matchId, teamId),
+  ]);
+  return { players: roster.filter((p) => !pickedElsewhere.has(p.id)), customized: false };
 }
 
 // Player ids explicitly picked by a DIFFERENT team anywhere in this match's slot
