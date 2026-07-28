@@ -3,7 +3,56 @@
 > Living doc for picking up work in a new session. Update the **Open items** and
 > **Recent changes** sections at the end of any substantial task.
 
-_Last updated: 2026-07-12_
+_Last updated: 2026-07-28_
+
+---
+
+## Latest session — Slot-level match squads (2026-07-28)
+
+Made a team's **match squad** a slot-level concept: guest players no longer leak
+into their home team, a player can't be fielded by two teams in the same slot,
+and the match-day poster reflects the real squads. Verified against running app + DB.
+
+**Mental model:** a **slot** (`sessions` row) holds several **matches** (round-robin
+A-B, A-C, B-C). A team's squad is stored per *(match, team)* (`match_squad_players`)
+but conceptually belongs to the **team for the whole slot** — every game a team plays
+in a slot uses the same squad. No explicit rows = fall back to roster; first edit
+materialises. **One player, one team per slot**: an explicit pick by one team blocks
+that player from any other team in the slot (roster membership alone doesn't lock).
+
+**Changed:**
+- `src/server/actions/squads.ts` — squad writes are slot-scoped. `slotMatchIds(matchId, teamId)`
+  → `{ teamMatchIds, allMatchIds }` (legacy sessionless matches degrade to one match).
+  `replaceSlotSquad(teamMatchIds, teamId, playerIds)` deletes+re-inserts the team's rows
+  across all its slot matches (propagates edits + reconciles legacy/divergent rows).
+  `addMatchSquadPlayer` / `removeMatchSquadPlayer` / `fillSquadFromAvailability` compute the
+  new full squad (effective ± change) and call `replaceSlotSquad`.
+  `pickedByAnotherTeamInSlot(allMatchIds, teamId, playerId)` enforces one-player-one-team
+  on add + bulk fill (only explicit picks count; returns blocking team name).
+- `src/server/queries/match-squad.ts` — `getEffectiveSquad` roster-fallback branch now
+  **excludes** players picked by another team in the slot. New
+  `pickedByOtherTeamsInSlot(matchId, teamId)` → `Set<playerId>` for the lineup page.
+- `src/app/(app)/matches/[id]/lineup/[teamId]/page.tsx` — passes full sport-player list as
+  `candidates` + `blockedIds = pickedByOtherTeamsInSlot(...)`.
+- `src/components/match-squad-manager.tsx` — new `blockedIds` prop; "In the squad" resolved
+  from full candidate map (members always show); Add list excludes blocked + current squad.
+  Fixes "modal shows 0 but record page shows players" mismatch.
+- `src/app/(app)/sessions/[id]/poster/route.tsx` — poster shows each team's effective squad
+  from the fixture it first appears in (slot-consistent = matches every match page).
+
+**Verified:** identical squad across a team's games; roster fallback agrees between modal +
+record page; no team's squad contains another team's players; add/remove propagates across a
+team's slot games; poster matches per-match squads.
+
+**Caveats / next steps:**
+- Legacy divergent data only self-heals when each team's squad is next edited. For an immediate
+  fix, add a per-slot cleanup script (remove `match_squad_players` rows whose player is also
+  explicitly picked by another team; unify each team's rows across its slot matches).
+- Starting XI (`match_lineups` / `match_lineup_slots`) is **still per-match** — only squad
+  membership is shared across the slot (intentional; confirm desired).
+- `getEffectiveSquad` runs an extra slot query in the fallback branch; fine at scale, revisit if hot.
+
+---
 
 ## What this is
 A sports team manager for Strativ: sports, teams, players, staff, venues,
@@ -281,6 +330,9 @@ errors linger, so trust a clean restart over the buffer.
   `Authorization: Bearer <CRON_SECRET>`.
 
 ## Recent changes (newest first)
+- Slot-level match squads: squad shared across a team's slot games, one-player-one-team
+  per slot, roster-fallback excludes cross-team picks, poster reflects real squads
+  (see "Latest session" at top).
 - "↩️ Reopen match" admin action (silent revert to scheduled, keep/clear result).
 - Opt-out RSVP: players default to "in" when their team is scheduled (seed-availability.ts).
 - Player emails shown in the players list (under the name / mobile card line).
