@@ -167,7 +167,9 @@ export function SquadBoard({
                       if (id) moveTo(id, col.teamId);
                     }}
                     onClick={() => held && moveTo(held, col.teamId)}
-                    className={`tv-card-sm flex min-h-40 shrink-0 basis-60 flex-col p-3 transition-colors sm:flex-1 ${
+                    // min-w (not basis) so flex-1 can't shrink a column below
+                    // readable width — past that the strip scrolls instead.
+                    className={`tv-card-sm flex min-h-40 min-w-[15rem] flex-1 flex-col p-3 transition-colors ${
                       isOver ? "bg-burnt-500/10 ring-2 ring-burnt-400" : ""
                     } ${held ? "cursor-copy" : ""}`}
                   >
