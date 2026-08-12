@@ -105,6 +105,24 @@ export function SquadBoard({
 
   return (
     <div className="space-y-10">
+      {/* Held players survive scrolling, so the drop target can be a column
+          you had to scroll to find. Stays put while you look for it. */}
+      {held ? (
+        <div className="sticky top-2 z-10 flex items-center justify-between gap-3 rounded-lg border border-burnt-400 bg-burnt-500/10 px-3 py-2 text-sm backdrop-blur">
+          <span className="min-w-0 truncate">
+            Holding <span className="font-bold">{byId.get(held)?.name}</span> — tap a team to move,
+            or another player to swap.
+          </span>
+          <button
+            type="button"
+            onClick={() => setHeld(null)}
+            className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold text-ink-500 hover:bg-cream-200"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : null}
+
       {sports.map((sport) => {
         const sportTeams = teams.filter((t) => t.sportId === sport.id);
         const sportPlayers = players.filter((p) => p.sportId === sport.id);
@@ -129,7 +147,9 @@ export function SquadBoard({
               />
               {sport.name}
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* One scrolling strip, never a wrapping grid: a team on a second
+                row is off-screen from the team you're dragging out of. */}
+            <div className="flex gap-3 overflow-x-auto pb-2">
               {columns.map((col) => {
                 const roster = sportPlayers.filter((p) => (teamOf[p.id] ?? null) === col.teamId);
                 const isOver = over === col.id;
@@ -147,7 +167,7 @@ export function SquadBoard({
                       if (id) moveTo(id, col.teamId);
                     }}
                     onClick={() => held && moveTo(held, col.teamId)}
-                    className={`tv-card-sm flex min-h-40 flex-col p-3 transition-colors ${
+                    className={`tv-card-sm flex min-h-40 shrink-0 basis-60 flex-col p-3 transition-colors sm:flex-1 ${
                       isOver ? "bg-burnt-500/10 ring-2 ring-burnt-400" : ""
                     } ${held ? "cursor-copy" : ""}`}
                   >
@@ -162,7 +182,9 @@ export function SquadBoard({
                         {held ? "Drop here" : "Empty"}
                       </p>
                     ) : (
-                      <ul className="space-y-1.5">
+                      // Capped so a long free-agents list doesn't stretch every
+                      // other column past the fold.
+                      <ul className="max-h-[55vh] space-y-1.5 overflow-y-auto">
                         {roster.map((p) => {
                           const picked = held === p.id;
                           return (
