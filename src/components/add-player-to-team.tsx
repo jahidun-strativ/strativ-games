@@ -8,6 +8,7 @@ import {
   assignPlayerToTeam,
   createPlayer,
   removePlayerFromTeam,
+  swapPlayers,
 } from "@/server/actions/players";
 import type { Sport, Team } from "@/db/schema";
 
@@ -28,6 +29,7 @@ export function AddPlayerButton({
   sports,
   teams,
   canCreate = true,
+  canSwap = false,
 }: {
   teamId: string;
   teamName: string;
@@ -38,6 +40,9 @@ export function AddPlayerButton({
   // Whether to offer creating a brand-new player (admin-only action). Captains
   // can add/remove existing players but not create new records.
   canCreate?: boolean;
+  // Whether to offer swapping with a player on another team (admin-only: it
+  // changes two rosters at once).
+  canSwap?: boolean;
 }) {
   return (
     <FormModal title={`${teamName} — roster`} triggerLabel="+ Add / remove players" width={560}>
@@ -49,6 +54,7 @@ export function AddPlayerButton({
           sports={sports}
           teams={teams}
           canCreate={canCreate}
+          canSwap={canSwap}
           onDone={close}
         />
       )}
@@ -63,6 +69,7 @@ function AddPlayerBody({
   sports,
   teams,
   canCreate,
+  canSwap,
   onDone,
 }: {
   teamId: string;
@@ -71,10 +78,13 @@ function AddPlayerBody({
   sports: Sport[];
   teams: Team[];
   canCreate: boolean;
+  canSwap: boolean;
   onDone: () => void;
 }) {
   const { message } = App.useApp();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // The other-team player we're picking a swap partner for, if any.
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   // Track changes made in this modal so the list updates live without closing
   // (the server also revalidates the underlying page in the background).
@@ -84,6 +94,8 @@ function AddPlayerBody({
 
   // Only players of this team's sport can join it.
   const candidates = players.filter((p) => p.sportId === teamSportId);
+  // What we can offer in a swap: whoever is on this team right now.
+  const ours = candidates.filter((p) => onTeam.has(p.id));
 
   function add(playerId: string) {
     setPendingId(playerId);
@@ -119,6 +131,23 @@ function AddPlayerBody({
     });
   }
 
+  // Trade one of ours for one of theirs. Closes on success so the page's
+  // revalidated roster (both teams changed) is what the admin sees next.
+  function swap(theirId: string, oursId: string) {
+    setPendingId(theirId);
+    startTransition(async () => {
+      try {
+        await swapPlayers(oursId, theirId);
+        message.success("Players swapped.");
+        onDone();
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : "Couldn't swap players.");
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
   return (
     <div>
       <p className="mb-2 text-sm font-semibold text-ink-700">
@@ -138,10 +167,11 @@ function AddPlayerBody({
             return (
               <li
                 key={p.id}
-                className={`flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm ${
+                className={`rounded-lg border border-line px-3 py-2 text-sm ${
                   here ? "bg-pitch-600/10" : "bg-cream-50"
                 }`}
               >
+                <div className="flex items-center justify-between gap-3">
                 <span className="min-w-0 truncate font-semibold">
                   {p.name}
                   {p.position ? (
@@ -149,7 +179,19 @@ function AddPlayerBody({
                   ) : null}
                 </span>
                 {onOtherTeam ? (
-                  <span className="shrink-0 text-xs font-semibold text-ink-500">{p.teamName}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-500">{p.teamName}</span>
+                    {canSwap && ours.length > 0 ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setSwapFor((id) => (id === p.id ? null : p.id))}
+                        className="rounded-md px-2 py-0.5 text-xs font-bold text-burnt-400 hover:bg-burnt-500/10 disabled:opacity-50"
+                      >
+                        {busy ? "Swapping…" : swapFor === p.id ? "Cancel" : "⇄ Swap"}
+                      </button>
+                    ) : null}
+                  </span>
                 ) : here ? (
                   <button
                     type="button"
@@ -169,6 +211,27 @@ function AddPlayerBody({
                     {busy ? "Adding…" : "+ Add"}
                   </button>
                 )}
+                </div>
+                {swapFor === p.id ? (
+                  <div className="mt-2 border-t border-line pt-2">
+                    <p className="mb-1.5 text-xs font-semibold text-ink-500">
+                      Send to {p.teamName} in exchange:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ours.map((o) => (
+                        <button
+                          key={o.id}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => swap(p.id, o.id)}
+                          className="rounded-full border border-line bg-cream-50 px-2.5 py-1 text-xs font-semibold hover:border-burnt-400 hover:text-burnt-400 disabled:opacity-50"
+                        >
+                          {o.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </li>
             );
           })}

@@ -86,6 +86,7 @@ export default async function TeamDetailPage({
                     teamName={team.name}
                     teamSportId={team.sportId}
                     canCreate={admin}
+                    canSwap={admin}
                     sports={allSports}
                     teams={allTeams}
                     players={allPlayers.map((p) => ({

@@ -96,6 +96,59 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
   revalidatePath(`/teams/${teamId}`);
 }
 
+// Trade two players between their two teams in one move. Admin-only: it
+// mutates two rosters at once, so no single captain can do it unilaterally
+// (assignPlayerToTeam deliberately refuses to poach for the same reason).
+export async function swapPlayers(playerAId: string, playerBId: string) {
+  await requireAdmin();
+  if (playerAId === playerBId) throw new Error("Pick two different players.");
+
+  const [a, b] = await Promise.all([
+    db.query.players.findFirst({ where: eq(players.id, playerAId) }),
+    db.query.players.findFirst({ where: eq(players.id, playerBId) }),
+  ]);
+  if (!a || !b) throw new Error("Player not found.");
+  if (!a.teamId || !b.teamId) throw new Error("Both players must be on a team to swap.");
+  if (a.teamId === b.teamId) throw new Error("Those players are already on the same team.");
+  if (a.sportId !== b.sportId) throw new Error("Players can only be swapped within the same sport.");
+
+  // ponytail: neon-http has no transactions, so these run sequentially. A
+  // failure mid-way leaves both players on the same team — recoverable by
+  // hand. Move to a pooled driver if atomicity ever matters here.
+  await db.update(players).set({ teamId: b.teamId }).where(eq(players.id, a.id));
+  await db.update(players).set({ teamId: a.teamId }).where(eq(players.id, b.id));
+
+  // A captain who leaves loses the captaincy of the team they left.
+  for (const p of [a, b]) {
+    await db
+      .update(teams)
+      .set({ captainId: null })
+      .where(and(eq(teams.id, p.teamId!), eq(teams.captainId, p.id)));
+  }
+
+  const [teamA, teamB] = await Promise.all([
+    db.query.teams.findFirst({ where: eq(teams.id, a.teamId), columns: { name: true } }),
+    db.query.teams.findFirst({ where: eq(teams.id, b.teamId), columns: { name: true } }),
+  ]);
+  await notifyPlayers([a.id], {
+    type: "assignment",
+    title: "🔄 You've been swapped",
+    body: `You've moved from ${teamA?.name ?? "your team"} to ${teamB?.name ?? "another team"}.`,
+    url: `/teams/${b.teamId}`,
+  });
+  await notifyPlayers([b.id], {
+    type: "assignment",
+    title: "🔄 You've been swapped",
+    body: `You've moved from ${teamB?.name ?? "your team"} to ${teamA?.name ?? "another team"}.`,
+    url: `/teams/${a.teamId}`,
+  });
+
+  revalidatePath("/players");
+  revalidatePath("/teams");
+  revalidatePath(`/teams/${a.teamId}`);
+  revalidatePath(`/teams/${b.teamId}`);
+}
+
 // Release a player from a team (back to free agent). Admin or the team's
 // captain. If the released player was the captain, the captaincy is cleared.
 export async function removePlayerFromTeam(playerId: string, teamId: string) {
