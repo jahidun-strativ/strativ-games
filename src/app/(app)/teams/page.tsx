@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewTeamButton } from "@/components/entity-modals";
+import { ButtonLink } from "@/components/ui/button";
 import { isAdmin } from "@/server/auth";
 import type { Sport } from "@/db/schema";
 
@@ -69,6 +70,9 @@ async function TeamsActions() {
     <div className="flex flex-wrap gap-2">
       <NewTeamButton sports={allSports} />
       <NewTeamButton sports={allSports} kind="external" variant="secondary" />
+      <ButtonLink variant="secondary" href="/teams/board">
+        Squad board
+      </ButtonLink>
     </div>
   );
 }

@@ -54,17 +54,10 @@ export async function deletePlayer(id: string) {
   redirect("/players");
 }
 
-// Assign an existing (unassigned) player to a team — used by the team page's
-// "Add player" modal. Admin or the team's captain. Refuses to poach a player
-// already on another team.
-export async function assignPlayerToTeam(playerId: string, teamId: string) {
-  await requireTeamManager(teamId);
-  const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
-  if (!player) throw new Error("Player not found.");
-  if (player.teamId && player.teamId !== teamId) {
-    throw new Error("That player is already on another team.");
-  }
-  await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+// Shared tail of every "player joined this team" path: tell them, and default
+// their RSVP to "in" for the team's upcoming scheduled matches (opt-out;
+// existing responses untouched).
+async function onboardToTeam(playerId: string, teamId: string) {
   const team = await db.query.teams.findFirst({
     where: eq(teams.id, teamId),
     columns: { name: true },
@@ -75,8 +68,6 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
     body: `You've been added to ${team?.name ?? "a team"}.`,
     url: `/teams/${teamId}`,
   });
-  // Opt-out RSVP: joining a team defaults the player to "in" for that team's
-  // upcoming scheduled matches (existing responses untouched).
   const upcoming = await db.query.matches.findMany({
     where: (m, { and: a, or, eq: e, gte }) =>
       a(
@@ -92,8 +83,57 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
       .values(upcoming.map((m) => ({ matchId: m.id, playerId, status: "in" })))
       .onConflictDoNothing();
   }
+}
+
+// Assign an existing (unassigned) player to a team — used by the team page's
+// "Add player" modal. Admin or the team's captain. Refuses to poach a player
+// already on another team.
+export async function assignPlayerToTeam(playerId: string, teamId: string) {
+  await requireTeamManager(teamId);
+  const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
+  if (!player) throw new Error("Player not found.");
+  if (player.teamId && player.teamId !== teamId) {
+    throw new Error("That player is already on another team.");
+  }
+  await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+  await onboardToTeam(playerId, teamId);
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
+}
+
+// Move a player to another team (or to free agency with teamId=null). Unlike
+// assignPlayerToTeam this *does* poach, so it's admin-only — it's what the
+// squad board's drag-and-drop calls.
+export async function movePlayerToTeam(playerId: string, teamId: string | null) {
+  await requireAdmin();
+  const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
+  if (!player) throw new Error("Player not found.");
+  if (player.teamId === teamId) return;
+
+  if (teamId) {
+    const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+    if (!team) throw new Error("Team not found.");
+    if (team.kind === "external") throw new Error("External opponents don't have a roster.");
+    if (team.sportId !== player.sportId) {
+      throw new Error(`${player.name} doesn't play that sport.`);
+    }
+  }
+
+  await db.update(players).set({ teamId }).where(eq(players.id, playerId));
+  // Leaving a team ends any captaincy of it.
+  if (player.teamId) {
+    await db
+      .update(teams)
+      .set({ captainId: null })
+      .where(and(eq(teams.id, player.teamId), eq(teams.captainId, playerId)));
+    revalidatePath(`/teams/${player.teamId}`);
+  }
+  if (teamId) {
+    await onboardToTeam(playerId, teamId);
+    revalidatePath(`/teams/${teamId}`);
+  }
+  revalidatePath("/players");
+  revalidatePath("/teams");
 }
 
 // Trade two players between their two teams in one move. Admin-only: it
