@@ -29,6 +29,9 @@ export const teams = pgTable("teams", {
   // opponent (other company / local club) we only track by name.
   kind: text("kind").notNull().default("internal"),
   league: text("league"),
+  // Legacy free-text column, unused by the app but kept so `db:push` doesn't drop
+  // the existing data. Safe to remove in a deliberate migration later.
+  stadium: text("stadium"),
   formation: text("formation").notNull().default("4-4-2"),
   // The team's captain (a player on this team). Whichever registered user that
   // player is linked to gets captain powers for this team: editing per-match
