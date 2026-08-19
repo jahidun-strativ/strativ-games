@@ -24,6 +24,7 @@ export async function GET(
       awayTeam: { columns: { id: true, name: true, kind: true } },
       venue: true,
       sport: true,
+      session: { columns: { title: true }, with: { season: { columns: { name: true } } } },
     },
   });
   if (!match) return new Response("Not found", { status: 404 });
@@ -47,15 +48,21 @@ export async function GET(
   });
 
   const competitive = match.kind === "competitive";
+  const league = match.session?.season ?? null;
   const url = new URL(req.url);
   const requested = url.searchParams.get("variant");
-  // Default: a VS poster for competitive games, a full line-up for internal.
+  // Default: league photocard for a matchday, VS for competitive, full for internal.
   const variant: PosterData["variant"] =
-    requested === "vs" || requested === "squad" || requested === "full"
+    requested === "vs" ||
+    requested === "squad" ||
+    requested === "full" ||
+    requested === "league"
       ? requested
-      : competitive
-        ? "vs"
-        : "full";
+      : league
+        ? "league"
+        : competitive
+          ? "vs"
+          : "full";
 
   const when = formatFull(match.kickoffAt);
   const venue = `${match.venue.name}${match.venue.city ? `, ${match.venue.city}` : ""}`;
@@ -64,7 +71,21 @@ export async function GET(
   let data: PosterData;
   let name: string;
 
-  if (variant === "squad") {
+  if (variant === "league") {
+    data = {
+      variant: "league",
+      seasonName: league?.name ?? "Strativ Futsal League",
+      matchday: match.session?.title ?? "Matchday",
+      teams: [
+        { name: home.name, players: [] },
+        { name: away.name, players: [] },
+      ],
+      venue,
+      when,
+      sport,
+    };
+    name = `${slug(home.name)}-vs-${slug(away.name)}-league.png`;
+  } else if (variant === "squad") {
     // The Strativ (internal) side's roster on its own.
     const ours = home.kind !== "external" ? home : away;
     data = {

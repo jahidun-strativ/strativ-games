@@ -33,6 +33,16 @@ export type PosterData =
       sport?: string | null;
     }
   | {
+      // A league matchday: season branding ribbon + a gold VS hero.
+      variant: "league";
+      seasonName: string; // "Strativ Futsal League Season 1"
+      matchday: string; // "Matchday 3"
+      teams: PosterTeam[]; // [home, away] (names used; players optional)
+      venue: string;
+      when: string;
+      sport?: string | null;
+    }
+  | {
       // A schedule of every upcoming slot in one image.
       variant: "fixtures";
       kindLabel: string; // headline, e.g. "Upcoming"
@@ -60,8 +70,8 @@ export function posterHeight(data: PosterData): number {
     const chrome = 394;
     return Math.max(720, Math.round(chrome + cardsH + gaps));
   }
-  // The "vs" hero has no line-ups; keep it a tall, centred poster.
-  if (data.variant === "vs") return 1080;
+  // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
+  if (data.variant === "vs" || data.variant === "league") return 1080;
 
   const compact = data.teams.length >= 3;
   const maxPlayers = Math.max(1, ...data.teams.map((t) => t.players.length));
@@ -137,7 +147,7 @@ function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null
               marginLeft: 14,
             }}
           >
-            STRATIV GAME
+            STRATIV GAMES
           </div>
         </div>
         {sport ? (
@@ -189,6 +199,115 @@ function Header({ kindLabel, sport }: { kindLabel: string; sport?: string | null
           }}
         >
           {kindLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// League matchday header: brand row + a gold season ribbon with the matchday.
+function LeagueBanner({
+  seasonName,
+  matchday,
+  sport,
+}: {
+  seasonName: string;
+  matchday: string;
+  sport?: string | null;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <Monogram size={46} />
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Oswald",
+              fontWeight: 700,
+              fontSize: 27,
+              letterSpacing: 2,
+              color: INK_900,
+              marginLeft: 14,
+            }}
+          >
+            STRATIV GAMES
+          </div>
+        </div>
+        {sport ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              fontFamily: "Archivo",
+              fontWeight: 600,
+              fontSize: 15,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: INK_700,
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 999,
+              padding: "6px 16px",
+            }}
+          >
+            {sport}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Gold season ribbon */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          marginTop: 26,
+          padding: "22px 28px",
+          borderRadius: 18,
+          background: "linear-gradient(120deg, rgba(245,184,31,0.22), rgba(249,115,22,0.08))",
+          border: "1px solid rgba(245,184,31,0.35)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            fontFamily: "Archivo",
+            fontWeight: 700,
+            fontSize: 20,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            color: "#f5cf6b",
+          }}
+        >
+          🏆 League Matchday
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 8,
+            fontFamily: "Oswald",
+            fontWeight: 700,
+            fontSize: 52,
+            lineHeight: 0.95,
+            textTransform: "uppercase",
+            letterSpacing: -1,
+            color: INK_900,
+          }}
+        >
+          {seasonName}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            marginTop: 6,
+            fontFamily: "Oswald",
+            fontWeight: 600,
+            fontSize: 30,
+            color: "#fb8b4c",
+          }}
+        >
+          {matchday}
         </div>
       </div>
     </div>
@@ -554,6 +673,137 @@ export function Poster(data: PosterData) {
               />
             ))
           )}
+        </div>
+        <Footer />
+      </PageShell>
+    );
+  }
+
+  // League matchday: gold-themed VS hero under a season ribbon.
+  if (data.variant === "league") {
+    const { seasonName, matchday, teams, venue, when, sport } = data;
+    const home = teams[0] ?? { name: "TBD", players: [] };
+    const away = teams[1] ?? { name: "TBD", players: [] };
+    const side = (name: string, accent: string) => (
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 24px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: 58,
+            height: 58,
+            borderRadius: 16,
+            background: accent,
+            boxShadow: `0 8px 22px ${accent}66`,
+            marginBottom: 26,
+          }}
+        />
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Oswald",
+            fontWeight: 700,
+            fontSize: 60,
+            textTransform: "uppercase",
+            letterSpacing: -1,
+            color: INK_900,
+            textAlign: "center",
+            lineHeight: 0.95,
+            justifyContent: "center",
+          }}
+        >
+          {name}
+        </div>
+      </div>
+    );
+    return (
+      <PageShell>
+        <LeagueBanner seasonName={seasonName} matchday={matchday} sport={sport} />
+        <div style={{ display: "flex", flex: 1, width: "100%", marginTop: 28, marginBottom: 30 }}>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              alignItems: "stretch",
+              justifyContent: "center",
+              width: "100%",
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: 24,
+              border: "1px solid rgba(245,184,31,0.25)",
+              background: "linear-gradient(180deg,rgba(245,184,31,0.06),rgba(255,255,255,0.015))",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                position: "absolute",
+                top: -80,
+                left: -160,
+                width: "62%",
+                height: 1500,
+                background: "linear-gradient(180deg,rgba(249,115,22,0.22),rgba(249,115,22,0.04))",
+                transform: "skewX(-11deg)",
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                position: "absolute",
+                top: -80,
+                right: -160,
+                width: "62%",
+                height: 1500,
+                background: "linear-gradient(180deg,rgba(245,184,31,0.22),rgba(245,184,31,0.04))",
+                transform: "skewX(-11deg)",
+              }}
+            />
+            {side(home.name, ACCENTS[0])}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: 128,
+                height: 128,
+                marginLeft: -64,
+                marginTop: -64,
+                borderRadius: 64,
+                background: `linear-gradient(150deg,${BASE},#241c0a)`,
+                border: "3px solid rgba(245,184,31,0.45)",
+                boxShadow: "0 12px 34px rgba(0,0,0,0.55)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  fontFamily: "Oswald",
+                  fontWeight: 700,
+                  fontSize: 60,
+                  color: "#f5cf6b",
+                  lineHeight: 1,
+                }}
+              >
+                VS
+              </div>
+            </div>
+            {side(away.name, ACCENTS[3])}
+          </div>
+        </div>
+        <div style={{ display: "flex", width: "100%", marginBottom: 26 }}>
+          <MetaChips venue={venue} when={when} />
         </div>
         <Footer />
       </PageShell>

@@ -76,11 +76,14 @@ async function StatsContent() {
     allSports.map(async (sport) => {
       const sportMatches = await db.query.matches.findMany({
         where: eq(matches.sportId, sport.id),
+        with: { session: { columns: { seasonId: true } } },
       });
       const internalTeams = sport.teams.filter((t) => t.kind !== "external");
+      // League matchdays have their own table on /league — keep them out of the
+      // general internal standings so "regular" and "league" stay separate.
       const internal = computeStandings(
         internalTeams,
-        sportMatches.filter((m) => m.kind === "internal"),
+        sportMatches.filter((m) => m.kind === "internal" && !m.session?.seasonId),
       );
       const competitive = computeCompetitiveRecord(
         internalTeams,

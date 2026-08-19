@@ -3,7 +3,7 @@ import { inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { appUsers, notifications, players } from "@/db/schema";
 
-export type NotificationType = "match" | "result" | "assignment" | "cost";
+export type NotificationType = "match" | "result" | "assignment" | "cost" | "league";
 
 type NotificationInput = {
   type: NotificationType;

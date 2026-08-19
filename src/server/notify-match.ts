@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { matches, sessions } from "@/db/schema";
 import { sendPushToAll, sendPushToEndpoint, type PushPayload } from "@/lib/push";
 import { notifyAllUsers } from "@/server/notifications";
+import { getSeasonById, getSeasonView } from "@/server/queries/season";
 import { formatFull } from "@/lib/format";
 
 type Variant =
@@ -33,13 +34,27 @@ export async function buildMatchPayload(
 ): Promise<PushPayload | null> {
   const m = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    with: { venue: true, homeTeam: true, awayTeam: true },
+    with: {
+      venue: true,
+      homeTeam: true,
+      awayTeam: true,
+      session: { columns: { title: true }, with: { season: { columns: { id: true, name: true } } } },
+    },
   });
   if (!m) return null;
   const label =
     m.homeTeam && m.awayTeam
       ? `${m.homeTeam.name} vs ${m.awayTeam.name}`
       : m.title || "Match";
+  // League matchdays get their own branding and deep-link to the league page.
+  const league = m.session?.season ?? null;
+  if (league) {
+    return {
+      title: TITLES[variant],
+      body: `${league.name} · ${m.session?.title ?? "Matchday"} — ${label} · ${formatFull(m.kickoffAt)}`,
+      url: `/league/${league.id}`,
+    };
+  }
   return {
     title: TITLES[variant],
     body: `${label} · ${formatFull(m.kickoffAt)} at ${m.venue.name}`,
@@ -61,15 +76,66 @@ export async function notifyMatchToAll(matchId: string, variant: Variant) {
 export async function notifyMatchResult(matchId: string) {
   const m = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    with: { homeTeam: true, awayTeam: true },
+    with: {
+      homeTeam: true,
+      awayTeam: true,
+      session: { columns: { title: true }, with: { season: { columns: { id: true, name: true } } } },
+    },
   });
   if (!m || !m.homeTeam || !m.awayTeam) return;
   const score = `${m.homeScore ?? 0}–${m.awayScore ?? 0}`;
+  const league = m.session?.season ?? null;
+  if (league) {
+    const title = "🏁 League full-time";
+    const body = `${m.homeTeam.name} ${score} ${m.awayTeam.name} · ${league.name}${m.session?.title ? ` · ${m.session.title}` : ""}`;
+    const url = `/result/${m.id}`;
+    await sendPushToAll({ title, body, url });
+    await notifyAllUsers({ type: "league", title, body, url });
+    return;
+  }
   const title = "🏁 Full-time";
   const body = `${m.homeTeam.name} ${score} ${m.awayTeam.name} · tap for the result`;
   const url = `/result/${m.id}`;
   await sendPushToAll({ title, body, url });
   await notifyAllUsers({ type: "result", title, body, url });
+}
+
+// A whole league matchday was scheduled (one slot, 3 round-robin games) — one
+// push/inbox item to everyone, deep-linking to the league page.
+export async function notifyLeagueMatchday(sessionId: string) {
+  const s = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+    with: {
+      venue: true,
+      season: { columns: { id: true, name: true } },
+      fixtures: { with: { homeTeam: { columns: { name: true } }, awayTeam: { columns: { name: true } } } },
+    },
+  });
+  if (!s || !s.season) return;
+  const teamNames = [
+    ...new Set(s.fixtures.flatMap((f) => [f.homeTeam?.name, f.awayTeam?.name]).filter(Boolean)),
+  ];
+  const title = `🏆 ${s.season.name}`;
+  const body = `${s.title} scheduled — ${teamNames.join(", ")} · ${formatFull(s.startAt)} at ${s.venue.name}`;
+  const url = `/league/${s.season.id}`;
+  await sendPushToAll({ title, body, url });
+  await notifyAllUsers({ type: "league", title, body, url });
+}
+
+// Season ended — crown the champion (and name the top scorer) to everyone.
+export async function notifyLeagueChampion(seasonId: string) {
+  const season = await getSeasonById(seasonId);
+  if (!season) return;
+  const view = await getSeasonView(season);
+  const parts: string[] = [];
+  if (view.champion) parts.push(`Champions: ${view.champion.teamName}`);
+  if (view.awards.topScorer)
+    parts.push(`Top scorer: ${view.awards.topScorer.player.name} (${view.awards.topScorer.goals})`);
+  const title = `🏆 ${season.name} — Champions`;
+  const body = parts.length ? parts.join(" · ") : "The season has ended — see the final standings.";
+  const url = `/league/${season.id}`;
+  await sendPushToAll({ title, body, url });
+  await notifyAllUsers({ type: "league", title, body, url });
 }
 
 // One push for a booked slot (single game or round-robin), linking to the

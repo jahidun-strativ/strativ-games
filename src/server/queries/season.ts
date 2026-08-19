@@ -70,6 +70,32 @@ async function seasonScorers(seasonId: string): Promise<SeasonScorer[]> {
     .orderBy(desc(sum(playerMatchStats.goals)), desc(sum(playerMatchStats.assists)));
 }
 
+// One player's totals scoped to a single season (completed league matches only).
+// Mirrors getPlayerTotals (overall) so a profile can show League vs Overall.
+export async function getPlayerSeasonTotals(playerId: string, seasonId: string) {
+  const [row] = await db
+    .select({
+      goals: sum(playerMatchStats.goals).mapWith(Number),
+      assists: sum(playerMatchStats.assists).mapWith(Number),
+      appearances: count(playerMatchStats.id).mapWith(Number),
+    })
+    .from(playerMatchStats)
+    .innerJoin(matches, eq(playerMatchStats.matchId, matches.id))
+    .innerJoin(sessions, eq(matches.sessionId, sessions.id))
+    .where(
+      and(
+        eq(playerMatchStats.playerId, playerId),
+        eq(sessions.seasonId, seasonId),
+        eq(matches.status, "completed"),
+      ),
+    );
+  return {
+    goals: row?.goals ?? 0,
+    assists: row?.assists ?? 0,
+    appearances: row?.appearances ?? 0,
+  };
+}
+
 async function resolveAwards(
   season: Season,
   scorers: SeasonScorer[],

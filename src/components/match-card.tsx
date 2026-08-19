@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
 import type { Match, Team, Venue } from "@/db/schema";
@@ -7,6 +8,8 @@ export type MatchWithRefs = Match & {
   homeTeam: Team | null;
   awayTeam: Team | null;
   venue: Venue;
+  // Present when the match is a league matchday (its slot belongs to a season).
+  session?: { title: string | null; season: { id: string; name: string } | null } | null;
 };
 
 const accent: Record<string, string> = {
@@ -54,20 +57,34 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
   const homeWin = played && (match.homeScore ?? 0) > (match.awayScore ?? 0);
   const awayWin = played && (match.awayScore ?? 0) > (match.homeScore ?? 0);
+  const league = match.session?.season ?? null;
 
   return (
     <Link
       href={`/matches/${match.id}`}
-      className={`tv-card-sm block border-l-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-tv)] ${accent[match.status] ?? "border-l-ink-400"}`}
+      className={`tv-card-sm block border-l-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-tv)] ${
+        league ? "border-l-gold-400" : accent[match.status] ?? "border-l-ink-400"
+      }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-xs font-semibold text-ink-500">
           {formatDate(match.kickoffAt)}
           <span className="text-ink-400"> · </span>
           {formatTime(match.kickoffAt)}
+          {league && match.session?.title ? (
+            <>
+              <span className="text-ink-400"> · </span>
+              {match.session.title}
+            </>
+          ) : null}
         </span>
         <div className="flex items-center gap-1.5">
-          {match.kind === "competitive" ? (
+          {league ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold-300">
+              <Trophy className="h-3 w-3" />
+              League
+            </span>
+          ) : match.kind === "competitive" ? (
             <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>

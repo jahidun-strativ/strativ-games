@@ -26,7 +26,7 @@ export default async function PublicLeaguePage({
             <span className="text-burnt-500">S</span>
             <span className="text-ink-900">G</span>
           </span>
-          <p className="font-display text-lg tracking-widest text-ink-900">STRATIV GAME</p>
+          <p className="font-display text-lg tracking-widest text-ink-900">STRATIV GAMES</p>
         </div>
 
         <div className="mb-8">

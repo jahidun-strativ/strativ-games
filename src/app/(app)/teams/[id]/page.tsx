@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import { desc, eq, or } from "drizzle-orm";
+import { Trophy } from "lucide-react";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
 import { deleteTeam } from "@/server/actions/teams";
+import { getActiveSeason } from "@/server/queries/season";
+import { computeCompetitiveRecord, type StandingsRow } from "@/server/queries/standings";
 import { MatchCard } from "@/components/match-card";
+import { StatTabs } from "@/components/stat-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
@@ -45,8 +49,52 @@ export default async function TeamDetailPage({
     where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
     orderBy: desc(matches.kickoffAt),
     limit: 6,
-    with: { homeTeam: true, awayTeam: true, venue: true },
+    with: {
+      homeTeam: true,
+      awayTeam: true,
+      venue: true,
+      session: { columns: { title: true }, with: { season: { columns: { id: true, name: true } } } },
+    },
   });
+
+  // League (season) vs Overall record. computeCompetitiveRecord with a single
+  // team gives that team's own W/D/L over whatever matches we hand it.
+  const allForRecord = external
+    ? []
+    : await db.query.matches.findMany({
+        where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
+        with: { session: { columns: { seasonId: true } } },
+      });
+  const season = external ? null : await getActiveSeason();
+  const leagueRec =
+    season && season.sportId === team.sportId
+      ? computeCompetitiveRecord(
+          [team],
+          allForRecord.filter((m) => m.session?.seasonId === season.id),
+        )[0] ?? null
+      : null;
+  const overallRec = external ? null : computeCompetitiveRecord([team], allForRecord)[0] ?? null;
+
+  const recordPanel = (r: StandingsRow) => (
+    <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+      {[
+        { label: "P", value: r.played },
+        { label: "W", value: r.won },
+        { label: "D", value: r.drawn },
+        { label: "L", value: r.lost },
+        { label: "GF", value: r.goalsFor },
+        { label: "GA", value: r.goalsAgainst },
+        { label: "Pts", value: r.points },
+      ].map((s) => (
+        <div key={s.label} className="tv-card-sm p-3 text-center">
+          <p className="scoreboard text-xl font-bold text-burnt-400">{s.value}</p>
+          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-ink-500">
+            {s.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div>
@@ -150,6 +198,32 @@ export default async function TeamDetailPage({
         </section>
 
         <section>
+          {overallRec ? (
+            <div className="mb-6">
+              <h2 className="font-display mb-3 text-xl text-ink-900">Record</h2>
+              {leagueRec && season ? (
+                <StatTabs
+                  tabs={[
+                    {
+                      label: "League",
+                      panel: (
+                        <div>
+                          <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gold-300">
+                            <Trophy className="h-3.5 w-3.5" /> {season.name}
+                          </p>
+                          {recordPanel(leagueRec)}
+                        </div>
+                      ),
+                    },
+                    { label: "Overall", panel: recordPanel(overallRec) },
+                  ]}
+                />
+              ) : (
+                recordPanel(overallRec)
+              )}
+            </div>
+          ) : null}
+
           <h2 className="font-display mb-3 text-xl text-ink-900">Recent & upcoming</h2>
           <div className="space-y-3">
             {teamMatches.length === 0 ? (

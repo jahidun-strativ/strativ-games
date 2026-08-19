@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { asc, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { matches } from "@/db/schema";
+import { matches, sessions } from "@/db/schema";
 import { MatchCard } from "@/components/match-card";
 import { SlotCard, type SlotWithFixtures } from "@/components/slot-card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,8 +36,10 @@ async function MatchesContent({
   const kind = typeof kindFilter === "string" && kindFilter !== "" ? kindFilter : null;
 
   const [allSlots, standaloneMatches, allSports, allTeams, allVenues] = await Promise.all([
-    // Slots group their games; each fixture keeps its own teams/scores.
+    // Slots group their games; each fixture keeps its own teams/scores. League
+    // matchdays (seasonId set) are excluded — they live only inside /league.
     db.query.sessions.findMany({
+      where: isNull(sessions.seasonId),
       with: {
         venue: true,
         fixtures: {

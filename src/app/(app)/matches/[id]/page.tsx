@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Trophy } from "lucide-react";
 import { db } from "@/db";
 import {
   cancelMatch,
@@ -58,6 +59,7 @@ export default async function MatchDetailPage({
         venue: true,
         sport: true,
         playerStats: true,
+        session: { columns: { title: true }, with: { season: { columns: { id: true, name: true } } } },
       },
     }),
     db.query.sports.findMany(),
@@ -68,6 +70,7 @@ export default async function MatchDetailPage({
 
   const admin = await isAdmin();
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
+  const league = match.session?.season ?? null;
 
   // Team(s) the viewer can open the lineup page for: their own side as captain,
   // or ANY internal side as admin (admins manage match squads for both teams,
@@ -115,8 +118,12 @@ export default async function MatchDetailPage({
           getEffectiveSquad(id, match.awayTeamId),
         ])
       : [{ players: [] }, { players: [] }];
-  const posterVariants: PosterVariant[] =
-    match.kind === "competitive"
+  const posterVariants: PosterVariant[] = league
+    ? [
+        { label: "League matchday poster", variant: "league", hint: league.name },
+        { label: "Team line-ups", variant: "full", hint: "Both squads" },
+      ]
+    : match.kind === "competitive"
       ? [
           { label: "Match poster", variant: "vs", hint: "Strativ vs opponent" },
           { label: "Team sheet", variant: "squad", hint: "Strativ line-up" },
@@ -153,8 +160,20 @@ export default async function MatchDetailPage({
       />
 
       {/* Match hero */}
-      <section className="tv-card glossy p-6 text-center sm:p-8">
-        {match.kind === "competitive" ? (
+      <section
+        className={`tv-card glossy p-6 text-center sm:p-8 ${
+          league ? "ring-1 ring-gold-400/40" : ""
+        }`}
+      >
+        {league ? (
+          <p className="mb-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.3em] text-gold-300">
+            <Trophy className="h-4 w-4" />
+            {league.name}
+            {match.session?.title ? (
+              <span className="text-ink-500">· {match.session.title}</span>
+            ) : null}
+          </p>
+        ) : match.kind === "competitive" ? (
           <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.3em] text-burnt-400">
             Competitive
           </p>
@@ -186,7 +205,14 @@ export default async function MatchDetailPage({
               {paidByLabel(match.paidBy)}
             </span>
           ) : null}
-          {match.sessionId ? (
+          {league ? (
+            <Link
+              href={`/league/${league.id}`}
+              className="inline-flex items-center gap-1 rounded-full border border-gold-400/40 bg-gold-400/10 px-3 py-1 uppercase tracking-wide !text-gold-300 transition-colors hover:!bg-gold-400/20"
+            >
+              League table →
+            </Link>
+          ) : match.sessionId ? (
             <Link
               href={`/sessions/${match.sessionId}`}
               className="inline-flex items-center gap-1 rounded-full border border-burnt-500/30 bg-burnt-500/10 px-3 py-1 uppercase tracking-wide !text-burnt-400 transition-colors hover:!bg-burnt-500/20"

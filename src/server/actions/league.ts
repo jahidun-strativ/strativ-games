@@ -9,7 +9,7 @@ import { requireAdmin } from "@/server/auth";
 import { int, opt, str } from "@/server/form";
 import { threeTeamRoundRobin } from "@/server/round-robin";
 import { seedDefaultAvailability } from "@/server/seed-availability";
-import { notifySessionCreated } from "@/server/notify-match";
+import { notifyLeagueMatchday, notifyLeagueChampion } from "@/server/notify-match";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 
 function revalidateLeague(seasonId?: string) {
@@ -98,7 +98,7 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   }
 
   const settings = await getNotificationSettings();
-  if (settings.notifyOnCreate) await notifySessionCreated(session.id).catch(() => {});
+  if (settings.notifyOnCreate) await notifyLeagueMatchday(session.id).catch(() => {});
 
   revalidateLeague(seasonId);
   redirect(`/sessions/${session.id}`);
@@ -108,6 +108,8 @@ export async function setSeasonStatus(seasonId: string, status: "active" | "ende
   await requireAdmin();
   await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
   revalidateLeague(seasonId);
+  // Crown the champion to everyone when the season closes.
+  if (status === "ended") await notifyLeagueChampion(seasonId).catch(() => {});
 }
 
 const AWARD_FIELDS = ["topScorerId", "fairplayTeamId", "playerOfSeasonId", "bestGkId"] as const;

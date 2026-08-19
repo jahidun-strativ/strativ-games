@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Trophy } from "lucide-react";
 import { db } from "@/db";
 import { deletePlayer } from "@/server/actions/players";
 import { getPlayerTotals } from "@/server/queries/stats";
+import { getActiveSeason, getPlayerSeasonTotals } from "@/server/queries/season";
+import { StatTabs } from "@/components/stat-tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
@@ -36,6 +39,29 @@ export default async function PlayerDetailPage({
 
   const admin = await isAdmin();
   const totals = await getPlayerTotals(id);
+  // League (season-scoped) totals sit beside the overall/all-time ones.
+  const season = await getActiveSeason();
+  const leagueTotals =
+    season && season.sportId === player.sportId
+      ? await getPlayerSeasonTotals(id, season.id)
+      : null;
+
+  const statGrid = (t: { goals: number; assists: number; appearances: number }) => (
+    <div className="grid grid-cols-3 gap-3 sm:max-w-md sm:gap-4">
+      {[
+        { label: "Goals", value: t.goals },
+        { label: "Assists", value: t.assists },
+        { label: "Apps", value: t.appearances },
+      ].map((stat) => (
+        <div key={stat.label} className="tv-card-sm p-4 text-center">
+          <p className="scoreboard text-3xl font-bold text-burnt-400">{stat.value}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-ink-500">
+            {stat.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div>
@@ -56,19 +82,27 @@ export default async function PlayerDetailPage({
         <StatusBadge status={player.status} />
       </div>
 
-      <section className="grid grid-cols-3 gap-3 sm:max-w-md sm:gap-4">
-        {[
-          { label: "Goals", value: totals.goals },
-          { label: "Assists", value: totals.assists },
-          { label: "Apps", value: totals.appearances },
-        ].map((stat) => (
-          <div key={stat.label} className="tv-card-sm p-4 text-center">
-            <p className="scoreboard text-3xl font-bold text-burnt-400">{stat.value}</p>
-            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-ink-500">
-              {stat.label}
-            </p>
-          </div>
-        ))}
+      <section>
+        {leagueTotals && season ? (
+          <StatTabs
+            tabs={[
+              {
+                label: "League",
+                panel: (
+                  <div>
+                    <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gold-300">
+                      <Trophy className="h-3.5 w-3.5" /> {season.name}
+                    </p>
+                    {statGrid(leagueTotals)}
+                  </div>
+                ),
+              },
+              { label: "Overall", panel: statGrid(totals) },
+            ]}
+          />
+        ) : (
+          statGrid(totals)
+        )}
       </section>
 
       <section className="mt-8">
