@@ -5,15 +5,13 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/league", label: "Overview", exact: true },
-  { href: "/league/fixtures", label: "Fixtures" },
   { href: "/league/teams", label: "Teams" },
-  { href: "/league/stats", label: "Stats" },
-  { href: "/league/awards", label: "Awards" },
-  { href: "/league/season", label: "Season", adminOnly: true },
+  { href: "/league/matches", label: "Matches" },
+  { href: "/league/settings", label: "Settings", adminOnly: true },
 ] as const;
 
-// Secondary nav for the league section — mirrors the sidebar submenu so the
-// league is browsable on mobile and inside the page too.
+// Secondary nav for the league section — the Overview is the single display
+// page; the rest are management sections (mirrors the sidebar submenu).
 export function LeagueTabs({ admin }: { admin: boolean }) {
   const pathname = usePathname();
   const tabs = TABS.filter((t) => !("adminOnly" in t) || admin);

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LeagueTabs } from "@/components/league/league-tabs";
 import { CreateSeasonButton } from "@/components/league/create-season-button";
+import { SeasonStatusButton } from "@/components/league/season-admin";
 
 // Live standings — recomputed on every visit so a just-recorded result shows.
 export const dynamic = "force-dynamic";
@@ -41,14 +42,17 @@ export default async function LeagueLayout({ children }: { children: React.React
         kicker={season.status === "ended" ? "League office · Final" : "League office"}
         title={season.name}
         actions={
-          <Link
-            href={`/league/${season.id}`}
-            target="_blank"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-burnt-500 hover:text-burnt-400"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Public page
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/league/${season.id}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-burnt-500 hover:text-burnt-400"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Public page
+            </Link>
+            {admin ? <SeasonStatusButton season={season} /> : null}
+          </div>
         }
       />
       <LeagueTabs admin={admin} />

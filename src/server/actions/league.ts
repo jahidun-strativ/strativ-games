@@ -104,6 +104,21 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   redirect(`/sessions/${session.id}`);
 }
 
+// Edit an existing season's details. sportId stays fixed — matchdays and the
+// league teams are tied to it, so changing it would orphan existing data.
+export async function updateSeason(seasonId: string, formData: FormData) {
+  await requireAdmin();
+  const name = str(formData, "name");
+  const startAt = new Date(str(formData, "startAt"));
+  if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start date.");
+  const plannedMatchdays = Math.max(1, int(formData, "plannedMatchdays"));
+  await db
+    .update(seasons)
+    .set({ name, startAt, plannedMatchdays })
+    .where(eq(seasons.id, seasonId));
+  revalidateLeague(seasonId);
+}
+
 export async function setSeasonStatus(seasonId: string, status: "active" | "ended") {
   await requireAdmin();
   await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
