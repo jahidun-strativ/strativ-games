@@ -39,7 +39,7 @@ export function RosterTable({
                 {captainId && p.id === captainId ? (
                   <span
                     title="Captain"
-                    className="rounded bg-burnt-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-burnt-400"
+                    className="rounded bg-burnt-500/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-burnt-400"
                   >
                     🧢 C
                   </span>

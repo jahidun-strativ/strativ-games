@@ -129,7 +129,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-ink-900">{n.title}</span>
                   <span className="block text-xs text-ink-500">{n.body}</span>
-                  <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-ink-400">
+                  <span className="mt-0.5 block text-[11px] uppercase tracking-wider text-ink-400">
                     {ago(n.createdAt)}
                   </span>
                 </span>

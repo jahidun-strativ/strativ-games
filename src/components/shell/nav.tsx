@@ -70,7 +70,7 @@ export function SidebarNav({ admin = false }: { admin?: boolean }) {
   const visible = links.filter((l) => !l.adminOnly || admin);
   return (
     <nav className="flex flex-col gap-1">
-      <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] !text-ink-400">
+      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.2em] !text-ink-400">
         Menu
       </p>
       {visible.map((link) => {
@@ -146,7 +146,7 @@ export function BottomTabs({ admin = false }: { admin?: boolean }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-1 py-2 text-[10px] font-semibold ${
+              className={`flex flex-col items-center gap-1 py-2 text-[11px] font-semibold ${
                 active ? "!text-burnt-400" : "!text-ink-500"
               }`}
             >
@@ -165,7 +165,7 @@ export function BottomTabs({ admin = false }: { admin?: boolean }) {
         <button
           type="button"
           onClick={() => setMoreOpen(true)}
-          className={`flex flex-col items-center gap-1 py-2 text-[10px] font-semibold ${
+          className={`flex flex-col items-center gap-1 py-2 text-[11px] font-semibold ${
             onOverflow ? "!text-burnt-400" : "!text-ink-500"
           }`}
         >

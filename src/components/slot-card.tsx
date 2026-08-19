@@ -35,11 +35,11 @@ export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: str
         </span>
         <div className="flex items-center gap-1.5">
           {slot.kind === "competitive" ? (
-            <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burnt-400">
+            <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>
           ) : null}
-          <span className="rounded-full bg-ink-900/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
+          <span className="rounded-full bg-ink-900/5 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink-500">
             {count} game{count === 1 ? "" : "s"}
           </span>
           <StatusBadge status={status} />

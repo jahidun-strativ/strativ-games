@@ -36,7 +36,7 @@ function TeamGrid({ items }: { items: TeamCard[] }) {
             <div className="flex items-start justify-between gap-2">
               <h2 className="font-display text-xl leading-tight">{team.name}</h2>
               <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white"
+                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase text-white"
                 style={{ backgroundColor: team.sport.color }}
               >
                 {team.sport.shortName}

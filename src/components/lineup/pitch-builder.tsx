@@ -292,7 +292,7 @@ export function PitchBuilder({
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               >
                 <span
-                  className={`flex h-12 w-12 flex-col items-center justify-center rounded-full border-2 text-[10px] font-bold leading-tight transition-transform sm:h-14 sm:w-14 ${
+                  className={`flex h-12 w-12 flex-col items-center justify-center rounded-full border-2 text-[11px] font-bold leading-tight transition-transform sm:h-14 sm:w-14 ${
                     isActive
                       ? "scale-110 border-gold-300 bg-gold-300 text-black"
                       : player

@@ -40,7 +40,7 @@ function ScorerRow({ line, side }: { line: Line; side: "home" | "away" }) {
         {line.assists > 0 ? (
           <span className="rounded bg-cream-200 px-1.5 py-0.5 font-bold text-ink-500">
             {line.assists}
-            <span className="ml-0.5 text-[10px]">A</span>
+            <span className="ml-0.5 text-[11px]">A</span>
           </span>
         ) : null}
       </span>
@@ -154,7 +154,7 @@ export default async function PublicResultPage({
                   </span>
                 </div>
                 {completed && hs === as ? (
-                  <span className="mt-2 text-[10px] font-bold uppercase tracking-widest text-ink-500">
+                  <span className="mt-2 text-[11px] font-bold uppercase tracking-widest text-ink-500">
                     Draw
                   </span>
                 ) : null}

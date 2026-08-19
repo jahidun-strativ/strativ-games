@@ -47,7 +47,7 @@ export function MonthlyRace({
                   <span className="scoreboard block text-lg font-bold leading-none text-burnt-400">
                     {metric(row)}
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
                     {metricLabel}
                   </span>
                 </span>

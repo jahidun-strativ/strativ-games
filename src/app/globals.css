@@ -15,9 +15,9 @@
   --color-cream-300: rgb(255 255 255 / 0.12);
 
   /* Text (light-on-dark scale) */
-  --color-ink-400: #5c6a7d;
-  --color-ink-500: #8a96a7;
-  --color-ink-700: #c4cedb;
+  --color-ink-400: #6b788b; /* tertiary — slightly lifted for legibility */
+  --color-ink-500: #9aa7b9; /* secondary — brighter for readability */
+  --color-ink-700: #ccd5e1;
   --color-ink-900: #f3f6fb;
 
   /* Primary — energy orange */
@@ -47,7 +47,17 @@
   --font-sans: var(--font-archivo), "Archivo", system-ui, sans-serif;
   --font-score: var(--font-chivo), "Chivo Mono", monospace;
 
-  --radius-tv: 1rem;
+  /* Refined type scale — a slightly larger, more readable body + calmer
+     heading line-heights. Rescales `text-sm`/`text-base` app-wide (antd
+     controls keep their own sizing). */
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem; /* 15px (was 14) — the body workhorse */
+  --text-sm--line-height: 1.55;
+  --text-base--line-height: 1.6;
+  --text-lg--line-height: 1.4;
+  --text-xl--line-height: 1.3;
+
+  --radius-tv: 0.8rem;
 
   --shadow-tv: 0 10px 30px -12px rgb(0 0 0 / 0.6);
   --shadow-tv-sm: 0 6px 18px -10px rgb(0 0 0 / 0.55);
@@ -57,6 +67,7 @@
 body {
   color: var(--color-ink-900);
   font-family: var(--font-sans);
+  line-height: 1.55;
   background-color: #0a0e15;
   /* One restrained warm glow from the top, then a clean vertical fade. */
   background-image:
@@ -88,12 +99,15 @@ select,
 .tv-card,
 .tv-card-sm {
   position: relative;
+  /* Solid elevated tint under a soft top sheen — lifts the card off the
+     near-black background instead of relying on faint transparency. */
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
-  border: 1px solid var(--color-line);
+    linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02)),
+    var(--color-cream-50);
+  border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: var(--radius-tv);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
     var(--shadow-tv);
 }
 

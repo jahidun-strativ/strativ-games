@@ -61,7 +61,7 @@ export default async function LeagueOverviewPage() {
             ) : (
               <p className="scoreboard text-2xl font-bold text-burnt-400">{s.value}</p>
             )}
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-ink-500">
+            <p className="mt-1 text-[11px] font-bold uppercase tracking-widest text-ink-500">
               {s.label}
             </p>
           </div>

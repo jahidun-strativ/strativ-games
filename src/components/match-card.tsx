@@ -32,7 +32,7 @@ function TeamRow({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="w-11 shrink-0 text-[10px] font-bold tracking-wider text-ink-400">
+        <span className="w-11 shrink-0 text-[11px] font-bold tracking-wider text-ink-400">
           {tag}
         </span>
         <span className={`truncate text-sm ${winner ? "font-bold" : "font-medium"}`}>
@@ -70,11 +70,11 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
           regular fixture card. */}
       {league ? (
         <div className="-mx-4 -mt-4 mb-3 flex items-center justify-between gap-2 border-b border-gold-400/30 bg-gradient-to-r from-gold-400/25 to-burnt-500/10 px-4 py-1.5">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-300">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gold-300">
             <Trophy className="h-3 w-3" /> League
           </span>
           {match.session?.title ? (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-burnt-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               {match.session.title}
             </span>
           ) : null}
@@ -88,7 +88,7 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
         </span>
         <div className="flex items-center gap-1.5">
           {!league && match.kind === "competitive" ? (
-            <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burnt-400">
+            <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>
           ) : null}

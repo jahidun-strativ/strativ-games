@@ -25,7 +25,7 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: str
   return (
     <div className="tv-card-sm p-4">
       <p className={`scoreboard text-xl font-bold ${tone ?? "text-ink-900"}`}>{value}</p>
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-500">
+      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-500">
         {label}
       </p>
     </div>
