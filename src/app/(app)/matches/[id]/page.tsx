@@ -83,6 +83,9 @@ export default async function MatchDetailPage({
     )
   ).filter((t): t is { id: string; name: string; captain: boolean } => t !== null);
 
+  // Result entry is open to admins and to a captain of either team playing.
+  const canScore = admin || lineupTeams.some((t) => t.captain);
+
   // RSVPs for this match + the viewer's own player (to prefill their control).
   const [availabilityRows, myPlayer] = await Promise.all([
     db.query.matchAvailability.findMany({
@@ -284,7 +287,7 @@ export default async function MatchDetailPage({
         </section>
       ) : null}
 
-      {admin && match.status !== "cancelled" ? (
+      {canScore && match.status !== "cancelled" ? (
         <section className="mt-8">
           <h2 className="font-display mb-3 text-xl text-ink-900">
             {match.status === "completed" ? "Edit result" : "Record result"}

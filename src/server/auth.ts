@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/server";
 import { isAllowedEmail } from "@/lib/auth/allowed";
 import { db } from "@/db";
-import { players, teams, type Role } from "@/db/schema";
+import { matches, players, teams, type Role } from "@/db/schema";
 
 // Deduped per request: the layout, isAdmin(), and page guards all share one
 // session validation and one role lookup instead of repeating them.
@@ -76,6 +76,27 @@ export async function requireTeamManager(teamId: string) {
   if ((await getRole(user.id)) === "admin") return user;
   if (await isCaptainOf(teamId)) return user;
   throw new Error("Only an admin or this team's captain can do that.");
+}
+
+// True if the user may record THIS match's result: an admin, or the captain of
+// either team playing. UI gating — never throws.
+export async function canScoreMatch(homeTeamId: string | null, awayTeamId: string | null) {
+  if (await isAdmin()) return true;
+  if (homeTeamId && (await isCaptainOf(homeTeamId))) return true;
+  if (awayTeamId && (await isCaptainOf(awayTeamId))) return true;
+  return false;
+}
+
+// Guards result recording: admin, or a captain of a participating team.
+export async function requireMatchScorer(matchId: string) {
+  const user = await requireUser();
+  if ((await getRole(user.id)) === "admin") return user;
+  const match = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    columns: { homeTeamId: true, awayTeamId: true },
+  });
+  if (match && (await canScoreMatch(match.homeTeamId, match.awayTeamId))) return user;
+  throw new Error("Only an admin or a participating team's captain can record this result.");
 }
 
 // Guards match line-ups: the team's CAPTAIN only. Admins do not

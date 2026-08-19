@@ -79,12 +79,37 @@ export const venues = pgTable("venues", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// A competition season — a run of matchdays whose results feed one standings
+// table and one set of awards. Scoped to a sport; its teams are that sport's
+// internal teams. Award columns are winners: top-scorer & fairplay auto-compute
+// when null, player-of-season & best-GK are admin picks (null = not chosen).
+export const seasons = pgTable("seasons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sportId: uuid("sport_id")
+    .notNull()
+    .references(() => sports.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("active"), // active | ended
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  // How many matchdays the season is meant to run (each = one round-robin slot).
+  // Drives the "Matchday N of M" progress; not enforced.
+  plannedMatchdays: integer("planned_matchdays").notNull().default(6),
+  topScorerId: uuid("top_scorer_id").references(() => players.id, { onDelete: "set null" }),
+  fairplayTeamId: uuid("fairplay_team_id").references(() => teams.id, { onDelete: "set null" }),
+  playerOfSeasonId: uuid("player_of_season_id").references(() => players.id, { onDelete: "set null" }),
+  bestGkId: uuid("best_gk_id").references(() => players.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // A booked slot (e.g. a 90-min hire). Holds one or more fixtures: a single
 // game (2 teams / competitive) or a round-robin (3 internal teams). Cost and
 // who-paid live here since one slot is one bill regardless of games played.
 export const sessions = pgTable("sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
+  // Set when this slot is a league matchday — links its games into a season's
+  // standings/awards. Null for ordinary (non-league) slots.
+  seasonId: uuid("season_id").references(() => seasons.id, { onDelete: "set null" }),
   venueId: uuid("venue_id")
     .notNull()
     .references(() => venues.id, { onDelete: "restrict" }),
@@ -149,6 +174,8 @@ export const playerMatchStats = pgTable(
       .references(() => players.id, { onDelete: "cascade" }),
     goals: integer("goals").notNull().default(0),
     assists: integer("assists").notNull().default(0),
+    yellowCards: integer("yellow_cards").notNull().default(0),
+    redCards: integer("red_cards").notNull().default(0),
     played: boolean("played").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -365,8 +392,14 @@ export const venuesRelations = relations(venues, ({ many }) => ({
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   venue: one(venues, { fields: [sessions.venueId], references: [venues.id] }),
   sport: one(sports, { fields: [sessions.sportId], references: [sports.id] }),
+  season: one(seasons, { fields: [sessions.seasonId], references: [seasons.id] }),
   fixtures: many(matches),
   payments: many(sessionPayments),
+}));
+
+export const seasonsRelations = relations(seasons, ({ one, many }) => ({
+  sport: one(sports, { fields: [seasons.sportId], references: [sports.id] }),
+  matchdays: many(sessions),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({
@@ -431,6 +464,7 @@ export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type StaffMember = typeof staff.$inferSelect;
 export type Venue = typeof venues.$inferSelect;
+export type Season = typeof seasons.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type PlayerMatchStat = typeof playerMatchStats.$inferSelect;
@@ -454,6 +488,9 @@ export type Role = (typeof ROLES)[number];
 
 export const MATCH_STATUSES = ["scheduled", "completed", "cancelled"] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];
+
+export const SEASON_STATUSES = ["active", "ended"] as const;
+export type SeasonStatus = (typeof SEASON_STATUSES)[number];
 
 export const MATCH_KINDS = ["internal", "competitive"] as const;
 export type MatchKind = (typeof MATCH_KINDS)[number];

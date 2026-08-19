@@ -11,6 +11,7 @@ import { pushConfigured } from "@/lib/push";
 import { getNotificationSettings } from "@/server/queries/notification-settings";
 import { notifySessionCreated } from "@/server/notify-match";
 import { seedDefaultAvailability } from "@/server/seed-availability";
+import { threeTeamRoundRobin, type PlannedFixture } from "@/server/round-robin";
 import type { NotifyResult } from "@/server/actions/matches";
 
 // Manually (re)send a slot's notification to everyone — ignores the toggle.
@@ -30,33 +31,6 @@ function revalidateSessionPages(id?: string) {
   revalidatePath("/venues");
   revalidatePath("/");
   if (id) revalidatePath(`/sessions/${id}`);
-}
-
-type PlannedFixture = {
-  homeTeamId: string;
-  awayTeamId: string;
-  offsetMin: number; // minutes after the slot start
-  durationMin: number;
-  breakMin: number;
-  orderIndex: number;
-};
-
-// Round-robin among 3 teams: A–B, A–C, B–C, each 25 min + 5 min break,
-// staggered 30 min apart so they fit a 90-min slot.
-function threeTeamRoundRobin(ids: string[]): PlannedFixture[] {
-  const pairs: [number, number][] = [
-    [0, 1],
-    [0, 2],
-    [1, 2],
-  ];
-  return pairs.map(([h, a], i) => ({
-    homeTeamId: ids[h],
-    awayTeamId: ids[a],
-    offsetMin: i * 30,
-    durationMin: 25,
-    breakMin: 5,
-    orderIndex: i,
-  }));
 }
 
 async function sportForTeams(teamIds: string[]): Promise<string> {

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { appUsers, matches, playerMatchStats, pushSubscriptions, sessions, teams } from "@/db/schema";
-import { requireAdmin } from "@/server/auth";
+import { requireAdmin, requireMatchScorer } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
 import { notifyPlayers } from "@/server/notifications";
@@ -31,6 +31,7 @@ export async function resendMatchNotification(id: string): Promise<NotifyResult>
 function revalidateMatchPages(id?: string) {
   revalidatePath("/matches");
   revalidatePath("/stats");
+  revalidatePath("/league");
   revalidatePath("/");
   if (id) revalidatePath(`/matches/${id}`);
 }
@@ -209,7 +210,7 @@ export async function reopenMatch(id: string, clearResult: boolean) {
 }
 
 export async function recordResult(id: string, formData: FormData) {
-  await requireAdmin();
+  await requireMatchScorer(id);
   const homeScore = optInt(formData, "homeScore") ?? 0;
   const awayScore = optInt(formData, "awayScore") ?? 0;
 
@@ -231,15 +232,17 @@ export async function recordResult(id: string, formData: FormData) {
   const playerIds = new Set<string>();
   const playedIds: string[] = [];
   for (const key of formData.keys()) {
-    const m = key.match(/^stat-(.+)-(goals|assists|played)$/);
+    const m = key.match(/^stat-(.+)-(goals|assists|yellow|red|played)$/);
     if (m) playerIds.add(m[1]);
   }
   for (const playerId of playerIds) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
+    const yellowCards = optInt(formData, `stat-${playerId}-yellow`) ?? 0;
+    const redCards = optInt(formData, `stat-${playerId}-red`) ?? 0;
     const played = formData.get(`stat-${playerId}-played`) === "on";
     if (played) playedIds.push(playerId);
-    if (!played && goals === 0 && assists === 0) {
+    if (!played && goals === 0 && assists === 0 && yellowCards === 0 && redCards === 0) {
       statements.push(
         db
           .delete(playerMatchStats)
@@ -252,10 +255,10 @@ export async function recordResult(id: string, formData: FormData) {
     statements.push(
       db
         .insert(playerMatchStats)
-        .values({ matchId: id, playerId, goals, assists, played: true })
+        .values({ matchId: id, playerId, goals, assists, yellowCards, redCards, played: true })
         .onConflictDoUpdate({
           target: [playerMatchStats.matchId, playerMatchStats.playerId],
-          set: { goals, assists, played: true },
+          set: { goals, assists, yellowCards, redCards, played: true },
         }),
     );
   }

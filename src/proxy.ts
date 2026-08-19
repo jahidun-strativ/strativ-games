@@ -12,7 +12,10 @@ export default function proxy(request: NextRequest) {
   // the app: match/session poster images, and the match result page (deep-linked
   // from the full-time push). The UI that produces these stays gated.
   const path = request.nextUrl.pathname;
-  if (path.endsWith("/poster") || path.startsWith("/result/")) return;
+  // `/league/<id>` is the public standings page; `/league` (the hub) stays gated.
+  if (path.endsWith("/poster") || path.startsWith("/result/") || path.startsWith("/league/")) {
+    return;
+  }
   return authMiddleware(request);
 }
 

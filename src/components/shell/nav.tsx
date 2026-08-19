@@ -7,6 +7,7 @@ import { Drawer } from "antd";
 import {
   AppstoreOutlined,
   CalendarOutlined,
+  CrownOutlined,
   DribbbleOutlined,
   EllipsisOutlined,
   EnvironmentOutlined,
@@ -31,6 +32,7 @@ type NavLink = {
 const links: NavLink[] = [
   { href: "/", label: "Dashboard", icon: <AppstoreOutlined />, exact: true },
   { href: "/matches", label: "Matches", icon: <CalendarOutlined /> },
+  { href: "/league", label: "League", icon: <CrownOutlined /> },
   { href: "/teams", label: "Teams", icon: <FlagOutlined /> },
   { href: "/players", label: "Players", icon: <UserOutlined /> },
   { href: "/stats", label: "Stats", icon: <TrophyOutlined /> },
