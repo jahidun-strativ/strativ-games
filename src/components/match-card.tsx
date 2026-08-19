@@ -62,29 +62,32 @@ export function MatchCard({ match }: { match: MatchWithRefs }) {
   return (
     <Link
       href={`/matches/${match.id}`}
-      className={`tv-card-sm block border-l-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-tv)] ${
+      className={`tv-card-sm block overflow-hidden border-l-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-tv)] ${
         league ? "border-l-gold-400" : accent[match.status] ?? "border-l-ink-400"
       }`}
     >
+      {/* League matchdays wear a distinct gold banner so they never look like a
+          regular fixture card. */}
+      {league ? (
+        <div className="-mx-4 -mt-4 mb-3 flex items-center justify-between gap-2 border-b border-gold-400/30 bg-gradient-to-r from-gold-400/25 to-burnt-500/10 px-4 py-1.5">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-300">
+            <Trophy className="h-3 w-3" /> League
+          </span>
+          {match.session?.title ? (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-burnt-400">
+              {match.session.title}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-xs font-semibold text-ink-500">
           {formatDate(match.kickoffAt)}
           <span className="text-ink-400"> · </span>
           {formatTime(match.kickoffAt)}
-          {league && match.session?.title ? (
-            <>
-              <span className="text-ink-400"> · </span>
-              {match.session.title}
-            </>
-          ) : null}
         </span>
         <div className="flex items-center gap-1.5">
-          {league ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold-300">
-              <Trophy className="h-3 w-3" />
-              League
-            </span>
-          ) : match.kind === "competitive" ? (
+          {!league && match.kind === "competitive" ? (
             <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>

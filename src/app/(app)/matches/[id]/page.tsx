@@ -159,20 +159,25 @@ export default async function MatchDetailPage({
         }
       />
 
-      {/* Match hero */}
+      {/* Match hero — league matchdays get a full-width gold banner so they
+          read completely differently from a regular fixture. */}
       <section
         className={`tv-card glossy p-6 text-center sm:p-8 ${
-          league ? "ring-1 ring-gold-400/40" : ""
+          league ? "overflow-hidden ring-1 ring-gold-400/40" : ""
         }`}
       >
         {league ? (
-          <p className="mb-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.3em] text-gold-300">
-            <Trophy className="h-4 w-4" />
-            {league.name}
+          <div className="-mx-6 -mt-6 mb-6 flex flex-wrap items-center justify-center gap-2 border-b border-gold-400/30 bg-gradient-to-r from-gold-400/25 via-burnt-500/15 to-gold-400/25 px-6 py-3 sm:-mx-8 sm:-mt-8 sm:px-8">
+            <Trophy className="h-4 w-4 text-gold-300" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold-300">
+              {league.name}
+            </span>
             {match.session?.title ? (
-              <span className="text-ink-500">· {match.session.title}</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-ink-500">
+                · {match.session.title}
+              </span>
             ) : null}
-          </p>
+          </div>
         ) : match.kind === "competitive" ? (
           <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.3em] text-burnt-400">
             Competitive
