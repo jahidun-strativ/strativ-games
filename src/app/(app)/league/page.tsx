@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { players } from "@/db/schema";
@@ -79,9 +80,10 @@ async function LeagueContent() {
         <Link
           href={`/league/${season.id}`}
           target="_blank"
-          className="text-sm font-semibold text-burnt-500 hover:text-burnt-400"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-burnt-500 hover:text-burnt-400"
         >
-          🔗 Public league page
+          <ExternalLink className="h-4 w-4" />
+          Public league page
         </Link>
       </div>
 

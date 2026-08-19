@@ -201,7 +201,7 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
             empty="No assists yet."
           />
         </Panel>
-        <Panel title="🟨 Discipline">
+        <Panel title={<><CardChip tone="yellow" /> Discipline</>}>
           <RankedList
             rows={booked}
             keyOf={(r) => r.playerId}
@@ -209,8 +209,10 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
             primary={(r) => r.name}
             secondary={(r) => r.teamName ?? "Free agent"}
             value={(r) => (
-              <span className="text-sm">
-                {r.yellow}🟨 {r.red}🟥
+              <span className="flex items-center gap-1.5 text-sm">
+                {r.yellow}
+                <CardChip tone="yellow" /> {r.red}
+                <CardChip tone="red" />
               </span>
             )}
             empty="Clean so far."
@@ -226,8 +228,8 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
               <thead>
                 <tr className="bg-black/60 text-left font-display text-gold-300">
                   <th className="px-4 py-2">Team</th>
-                  <th className="px-4 py-2 text-center">🟨</th>
-                  <th className="px-4 py-2 text-center">🟥</th>
+                  <th className="px-4 py-2 text-center"><CardChip tone="yellow" /></th>
+                  <th className="px-4 py-2 text-center"><CardChip tone="red" /></th>
                   <th className="px-4 py-2 text-center">Pts</th>
                 </tr>
               </thead>

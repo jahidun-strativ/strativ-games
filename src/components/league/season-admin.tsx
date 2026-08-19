@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { App, Select } from "antd";
+import { Medal, ShieldCheck, Star, Hand, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setAward, setSeasonStatus } from "@/server/actions/league";
 import type { Season } from "@/db/schema";
@@ -41,9 +42,19 @@ export function AwardEditor({
     .map((p) => ({ value: p.id, label: p.teamName ? `${p.name} — ${p.teamName}` : p.name }));
   const teamOpts = teams.map((t) => ({ value: t.id, label: t.name }));
 
-  const row = (label: string, hint: string, field: AwardField, value: string | null, opts: { value: string; label: string }[]) => (
+  const row = (
+    icon: React.ReactNode,
+    label: string,
+    hint: string,
+    field: AwardField,
+    value: string | null,
+    opts: { value: string; label: string }[],
+  ) => (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">{label}</p>
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
+        {icon}
+        {label}
+      </p>
       <p className="mb-1 text-xs text-ink-400">{hint}</p>
       <Select
         allowClear
