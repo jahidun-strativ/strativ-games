@@ -238,28 +238,3 @@ select,
   }
 }
 
-/* League public page: cinematic "stadium night" backdrop.
-   Floodlight beams sweep from the top corners; brightness pulses like arena
-   lights warming up. The drifting crowd bokeh is drawn on <canvas>. */
-@keyframes ssm-beam-l {
-  0%   { transform: translateX(-50%) rotate(15deg); opacity: 0.55; }
-  100% { transform: translateX(-50%) rotate(25deg); opacity: 0.85; }
-}
-@keyframes ssm-beam-r {
-  0%   { transform: translateX(50%) rotate(-15deg); opacity: 0.85; }
-  100% { transform: translateX(50%) rotate(-25deg); opacity: 0.55; }
-}
-@keyframes ssm-flare {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50%      { opacity: 0.7; transform: scale(1.12); }
-}
-.ssm-beam-l { animation: ssm-beam-l 8s ease-in-out infinite alternate; }
-.ssm-beam-r { animation: ssm-beam-r 9.5s ease-in-out infinite alternate; }
-.ssm-flare  { animation: ssm-flare 6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .ssm-beam-l,
-  .ssm-beam-r,
-  .ssm-flare {
-    animation: none;
-  }
-}
