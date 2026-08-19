@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, isNotNull, notInArray, or } from "drizzle-orm";
 import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/icons";
 import { db } from "@/db";
-import { matches, players } from "@/db/schema";
+import { matches, players, sessions } from "@/db/schema";
 import { getMonthlyLeaderboard, type LeaderboardRow } from "@/server/queries/stats";
 import { isAdmin } from "@/server/auth";
 import { MatchCard } from "@/components/match-card";
@@ -32,16 +32,23 @@ async function DashboardContent() {
     year: "numeric",
   });
 
+  // League matchdays live only inside /league — keep them off the dashboard.
+  const leagueSlotIds = db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(isNotNull(sessions.seasonId));
+  const notLeague = or(isNull(matches.sessionId), notInArray(matches.sessionId, leagueSlotIds));
+
   const [upcoming, recent, monthly, allTeams, allVenues, playerCount] =
     await Promise.all([
       db.query.matches.findMany({
-        where: (m, { and, eq, gte }) => and(eq(m.status, "scheduled"), gte(m.kickoffAt, now)),
+        where: and(eq(matches.status, "scheduled"), gte(matches.kickoffAt, now), notLeague),
         orderBy: asc(matches.kickoffAt),
         limit: 5,
         with: { homeTeam: true, awayTeam: true, venue: true },
       }),
       db.query.matches.findMany({
-        where: eq(matches.status, "completed"),
+        where: and(eq(matches.status, "completed"), notLeague),
         orderBy: desc(matches.kickoffAt),
         limit: 3,
         with: { homeTeam: true, awayTeam: true, venue: true },
