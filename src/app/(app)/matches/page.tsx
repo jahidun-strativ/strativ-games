@@ -128,7 +128,7 @@ async function MatchesContent({
           {upcoming.length > 0 ? (
             <PosterButton
               basePath="/matches/poster"
-              label="🖼️ Upcoming picture"
+              label="Upcoming picture"
               variants={[
                 { label: "Upcoming fixtures", variant: "fixtures", hint: "All scheduled games in one image" },
               ]}

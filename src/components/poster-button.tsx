@@ -1,6 +1,7 @@
 "use client";
 
 import { Dropdown } from "antd";
+import { Image as ImageIcon, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type PosterVariant = {
@@ -14,7 +15,7 @@ export type PosterVariant = {
 export function PosterButton({
   basePath,
   variants,
-  label = "🖼️ Generate picture",
+  label = "Generate picture",
 }: {
   basePath: string; // e.g. "/matches/<id>/poster"
   variants: PosterVariant[];
@@ -39,7 +40,12 @@ export function PosterButton({
     },
     {
       key: `${v.variant}-dl`,
-      label: <span className="text-ink-500">⤓ Download {v.label}</span>,
+      label: (
+        <span className="inline-flex items-center gap-1.5 text-ink-500">
+          <Download className="h-3.5 w-3.5" />
+          Download {v.label}
+        </span>
+      ),
       onClick: () => open(v.variant, true),
     },
     { type: "divider" as const, key: `${v.variant}-div` },
@@ -50,7 +56,12 @@ export function PosterButton({
   return (
     <Dropdown menu={{ items }} trigger={["click"]}>
       <span>
-        <Button variant="secondary">{label}</Button>
+        <Button variant="secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <ImageIcon className="h-4 w-4" />
+            {label}
+          </span>
+        </Button>
       </span>
     </Dropdown>
   );
