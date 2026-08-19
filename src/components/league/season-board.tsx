@@ -179,7 +179,7 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Panel title="⚽ Top scorers">
+        <Panel title={<><Goal className="h-4 w-4" /> Top scorers</>}>
           <RankedList
             rows={scorersWithGoals}
             keyOf={(r) => r.playerId}
@@ -190,7 +190,7 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
             empty="No goals yet."
           />
         </Panel>
-        <Panel title="🅰️ Top assists">
+        <Panel title={<><Handshake className="h-4 w-4" /> Top assists</>}>
           <RankedList
             rows={assisters}
             keyOf={(r) => r.playerId}
