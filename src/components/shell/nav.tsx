@@ -21,19 +21,31 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+type SubLink = { href: string; label: string; adminOnly?: boolean };
 type NavLink = {
   href: string;
   label: string;
   icon: ReactNode;
   exact?: boolean;
   adminOnly?: boolean;
+  children?: SubLink[];
 };
 
 const ICON = 20;
 const links: NavLink[] = [
   { href: "/", label: "Dashboard", icon: <LayoutDashboard size={ICON} />, exact: true },
   { href: "/matches", label: "Matches", icon: <CalendarDays size={ICON} /> },
-  { href: "/league", label: "League", icon: <Trophy size={ICON} /> },
+  {
+    href: "/league",
+    label: "League",
+    icon: <Trophy size={ICON} />,
+    children: [
+      { href: "/league/fixtures", label: "Fixtures" },
+      { href: "/league/stats", label: "Stats" },
+      { href: "/league/awards", label: "Awards" },
+      { href: "/league/season", label: "Season", adminOnly: true },
+    ],
+  },
   { href: "/teams", label: "Teams", icon: <Shield size={ICON} /> },
   { href: "/players", label: "Players", icon: <Users size={ICON} /> },
   { href: "/stats", label: "Stats", icon: <BarChart3 size={ICON} /> },
@@ -64,27 +76,49 @@ export function SidebarNav({ admin = false }: { admin?: boolean }) {
       </p>
       {visible.map((link) => {
         const active = isActive(pathname, link.href, link.exact);
+        // A parent's submenu reveals itself while you're anywhere in its section.
+        const inSection = pathname === link.href || pathname.startsWith(link.href + "/");
+        const kids = (link.children ?? []).filter((c) => !c.adminOnly || admin);
         return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
-              active
-                ? "bg-burnt-500/15 !text-burnt-400"
-                : "!text-ink-700 hover:bg-cream-200 hover:!text-ink-900"
-            }`}
-          >
-            <span
-              className={`flex h-7 w-7 items-center justify-center rounded-lg text-base transition-colors ${
+          <div key={link.href}>
+            <Link
+              href={link.href}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all ${
                 active
-                  ? "glow-orange bg-gradient-to-br from-burnt-500 to-burnt-600 !text-white"
-                  : "bg-cream-200 text-ink-500 group-hover:text-ink-900"
+                  ? "bg-burnt-500/15 !text-burnt-400"
+                  : "!text-ink-700 hover:bg-cream-200 hover:!text-ink-900"
               }`}
             >
-              {link.icon}
-            </span>
-            {link.label}
-          </Link>
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-lg text-base transition-colors ${
+                  active
+                    ? "glow-orange bg-gradient-to-br from-burnt-500 to-burnt-600 !text-white"
+                    : "bg-cream-200 text-ink-500 group-hover:text-ink-900"
+                }`}
+              >
+                {link.icon}
+              </span>
+              {link.label}
+            </Link>
+            {kids.length > 0 && inSection ? (
+              <div className="mb-1 ml-[26px] mt-1 flex flex-col gap-0.5 border-l border-line pl-3">
+                {kids.map((c) => {
+                  const cActive = pathname === c.href || pathname.startsWith(c.href + "/");
+                  return (
+                    <Link
+                      key={c.href}
+                      href={c.href}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                        cActive ? "!text-burnt-400" : "!text-ink-500 hover:!text-ink-900"
+                      }`}
+                    >
+                      {c.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         );
       })}
     </nav>

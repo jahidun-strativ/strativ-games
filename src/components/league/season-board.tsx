@@ -109,8 +109,80 @@ function AwardCard({
   );
 }
 
-export function SeasonBoard({ view }: { view: SeasonView }) {
-  const { season, standings, scorers, fairplay, awards, matchdays, playedMatchdays, champion } = view;
+// The champion banner (only once a season has ended with results).
+export function LeagueChampion({ view }: { view: SeasonView }) {
+  if (!view.champion) return null;
+  return (
+    <div className="tv-card flex items-center gap-4 bg-gold-400/15 px-5 py-4">
+      <Trophy className="h-8 w-8 shrink-0 text-gold-300" strokeWidth={2} />
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Champions</p>
+        <p className="font-display text-2xl text-ink-900">{view.champion.teamName}</p>
+      </div>
+    </div>
+  );
+}
+
+export function LeagueStandings({ view }: { view: SeasonView }) {
+  const { season, standings, playedMatchdays } = view;
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-xl text-ink-900">Standings</h2>
+        <p className="text-sm text-ink-500">
+          Matchday {playedMatchdays} of {season.plannedMatchdays}
+        </p>
+      </div>
+      {standings.some((r) => r.played > 0) ? (
+        <StandingsTable rows={standings} />
+      ) : (
+        <p className="tv-card px-4 py-6 text-sm text-ink-500">
+          No results yet — the table fills in as matchdays are played.
+        </p>
+      )}
+    </section>
+  );
+}
+
+export function LeagueAwards({ view }: { view: SeasonView }) {
+  const { awards } = view;
+  return (
+    <section>
+      <h2 className="font-display mb-3 text-xl text-ink-900">Awards</h2>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AwardCard
+          icon={<Medal className="h-5 w-5 text-gold-300" />}
+          label="Top scorer"
+          winner={awards.topScorer?.player.name ?? null}
+          sub={awards.topScorer ? `${awards.topScorer.goals} goals · ${awards.topScorer.player.teamName ?? ""}` : null}
+          auto={awards.topScorer?.auto}
+        />
+        <AwardCard
+          icon={<ShieldCheck className="h-5 w-5 text-pitch-500" />}
+          label="Fair play"
+          winner={awards.fairplay?.teamName ?? null}
+          sub={awards.fairplay ? `${awards.fairplay.points} disciplinary pts` : null}
+          auto={awards.fairplay?.auto}
+        />
+        <AwardCard
+          icon={<Star className="h-5 w-5 text-burnt-400" />}
+          label="Player of the season"
+          winner={awards.playerOfSeason?.name ?? null}
+          sub={awards.playerOfSeason?.teamName ?? null}
+        />
+        <AwardCard
+          icon={<Hand className="h-5 w-5 text-sky-400" />}
+          label="Best goalkeeper"
+          winner={awards.bestGk?.name ?? null}
+          sub={awards.bestGk?.teamName ?? null}
+        />
+      </div>
+    </section>
+  );
+}
+
+export function LeagueStats({ view }: { view: SeasonView }) {
+  const { scorers, fairplay } = view;
   const scorersWithGoals = scorers.filter((s) => s.goals > 0).slice(0, 8);
   const assisters = [...scorers].filter((s) => s.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 8);
   const booked = [...scorers]
@@ -120,64 +192,6 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
 
   return (
     <div className="space-y-8">
-      {champion ? (
-        <div className="tv-card flex items-center gap-4 bg-gold-400/15 px-5 py-4">
-          <Trophy className="h-8 w-8 shrink-0 text-gold-300" strokeWidth={2} />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Champions</p>
-            <p className="font-display text-2xl text-ink-900">{champion.teamName}</p>
-          </div>
-        </div>
-      ) : null}
-
-      <section>
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl text-ink-900">Standings</h2>
-          <p className="text-sm text-ink-500">
-            Matchday {playedMatchdays} of {season.plannedMatchdays}
-          </p>
-        </div>
-        {standings.some((r) => r.played > 0) ? (
-          <StandingsTable rows={standings} />
-        ) : (
-          <p className="tv-card px-4 py-6 text-sm text-ink-500">
-            No results yet — the table fills in as matchdays are played.
-          </p>
-        )}
-      </section>
-
-      <section>
-        <h2 className="font-display mb-3 text-xl text-ink-900">Awards</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <AwardCard
-            icon={<Medal className="h-5 w-5 text-gold-300" />}
-            label="Top scorer"
-            winner={awards.topScorer?.player.name ?? null}
-            sub={awards.topScorer ? `${awards.topScorer.goals} goals · ${awards.topScorer.player.teamName ?? ""}` : null}
-            auto={awards.topScorer?.auto}
-          />
-          <AwardCard
-            icon={<ShieldCheck className="h-5 w-5 text-pitch-500" />}
-            label="Fair play"
-            winner={awards.fairplay?.teamName ?? null}
-            sub={awards.fairplay ? `${awards.fairplay.points} disciplinary pts` : null}
-            auto={awards.fairplay?.auto}
-          />
-          <AwardCard
-            icon={<Star className="h-5 w-5 text-burnt-400" />}
-            label="Player of the season"
-            winner={awards.playerOfSeason?.name ?? null}
-            sub={awards.playerOfSeason?.teamName ?? null}
-          />
-          <AwardCard
-            icon={<Hand className="h-5 w-5 text-sky-400" />}
-            label="Best goalkeeper"
-            winner={awards.bestGk?.name ?? null}
-            sub={awards.bestGk?.teamName ?? null}
-          />
-        </div>
-      </section>
-
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Panel title={<><Goal className="h-4 w-4" /> Top scorers</>}>
           <RankedList
@@ -247,49 +261,67 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
           </div>
         </section>
       ) : null}
+    </div>
+  );
+}
 
-      <section>
-        <h2 className="font-display mb-3 text-xl text-ink-900">Matchdays</h2>
-        {matchdays.length === 0 ? (
-          <p className="tv-card px-4 py-6 text-sm text-ink-500">No matchdays scheduled yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {matchdays.map((md, i) => (
-              <div key={md.id} className="tv-card-sm overflow-hidden">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-line bg-cream-100 px-4 py-2">
-                  <p className="font-display text-ink-900">{md.title ?? `Matchday ${i + 1}`}</p>
-                  <p className="text-xs text-ink-500">
-                    {formatDate(md.startAt)} · {formatTime(md.startAt)}
-                    {md.venue ? ` · 📍 ${md.venue.name}` : ""}
-                  </p>
-                </div>
-                <ul>
-                  {md.fixtures.map((g) => (
-                    <li
-                      key={g.id}
-                      className="flex items-center gap-2 px-4 py-2 text-sm last:border-b-0 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line"
-                    >
-                      <Link href={`/matches/${g.id}`} className="flex-1 truncate text-right hover:text-burnt-400">
-                        {g.homeTeam?.name ?? "TBD"}
-                      </Link>
-                      <span className="scoreboard w-16 shrink-0 text-center font-bold">
-                        {g.status === "completed" && g.homeScore !== null
-                          ? `${g.homeScore}–${g.awayScore}`
-                          : g.status === "cancelled"
-                            ? "—"
-                            : "vs"}
-                      </span>
-                      <Link href={`/matches/${g.id}`} className="flex-1 truncate hover:text-burnt-400">
-                        {g.awayTeam?.name ?? "TBD"}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+export function LeagueMatchdays({ view }: { view: SeasonView }) {
+  const { matchdays } = view;
+  return (
+    <section>
+      <h2 className="font-display mb-3 text-xl text-ink-900">Matchdays</h2>
+      {matchdays.length === 0 ? (
+        <p className="tv-card px-4 py-6 text-sm text-ink-500">No matchdays scheduled yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {matchdays.map((md, i) => (
+            <div key={md.id} className="tv-card-sm overflow-hidden">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-line bg-cream-100 px-4 py-2">
+                <p className="font-display text-ink-900">{md.title ?? `Matchday ${i + 1}`}</p>
+                <p className="text-xs text-ink-500">
+                  {formatDate(md.startAt)} · {formatTime(md.startAt)}
+                  {md.venue ? ` · 📍 ${md.venue.name}` : ""}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+              <ul>
+                {md.fixtures.map((g) => (
+                  <li
+                    key={g.id}
+                    className="flex items-center gap-2 px-4 py-2 text-sm last:border-b-0 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line"
+                  >
+                    <Link href={`/matches/${g.id}`} className="flex-1 truncate text-right hover:text-burnt-400">
+                      {g.homeTeam?.name ?? "TBD"}
+                    </Link>
+                    <span className="scoreboard w-16 shrink-0 text-center font-bold">
+                      {g.status === "completed" && g.homeScore !== null
+                        ? `${g.homeScore}–${g.awayScore}`
+                        : g.status === "cancelled"
+                          ? "—"
+                          : "vs"}
+                    </span>
+                    <Link href={`/matches/${g.id}`} className="flex-1 truncate hover:text-burnt-400">
+                      {g.awayTeam?.name ?? "TBD"}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// The full board on one page — used by the PUBLIC league page.
+export function SeasonBoard({ view }: { view: SeasonView }) {
+  return (
+    <div className="space-y-8">
+      <LeagueChampion view={view} />
+      <LeagueStandings view={view} />
+      <LeagueAwards view={view} />
+      <LeagueStats view={view} />
+      <LeagueMatchdays view={view} />
     </div>
   );
 }
