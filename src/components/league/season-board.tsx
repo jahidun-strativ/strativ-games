@@ -1,12 +1,27 @@
 import Link from "next/link";
+import { Trophy, Medal, ShieldCheck, Star, Hand, Goal, Handshake } from "lucide-react";
 import { StandingsTable } from "@/components/tables/standings-table";
 import { formatDate, formatTime } from "@/lib/format";
 import type { SeasonView } from "@/server/queries/season";
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+// Small football-card chip — a rounded rectangle in the yellow/red tone.
+function CardChip({ tone }: { tone: "yellow" | "red" }) {
+  return (
+    <span
+      aria-label={tone === "yellow" ? "yellow card" : "red card"}
+      className={`inline-block h-3.5 w-2.5 shrink-0 rounded-[2px] align-middle ${
+        tone === "yellow" ? "bg-gold-400" : "bg-tvred-500"
+      }`}
+    />
+  );
+}
+
+function Panel({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="tv-card overflow-hidden">
-      <p className="bg-black/60 px-4 py-2.5 font-display text-gold-300">{title}</p>
+      <p className="flex items-center gap-2 bg-black/60 px-4 py-2.5 font-display text-gold-300">
+        {title}
+      </p>
       {children}
     </div>
   );
@@ -65,7 +80,7 @@ function AwardCard({
   sub,
   auto,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   winner: string | null;
   sub?: string | null;
@@ -73,7 +88,9 @@ function AwardCard({
 }) {
   return (
     <div className="tv-card-sm flex items-center gap-3 p-4">
-      <span className="text-2xl">{icon}</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
+        {icon}
+      </span>
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">
           {label}
@@ -105,7 +122,7 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
     <div className="space-y-8">
       {champion ? (
         <div className="tv-card flex items-center gap-4 bg-gold-400/15 px-5 py-4">
-          <span className="text-3xl">🏆</span>
+          <Trophy className="h-8 w-8 shrink-0 text-gold-300" strokeWidth={2} />
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Champions</p>
             <p className="font-display text-2xl text-ink-900">{champion.teamName}</p>
@@ -133,27 +150,27 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
         <h2 className="font-display mb-3 text-xl text-ink-900">Awards</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <AwardCard
-            icon="🥇"
+            icon={<Medal className="h-5 w-5 text-gold-300" />}
             label="Top scorer"
             winner={awards.topScorer?.player.name ?? null}
             sub={awards.topScorer ? `${awards.topScorer.goals} goals · ${awards.topScorer.player.teamName ?? ""}` : null}
             auto={awards.topScorer?.auto}
           />
           <AwardCard
-            icon="🤝"
+            icon={<ShieldCheck className="h-5 w-5 text-pitch-500" />}
             label="Fair play"
             winner={awards.fairplay?.teamName ?? null}
             sub={awards.fairplay ? `${awards.fairplay.points} disciplinary pts` : null}
             auto={awards.fairplay?.auto}
           />
           <AwardCard
-            icon="⭐"
+            icon={<Star className="h-5 w-5 text-burnt-400" />}
             label="Player of the season"
             winner={awards.playerOfSeason?.name ?? null}
             sub={awards.playerOfSeason?.teamName ?? null}
           />
           <AwardCard
-            icon="🧤"
+            icon={<Hand className="h-5 w-5 text-sky-400" />}
             label="Best goalkeeper"
             winner={awards.bestGk?.name ?? null}
             sub={awards.bestGk?.teamName ?? null}

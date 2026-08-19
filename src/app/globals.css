@@ -237,3 +237,32 @@ select,
     animation: none;
   }
 }
+
+/* League public page: slow drifting aurora backdrop. */
+@keyframes ssm-aurora-a {
+  0% { transform: translate(-6%, -4%) scale(1); }
+  100% { transform: translate(8%, 7%) scale(1.28); }
+}
+@keyframes ssm-aurora-b {
+  0% { transform: translate(6%, 3%) scale(1.12); }
+  100% { transform: translate(-9%, -6%) scale(1); }
+}
+@keyframes ssm-aurora-c {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-7%, 9%) scale(1.22); }
+}
+@keyframes ssm-aurora-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.ssm-aurora-a { animation: ssm-aurora-a 22s ease-in-out infinite alternate; }
+.ssm-aurora-b { animation: ssm-aurora-b 27s ease-in-out infinite alternate; }
+.ssm-aurora-c { animation: ssm-aurora-c 32s ease-in-out infinite alternate; }
+.ssm-aurora-spin { animation: ssm-aurora-spin 70s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ssm-aurora-a,
+  .ssm-aurora-b,
+  .ssm-aurora-c,
+  .ssm-aurora-spin {
+    animation: none;
+  }
+}

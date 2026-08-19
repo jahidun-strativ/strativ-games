@@ -5,20 +5,20 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Drawer } from "antd";
 import {
-  AppstoreOutlined,
-  CalendarOutlined,
-  CrownOutlined,
-  DribbbleOutlined,
-  EllipsisOutlined,
-  EnvironmentOutlined,
-  FlagOutlined,
-  IdcardOutlined,
-  SafetyOutlined,
-  SettingOutlined,
-  TrophyOutlined,
-  UserOutlined,
-  WalletOutlined,
-} from "@ant-design/icons";
+  LayoutDashboard,
+  CalendarDays,
+  Trophy,
+  Shield,
+  Users,
+  BarChart3,
+  Briefcase,
+  Dribbble,
+  MapPin,
+  Wallet,
+  ShieldCheck,
+  Settings,
+  MoreHorizontal,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 type NavLink = {
@@ -29,18 +29,19 @@ type NavLink = {
   adminOnly?: boolean;
 };
 
+const ICON = 20;
 const links: NavLink[] = [
-  { href: "/", label: "Dashboard", icon: <AppstoreOutlined />, exact: true },
-  { href: "/matches", label: "Matches", icon: <CalendarOutlined /> },
-  { href: "/league", label: "League", icon: <CrownOutlined /> },
-  { href: "/teams", label: "Teams", icon: <FlagOutlined /> },
-  { href: "/players", label: "Players", icon: <UserOutlined /> },
-  { href: "/stats", label: "Stats", icon: <TrophyOutlined /> },
-  { href: "/staff", label: "Staff", icon: <IdcardOutlined /> },
-  { href: "/sports", label: "Sports", icon: <DribbbleOutlined /> },
-  { href: "/venues", label: "Venues", icon: <EnvironmentOutlined /> },
-  { href: "/costs", label: "Costs", icon: <WalletOutlined /> },
-  { href: "/members", label: "Members", icon: <SafetyOutlined />, adminOnly: true },
+  { href: "/", label: "Dashboard", icon: <LayoutDashboard size={ICON} />, exact: true },
+  { href: "/matches", label: "Matches", icon: <CalendarDays size={ICON} /> },
+  { href: "/league", label: "League", icon: <Trophy size={ICON} /> },
+  { href: "/teams", label: "Teams", icon: <Shield size={ICON} /> },
+  { href: "/players", label: "Players", icon: <Users size={ICON} /> },
+  { href: "/stats", label: "Stats", icon: <BarChart3 size={ICON} /> },
+  { href: "/staff", label: "Staff", icon: <Briefcase size={ICON} /> },
+  { href: "/sports", label: "Sports", icon: <Dribbble size={ICON} /> },
+  { href: "/venues", label: "Venues", icon: <MapPin size={ICON} /> },
+  { href: "/costs", label: "Costs", icon: <Wallet size={ICON} /> },
+  { href: "/members", label: "Members", icon: <ShieldCheck size={ICON} />, adminOnly: true },
 ];
 
 // Bottom tab bar pins the 4 most-used destinations; everything else (including
@@ -98,7 +99,7 @@ export function BottomTabs({ admin = false }: { admin?: boolean }) {
   // mobile, not just the 5 pinned tabs. Account lives only here.
   const overflow: NavLink[] = [
     ...links.filter((l) => !mobileLinks.includes(l) && (!l.adminOnly || admin)),
-    { href: "/account/settings", label: "Account & notifications", icon: <SettingOutlined /> },
+    { href: "/account/settings", label: "Account & notifications", icon: <Settings size={ICON} /> },
   ];
   // Light up the More tab whenever the current page isn't one of the pinned tabs.
   const onOverflow = !mobileLinks.some((l) => isActive(pathname, l.href, l.exact));
@@ -140,7 +141,7 @@ export function BottomTabs({ admin = false }: { admin?: boolean }) {
               onOverflow ? "bg-burnt-500/20" : ""
             }`}
           >
-            <EllipsisOutlined />
+            <MoreHorizontal size={ICON} />
           </span>
           More
         </button>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSeasonById, getSeasonView } from "@/server/queries/season";
 import { SeasonBoard } from "@/components/league/season-board";
+import { AuroraBackground } from "@/components/league/aurora-bg";
 
 export const metadata = { title: "League" };
 // Public, always-fresh standings (see proxy.ts — /league/<id> needs no sign-in).
@@ -18,8 +19,8 @@ export default async function PublicLeaguePage({
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-burnt-500/15 blur-3xl" />
-      <div className="relative mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
+      <AuroraBackground />
+      <div className="relative z-10 mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
         <div className="mb-6 flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-cream-50 font-display text-base">
             <span className="text-burnt-500">S</span>
