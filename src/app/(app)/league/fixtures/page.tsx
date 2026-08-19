@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { isAdmin } from "@/server/auth";
-import { getActiveSeason, getSeasonView } from "@/server/queries/season";
+import { getActiveSeason, getSeasonMatchdays } from "@/server/queries/season";
 import { LeagueMatchdays } from "@/components/league/season-board";
 import { AddMatchdayButton } from "@/components/league/add-matchday-button";
 
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function LeagueFixturesPage() {
   const [admin, season] = await Promise.all([isAdmin(), getActiveSeason()]);
   if (!season) return null;
-  const [view, venues] = await Promise.all([
-    getSeasonView(season),
+  const [matchdays, venues] = await Promise.all([
+    getSeasonMatchdays(season.id),
     admin ? db.query.venues.findMany() : Promise.resolve([]),
   ]);
 
@@ -22,11 +22,11 @@ export default async function LeagueFixturesPage() {
           <AddMatchdayButton
             seasonId={season.id}
             venues={venues}
-            nextNumber={view.matchdays.length + 1}
+            nextNumber={matchdays.length + 1}
           />
         </div>
       ) : null}
-      <LeagueMatchdays view={view} />
+      <LeagueMatchdays matchdays={matchdays} />
     </div>
   );
 }

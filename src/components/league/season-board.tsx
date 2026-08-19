@@ -265,8 +265,7 @@ export function LeagueStats({ view }: { view: SeasonView }) {
   );
 }
 
-export function LeagueMatchdays({ view }: { view: SeasonView }) {
-  const { matchdays } = view;
+export function LeagueMatchdays({ matchdays }: { matchdays: SeasonView["matchdays"] }) {
   return (
     <section>
       <h2 className="font-display mb-3 text-xl text-ink-900">Matchdays</h2>
@@ -321,7 +320,7 @@ export function SeasonBoard({ view }: { view: SeasonView }) {
       <LeagueStandings view={view} />
       <LeagueAwards view={view} />
       <LeagueStats view={view} />
-      <LeagueMatchdays view={view} />
+      <LeagueMatchdays matchdays={view.matchdays} />
     </div>
   );
 }

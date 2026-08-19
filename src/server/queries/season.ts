@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, asc, count, desc, eq, inArray, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { matches, playerMatchStats, players, seasons, sessions, teams } from "@/db/schema";
@@ -32,18 +33,36 @@ export type SeasonAwards = {
   bestGk: AwardPlayer | null;
 };
 
-export async function getActiveSeason(): Promise<Season | null> {
+// cache(): the league layout and the active sub-page both resolve the season —
+// dedupe so it's one DB round-trip per request, not one per component.
+export const getActiveSeason = cache(async (): Promise<Season | null> => {
   const row = await db.query.seasons.findFirst({
     where: eq(seasons.status, "active"),
     orderBy: desc(seasons.createdAt),
   });
   return row ?? null;
-}
+});
 
-export async function getSeasonById(id: string): Promise<Season | null> {
+export const getSeasonById = cache(async (id: string): Promise<Season | null> => {
   const row = await db.query.seasons.findFirst({ where: eq(seasons.id, id) });
   return row ?? null;
-}
+});
+
+// The matchday schedule (nested fixtures + team names). Its own cached query so
+// the Fixtures page can load just this without computing scorers/awards.
+export const getSeasonMatchdays = cache(async (seasonId: string) => {
+  return db.query.sessions.findMany({
+    where: eq(sessions.seasonId, seasonId),
+    orderBy: asc(sessions.startAt),
+    with: {
+      venue: { columns: { name: true, city: true } },
+      fixtures: {
+        orderBy: asc(matches.orderIndex),
+        with: { homeTeam: { columns: { name: true } }, awayTeam: { columns: { name: true } } },
+      },
+    },
+  });
+});
 
 // Every completed-match player stat in the season, summed per player.
 async function seasonScorers(seasonId: string): Promise<SeasonScorer[]> {
@@ -147,20 +166,10 @@ export type SeasonView = Awaited<ReturnType<typeof getSeasonView>>;
 // Everything the league page renders for one season: standings, matchdays,
 // scorers, fair-play and resolved awards. Read-only — used by both the in-app
 // and the public page.
-export async function getSeasonView(season: Season) {
+export const getSeasonView = cache(async (season: Season) => {
   const [sportTeams, matchdays, scorers] = await Promise.all([
     db.query.teams.findMany({ where: eq(teams.sportId, season.sportId) }),
-    db.query.sessions.findMany({
-      where: eq(sessions.seasonId, season.id),
-      orderBy: asc(sessions.startAt),
-      with: {
-        venue: { columns: { name: true, city: true } },
-        fixtures: {
-          orderBy: asc(matches.orderIndex),
-          with: { homeTeam: { columns: { name: true } }, awayTeam: { columns: { name: true } } },
-        },
-      },
-    }),
+    getSeasonMatchdays(season.id),
     seasonScorers(season.id),
   ]);
 
@@ -206,4 +215,4 @@ export async function getSeasonView(season: Season) {
     awards,
     champion,
   };
-}
+});
