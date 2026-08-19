@@ -72,10 +72,10 @@ export function AwardEditor({
 
   return (
     <div className="tv-card-sm grid gap-4 p-4 sm:grid-cols-2">
-      {row("🥇 Top scorer", "Blank = auto (most goals)", "topScorerId", season.topScorerId, playerOpts)}
-      {row("🤝 Fair play", "Blank = auto (fewest cards)", "fairplayTeamId", season.fairplayTeamId, teamOpts)}
-      {row("⭐ Player of the season", "Admin pick", "playerOfSeasonId", season.playerOfSeasonId, playerOpts)}
-      {row("🧤 Best goalkeeper", "Admin pick", "bestGkId", season.bestGkId, playerOpts)}
+      {row(<Medal className="h-4 w-4 text-gold-300" />, "Top scorer", "Blank = auto (most goals)", "topScorerId", season.topScorerId, playerOpts)}
+      {row(<ShieldCheck className="h-4 w-4 text-pitch-500" />, "Fair play", "Blank = auto (fewest cards)", "fairplayTeamId", season.fairplayTeamId, teamOpts)}
+      {row(<Star className="h-4 w-4 text-burnt-400" />, "Player of the season", "Admin pick", "playerOfSeasonId", season.playerOfSeasonId, playerOpts)}
+      {row(<Hand className="h-4 w-4 text-sky-400" />, "Best goalkeeper", "Admin pick", "bestGkId", season.bestGkId, playerOpts)}
     </div>
   );
 }
@@ -106,7 +106,14 @@ export function SeasonStatusButton({ season }: { season: Season }) {
 
   return (
     <Button variant={ended ? "secondary" : "primary"} onClick={toggle} disabled={isPending}>
-      {ended ? "Reopen season" : "🏁 End season"}
+      {ended ? (
+        "Reopen season"
+      ) : (
+        <span className="inline-flex items-center gap-1.5">
+          <Flag className="h-4 w-4" />
+          End season
+        </span>
+      )}
     </Button>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Goal, Handshake, Footprints } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matches } from "@/db/schema";
@@ -18,7 +19,7 @@ function Leaderboard({
   metric,
   unit,
 }: {
-  title: string;
+  title: React.ReactNode;
   rows: LeaderboardRow[];
   metric: (r: LeaderboardRow) => number;
   unit: string;
@@ -26,7 +27,7 @@ function Leaderboard({
   const sorted = [...rows].sort((a, b) => metric(b) - metric(a)).slice(0, 8);
   return (
     <div className="tv-card overflow-hidden">
-      <p className="bg-black/60 px-4 py-2.5 font-display text-gold-300">
+      <p className="flex items-center gap-2 bg-black/60 px-4 py-2.5 font-display text-gold-300">
         {title}
       </p>
       {sorted.length === 0 ? (
@@ -92,10 +93,20 @@ async function StatsContent() {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Leaderboard title="⚽ Top scorers" rows={leaderboard} metric={(r) => r.goals} unit="G" />
-        <Leaderboard title="🅰️ Top assists" rows={leaderboard} metric={(r) => r.assists} unit="A" />
         <Leaderboard
-          title="👟 Appearances"
+          title={<><Goal className="h-4 w-4" /> Top scorers</>}
+          rows={leaderboard}
+          metric={(r) => r.goals}
+          unit="G"
+        />
+        <Leaderboard
+          title={<><Handshake className="h-4 w-4" /> Top assists</>}
+          rows={leaderboard}
+          metric={(r) => r.assists}
+          unit="A"
+        />
+        <Leaderboard
+          title={<><Footprints className="h-4 w-4" /> Appearances</>}
           rows={leaderboard}
           metric={(r) => r.appearances}
           unit="apps"
