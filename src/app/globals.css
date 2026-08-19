@@ -177,6 +177,18 @@ select,
   content: none;
 }
 
+/* Keyboard focus ring on links and custom buttons — accessibility + a more
+   finished feel. antd controls keep their own focus styling, so they're left
+   out to avoid a double outline. */
+a:focus-visible,
+button:not([class*="ant-"]):focus-visible,
+[role="button"]:not([class*="ant-"]):focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-burnt-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* antd DatePicker with showTime: the date calendar and the time columns sit
    side by side, so on phones the popup is wider than the viewport and dates
    overlap / spill off-screen. Cap the popup to the screen and, on small
