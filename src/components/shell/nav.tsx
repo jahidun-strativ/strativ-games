@@ -41,6 +41,7 @@ const links: NavLink[] = [
     icon: <Trophy size={ICON} />,
     children: [
       { href: "/league/fixtures", label: "Fixtures" },
+      { href: "/league/teams", label: "Teams" },
       { href: "/league/stats", label: "Stats" },
       { href: "/league/awards", label: "Awards" },
       { href: "/league/season", label: "Season", adminOnly: true },
