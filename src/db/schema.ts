@@ -33,6 +33,10 @@ export const teams = pgTable("teams", {
   // the existing data. Safe to remove in a deliberate migration later.
   stadium: text("stadium"),
   formation: text("formation").notNull().default("4-4-2"),
+  // Seed for the team's generated banner (procedural gradient + pattern +
+  // monogram, rendered client/server-side). Null = the default look derived from
+  // the name; admins "shuffle" to a new seed to change it. No image is stored.
+  bannerSeed: integer("banner_seed"),
   // The team's captain (a player on this team). Whichever registered user that
   // player is linked to gets captain powers for this team: editing per-match
   // lineups and managing the roster. Admin-assigned; null = no captain yet.

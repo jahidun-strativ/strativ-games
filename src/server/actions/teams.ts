@@ -42,6 +42,19 @@ export async function deleteTeam(id: string) {
   redirect("/teams");
 }
 
+// Save a team's generated-banner seed (admin "shuffle → save"). No image is
+// stored — just the seed that drives the procedural banner.
+export async function setTeamBanner(teamId: string, seed: number) {
+  await requireAdmin();
+  await db
+    .update(teams)
+    .set({ bannerSeed: Math.trunc(seed) })
+    .where(eq(teams.id, teamId));
+  revalidatePath(`/teams/${teamId}`);
+  revalidatePath("/teams");
+  revalidatePath("/league/teams");
+}
+
 // Assign (or clear, with playerId=null) a team's captain. Admin-only. The
 // captain must be a player currently on this team. Notifies the new captain.
 export async function setTeamCaptain(teamId: string, playerId: string | null) {

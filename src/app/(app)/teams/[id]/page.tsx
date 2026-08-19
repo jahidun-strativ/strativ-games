@@ -8,7 +8,8 @@ import { getActiveSeason } from "@/server/queries/season";
 import { computeCompetitiveRecord, type StandingsRow } from "@/server/queries/standings";
 import { MatchCard } from "@/components/match-card";
 import { StatTabs } from "@/components/stat-tabs";
-import { PageHeader } from "@/components/ui/page-header";
+import { TeamBanner } from "@/components/team-banner";
+import { TeamBannerGenerator } from "@/components/team-banner-generator";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
@@ -98,20 +99,41 @@ export default async function TeamDetailPage({
 
   return (
     <div>
-      <PageHeader
-        kicker={`${external ? "Opponent" : team.sport.name}${team.league ? ` · ${team.league}` : ""}`}
-        title={team.name}
-        actions={
-          <>
-            {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
-            {!external ? (
-              <ButtonLink variant={admin ? "secondary" : "primary"} href={`/teams/${team.id}/lineup`}>
-                Lineup
-              </ButtonLink>
-            ) : null}
-          </>
-        }
-      />
+      {/* Team banner hero — a generated cover (gradient + monogram) with the
+          name overlaid; admins can shuffle/save a new look. */}
+      <div className="relative mb-4 overflow-hidden rounded-2xl border border-line">
+        <TeamBanner
+          name={team.name}
+          seed={team.bannerSeed}
+          variant="hero"
+          className="h-40 w-full sm:h-52"
+        />
+        <div className="absolute inset-0 flex flex-col justify-end gap-1 p-5 sm:p-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-white/80">
+            {external ? "Opponent" : team.sport.name}
+            {team.league ? ` · ${team.league}` : ""}
+          </p>
+          <h1 className="font-display text-3xl text-white sm:text-4xl">{team.name}</h1>
+        </div>
+        {admin && !external ? (
+          <div className="absolute right-3 top-3">
+            <TeamBannerGenerator
+              teamId={team.id}
+              teamName={team.name}
+              currentSeed={team.bannerSeed}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
+        {!external ? (
+          <ButtonLink variant={admin ? "secondary" : "primary"} href={`/teams/${team.id}/lineup`}>
+            Lineup
+          </ButtonLink>
+        ) : null}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>

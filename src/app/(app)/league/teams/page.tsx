@@ -7,6 +7,7 @@ import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
+import { TeamBanner } from "@/components/team-banner";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = { title: "League teams" };
@@ -90,10 +91,14 @@ export default async function LeagueTeamsPage() {
         ];
 
         return (
-          <div
-            key={team.id}
-            className="tv-card grid gap-6 p-5 sm:p-6 lg:grid-cols-[260px_1fr]"
-          >
+          <div key={team.id} className="tv-card overflow-hidden">
+            <TeamBanner
+              name={team.name}
+              seed={team.bannerSeed}
+              variant="strip"
+              className="h-16 w-full"
+            />
+            <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[260px_1fr]">
             {/* Identity + management rail */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -208,6 +213,7 @@ export default async function LeagueTeamsPage() {
                   })}
                 </div>
               )}
+            </div>
             </div>
           </div>
         );
