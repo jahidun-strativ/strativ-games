@@ -67,6 +67,11 @@ export async function GET(
   const when = formatFull(match.kickoffAt);
   const venue = `${match.venue.name}${match.venue.city ? `, ${match.venue.city}` : ""}`;
   const sport = match.sport?.name ?? null;
+  // League context brands the line-up / team-sheet posters too, so a league
+  // photo never looks like a regular one.
+  const leagueCtx = league
+    ? { seasonName: league.name, matchday: match.session?.title ?? "Matchday" }
+    : null;
 
   let data: PosterData;
   let name: string;
@@ -95,6 +100,7 @@ export async function GET(
       venue,
       when,
       sport,
+      league: leagueCtx,
     };
     name = `${slug(ours.name)}-squad.png`;
   } else if (variant === "vs") {
@@ -105,6 +111,7 @@ export async function GET(
       venue,
       when,
       sport,
+      league: leagueCtx,
     };
     name = `${slug(home.name)}-vs-${slug(away.name)}.png`;
   } else {
@@ -115,6 +122,7 @@ export async function GET(
       venue,
       when,
       sport,
+      league: leagueCtx,
     };
     name = `${slug(home.name)}-vs-${slug(away.name)}-lineups.png`;
   }

@@ -31,6 +31,10 @@ export type PosterData =
       venue: string;
       when: string;
       sport?: string | null;
+      // Set on a league matchday's line-up/team-sheet poster: swaps the header
+      // for the gold season ribbon and tints the columns, so it's visibly a
+      // league photo rather than a regular one.
+      league?: { seasonName: string; matchday: string } | null;
     }
   | {
       // A league matchday: season branding ribbon + a gold VS hero.
@@ -82,12 +86,15 @@ export function posterHeight(data: PosterData): number {
   const bodyH = teamHeaderH + listPadV + maxPlayers * rowH;
 
   // padding(112) + header(150) + body margins(62) + meta(48+26) + footer(24).
-  const chrome = 422;
+  // The league ribbon header is ~90px taller than the regular headline.
+  const chrome = 422 + (data.league ? 96 : 0);
   return Math.max(640, Math.round(chrome + bodyH));
 }
 
 // Per-team accent colours (burnt → pitch → sky → gold), cycled.
 const ACCENTS = ["#f97316", "#10b981", "#38bdf8", "#f5b81f"];
+// Gold-leaning accents for league photos, to set them apart from regular ones.
+const LEAGUE_ACCENTS = ["#f5b81f", "#f97316", "#fb8b4c", "#f5cf6b"];
 
 const INK_900 = "#f3f6fb";
 const INK_500 = "#8a96a7";
@@ -936,12 +943,14 @@ export function Poster(data: PosterData) {
     );
   } else {
     // "full" (all teams) or "squad" (single team). Columns shrink when there
-    // are 3 teams so a full round-robin still fits.
+    // are 3 teams so a full round-robin still fits. League photos use the gold
+    // accent set so they read differently from a regular line-up.
     const compact = teams.length >= 3;
+    const accents = data.league ? LEAGUE_ACCENTS : ACCENTS;
     body = (
       <div style={{ display: "flex", flex: 1, width: "100%", alignItems: "stretch" }}>
         {teams.map((t, i) => (
-          <TeamColumn key={i} team={t} accent={ACCENTS[i % ACCENTS.length]} compact={compact} />
+          <TeamColumn key={i} team={t} accent={accents[i % accents.length]} compact={compact} />
         ))}
       </div>
     );
@@ -949,7 +958,15 @@ export function Poster(data: PosterData) {
 
   return (
     <PageShell>
-      <Header kindLabel={kindLabel} sport={sport} />
+      {data.league ? (
+        <LeagueBanner
+          seasonName={data.league.seasonName}
+          matchday={data.league.matchday}
+          sport={sport}
+        />
+      ) : (
+        <Header kindLabel={kindLabel} sport={sport} />
+      )}
       <div style={{ display: "flex", flex: 1, width: "100%", marginTop: 32, marginBottom: 30 }}>{body}</div>
       <div style={{ display: "flex", width: "100%", marginBottom: 26 }}>
         <MetaChips venue={venue} when={when} />
