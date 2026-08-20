@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Settings,
   MoreHorizontal,
+  ChevronRight,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -98,6 +99,12 @@ export function SidebarNav({ admin = false }: { admin?: boolean }) {
                 {link.icon}
               </span>
               {link.label}
+              {kids.length > 0 ? (
+                <ChevronRight
+                  size={16}
+                  className={`ml-auto text-ink-400 transition-transform ${inSection ? "rotate-90" : ""}`}
+                />
+              ) : null}
             </Link>
             {kids.length > 0 && inSection ? (
               <div className="mb-1 ml-[26px] mt-1 flex flex-col gap-0.5 border-l border-line pl-3">
