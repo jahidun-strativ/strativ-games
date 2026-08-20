@@ -158,8 +158,9 @@ export default async function LeagueTeamsPage() {
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2">
+              {/* Actions — one column of consistent full-width buttons: primary
+                  CTA, then Lineup/Edit paired, then the share action. */}
+              <div className="space-y-2 border-t border-line pt-4 [&_.ant-btn]:w-full [&_.ant-btn]:justify-center">
                 {canManage ? (
                   <AddPlayerButton
                     teamId={team.id}
@@ -172,15 +173,19 @@ export default async function LeagueTeamsPage() {
                     players={assignablePlayers}
                   />
                 ) : null}
-                <ButtonLink variant="secondary" href={`/teams/${team.id}/lineup`}>
-                  Lineup
-                </ButtonLink>
-                <PosterButton
-                  basePath={`/teams/${team.id}/poster`}
-                  label="Squad picture"
-                  variants={[{ label: "Squad picture", variant: "squad", hint: "Team + player names" }]}
-                />
-                {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
+                <div className="flex gap-2 *:flex-1">
+                  <ButtonLink variant="secondary" href={`/teams/${team.id}/lineup`}>
+                    Lineup
+                  </ButtonLink>
+                  {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
+                </div>
+                <div className="[&>span]:block">
+                  <PosterButton
+                    basePath={`/teams/${team.id}/poster`}
+                    label="Squad picture"
+                    variants={[{ label: "Squad picture", variant: "squad", hint: "Team + player names" }]}
+                  />
+                </div>
               </div>
             </div>
 
