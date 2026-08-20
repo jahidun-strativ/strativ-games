@@ -9,6 +9,7 @@ import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
 import { TeamBanner } from "@/components/team-banner";
 import { TeamBannerGenerator } from "@/components/team-banner-generator";
+import { PosterButton } from "@/components/poster-button";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = { title: "League teams" };
@@ -174,6 +175,11 @@ export default async function LeagueTeamsPage() {
                 <ButtonLink variant="secondary" href={`/teams/${team.id}/lineup`}>
                   Lineup
                 </ButtonLink>
+                <PosterButton
+                  basePath={`/teams/${team.id}/poster`}
+                  label="Squad picture"
+                  variants={[{ label: "Squad picture", variant: "squad", hint: "Team + player names" }]}
+                />
                 {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
               </div>
             </div>

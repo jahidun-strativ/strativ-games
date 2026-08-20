@@ -10,6 +10,7 @@ import { MatchCard } from "@/components/match-card";
 import { StatTabs } from "@/components/stat-tabs";
 import { TeamBanner } from "@/components/team-banner";
 import { TeamBannerGenerator } from "@/components/team-banner-generator";
+import { PosterButton } from "@/components/poster-button";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { RosterTable } from "@/components/tables/roster-table";
@@ -132,6 +133,13 @@ export default async function TeamDetailPage({
           <ButtonLink variant={admin ? "secondary" : "primary"} href={`/teams/${team.id}/lineup`}>
             Lineup
           </ButtonLink>
+        ) : null}
+        {!external ? (
+          <PosterButton
+            basePath={`/teams/${team.id}/poster`}
+            label="Squad picture"
+            variants={[{ label: "Squad picture", variant: "squad", hint: "Team + player names" }]}
+          />
         ) : null}
       </div>
 

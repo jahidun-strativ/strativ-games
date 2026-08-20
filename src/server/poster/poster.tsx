@@ -28,8 +28,9 @@ export type PosterData =
       variant: "full" | "vs" | "squad";
       kindLabel: string; // "Match day" · "Competitive" · "Round-robin"…
       teams: PosterTeam[];
-      venue: string;
-      when: string;
+      // Omitted for a standalone team squad sheet (no match => no venue/kick-off).
+      venue?: string;
+      when?: string;
       sport?: string | null;
       // Set on a league matchday's line-up/team-sheet poster: swaps the header
       // for the gold season ribbon and tints the columns, so it's visibly a
@@ -321,7 +322,7 @@ function LeagueBanner({
   );
 }
 
-function MetaChips({ venue, when }: { venue: string; when: string }) {
+function MetaChips({ venue, when }: { venue?: string; when?: string }) {
   const chip = (icon: string, text: string) => (
     <div
       style={{
@@ -344,8 +345,8 @@ function MetaChips({ venue, when }: { venue: string; when: string }) {
   );
   return (
     <div style={{ display: "flex", flexWrap: "wrap", width: "100%" }}>
-      {chip("🗓", when)}
-      {chip("📍", venue)}
+      {when ? chip("🗓", when) : null}
+      {venue ? chip("📍", venue) : null}
     </div>
   );
 }
@@ -968,9 +969,11 @@ export function Poster(data: PosterData) {
         <Header kindLabel={kindLabel} sport={sport} />
       )}
       <div style={{ display: "flex", flex: 1, width: "100%", marginTop: 32, marginBottom: 30 }}>{body}</div>
-      <div style={{ display: "flex", width: "100%", marginBottom: 26 }}>
-        <MetaChips venue={venue} when={when} />
-      </div>
+      {venue || when ? (
+        <div style={{ display: "flex", width: "100%", marginBottom: 26 }}>
+          <MetaChips venue={venue} when={when} />
+        </div>
+      ) : null}
       <Footer />
     </PageShell>
   );
