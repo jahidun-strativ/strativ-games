@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { renderPoster } from "@/server/poster/respond";
 import type { PosterData } from "@/server/poster/poster";
+import { getActiveSeason } from "@/server/queries/season";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,11 +28,20 @@ export async function GET(
     return new Response("External opponents have no roster to picture.", { status: 400 });
   }
 
+  // A team in the active season's sport gets the gold league ribbon so its squad
+  // sheet is branded as part of the league; other teams get the plain header.
+  const season = await getActiveSeason();
+  const league =
+    season && season.sportId === team.sportId
+      ? { seasonName: season.name, matchday: "", label: "Team Squad" }
+      : null;
+
   const data: PosterData = {
     variant: "squad",
     kindLabel: "Squad",
     teams: [{ name: team.name, players: team.players.map((p) => p.name) }],
     sport: team.sport?.name ?? null,
+    league,
   };
 
   const download = new URL(req.url).searchParams.get("download") === "1";

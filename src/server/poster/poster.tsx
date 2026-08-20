@@ -35,7 +35,7 @@ export type PosterData =
       // Set on a league matchday's line-up/team-sheet poster: swaps the header
       // for the gold season ribbon and tints the columns, so it's visibly a
       // league photo rather than a regular one.
-      league?: { seasonName: string; matchday: string } | null;
+      league?: { seasonName: string; matchday: string; label?: string } | null;
     }
   | {
       // A league matchday: season branding ribbon + a gold VS hero.
@@ -87,8 +87,11 @@ export function posterHeight(data: PosterData): number {
   const bodyH = teamHeaderH + listPadV + maxPlayers * rowH;
 
   // padding(112) + header(150) + body margins(62) + meta(48+26) + footer(24).
+  // A standalone squad sheet has no venue/kick-off, so drop the meta budget or
+  // the canvas leaves a big empty gap below the line-up.
   // The league ribbon header is ~90px taller than the regular headline.
-  const chrome = 422 + (data.league ? 96 : 0);
+  const hasMeta = Boolean(data.venue || data.when);
+  const chrome = (hasMeta ? 422 : 348) + (data.league ? 96 : 0);
   return Math.max(640, Math.round(chrome + bodyH));
 }
 
@@ -218,10 +221,12 @@ function LeagueBanner({
   seasonName,
   matchday,
   sport,
+  label = "League Matchday",
 }: {
   seasonName: string;
   matchday: string;
   sport?: string | null;
+  label?: string;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
@@ -288,7 +293,7 @@ function LeagueBanner({
             color: "#f5cf6b",
           }}
         >
-          🏆 League Matchday
+          🏆 {label}
         </div>
         <div
           style={{
@@ -305,18 +310,20 @@ function LeagueBanner({
         >
           {seasonName}
         </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 6,
-            fontFamily: "Oswald",
-            fontWeight: 600,
-            fontSize: 30,
-            color: "#fb8b4c",
-          }}
-        >
-          {matchday}
-        </div>
+        {matchday ? (
+          <div
+            style={{
+              display: "flex",
+              marginTop: 6,
+              fontFamily: "Oswald",
+              fontWeight: 600,
+              fontSize: 30,
+              color: "#fb8b4c",
+            }}
+          >
+            {matchday}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -963,6 +970,7 @@ export function Poster(data: PosterData) {
         <LeagueBanner
           seasonName={data.league.seasonName}
           matchday={data.league.matchday}
+          label={data.league.label}
           sport={sport}
         />
       ) : (
