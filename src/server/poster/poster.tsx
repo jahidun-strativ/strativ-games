@@ -78,12 +78,10 @@ export function posterHeight(data: PosterData): number {
   // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
   if (data.variant === "vs" || data.variant === "league") return 1080;
 
-  // The standalone squad sheet lays players in two columns past 6, so its height
-  // grows with the taller column, not the full roster.
+  // The standalone squad sheet lists players in one column of roomy cards.
   if (data.variant === "squad") {
-    const n = data.teams[0]?.players.length ?? 0;
-    const rows = n > 6 ? Math.ceil(n / 2) : Math.max(1, n);
-    const bodyH = 130 + 48 + rows * 76; // header band + list padding + row cards
+    const n = Math.max(1, data.teams[0]?.players.length ?? 0);
+    const bodyH = 140 + 48 + n * 80; // header band + list padding + row cards
     const chrome = 348 + (data.league ? 96 : 0);
     return Math.max(720, Math.round(chrome + bodyH));
   }
@@ -422,14 +420,12 @@ function teamInitials(name: string): string {
   return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "") || name[0] || "?").toUpperCase();
 }
 
-// A standalone team squad sheet: a big branded panel with the roster laid out as
-// two columns of numbered player cards, plus a faint team monogram watermark.
-// (The multi-team match line-ups keep TeamColumn below.)
+// A standalone team squad sheet: a big branded panel with the roster in one
+// column of roomy numbered cards. The look is carried by the panel's layered
+// background — an accent glow behind the header, a large monogram watermark and
+// a soft inner vignette — not by splitting the list. (Match line-ups: TeamColumn.)
 function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
   const players = team.players;
-  const twoCol = players.length > 6;
-  const mid = Math.ceil(players.length / 2);
-  const columns = twoCol ? [players.slice(0, mid), players.slice(mid)] : [players];
 
   const row = (name: string, n: number) => (
     <div
@@ -437,20 +433,22 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
       style={{
         display: "flex",
         alignItems: "center",
-        background: "linear-gradient(90deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))",
+        background: "linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.015))",
         border: "1px solid rgba(255,255,255,0.08)",
+        borderLeft: `3px solid ${accent}`,
         borderRadius: 14,
-        padding: "13px 16px",
-        marginBottom: 12,
+        boxShadow: "0 6px 18px rgba(0,0,0,0.28)",
+        padding: "15px 22px",
+        marginBottom: 14,
       }}
     >
-      <NumberBadge n={n} accent={accent} size={40} />
+      <NumberBadge n={n} accent={accent} size={44} />
       <div
         style={{
           display: "flex",
           fontFamily: "Archivo",
           fontWeight: 700,
-          fontSize: 28,
+          fontSize: 32,
           color: INK_900,
           lineHeight: 1,
         }}
@@ -469,24 +467,50 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
         width: "100%",
         position: "relative",
         overflow: "hidden",
-        background: "linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))",
+        background: "linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))",
         border: "1px solid rgba(255,255,255,0.10)",
         borderRadius: 24,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
       }}
     >
-      {/* Faint monogram watermark, bleeding off the bottom-right corner */}
+      {/* Accent glow bleeding down from behind the header */}
       <div
         style={{
           display: "flex",
           position: "absolute",
-          bottom: -48,
-          right: -12,
+          top: -220,
+          left: -120,
+          width: 640,
+          height: 520,
+          borderRadius: 320,
+          background: `radial-gradient(circle, ${accent}44, ${accent}00 70%)`,
+        }}
+      />
+      {/* Soft dark vignette anchoring the bottom of the panel */}
+      <div
+        style={{
+          display: "flex",
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 360,
+          background: "linear-gradient(180deg, rgba(8,11,17,0), rgba(8,11,17,0.55))",
+        }}
+      />
+      {/* Large monogram watermark, bleeding off the bottom-right corner */}
+      <div
+        style={{
+          display: "flex",
+          position: "absolute",
+          bottom: -70,
+          right: -24,
           fontFamily: "Oswald",
           fontWeight: 700,
-          fontSize: 260,
+          fontSize: 300,
           lineHeight: 1,
-          letterSpacing: -6,
-          color: "rgba(255,255,255,0.035)",
+          letterSpacing: -8,
+          color: "rgba(255,255,255,0.04)",
         }}
       >
         {teamInitials(team.name)}
@@ -497,8 +521,8 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
         style={{
           display: "flex",
           flexDirection: "column",
-          padding: "26px 30px 22px",
-          background: `linear-gradient(120deg, ${accent} 0%, ${accent}00 82%)`,
+          padding: "30px 34px 26px",
+          background: `linear-gradient(120deg, ${accent}cc 0%, ${accent}22 45%, ${accent}00 82%)`,
           borderBottom: `3px solid ${accent}`,
         }}
       >
@@ -507,10 +531,10 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
             display: "flex",
             fontFamily: "Oswald",
             fontWeight: 700,
-            fontSize: 52,
+            fontSize: 58,
             textTransform: "uppercase",
             letterSpacing: -0.5,
-            color: INK_900,
+            color: "#ffffff",
             lineHeight: 1,
           }}
         >
@@ -520,20 +544,20 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
           style={{
             display: "flex",
             fontFamily: "Archivo",
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 16,
-            letterSpacing: 2,
+            letterSpacing: 2.5,
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.85)",
-            marginTop: 10,
+            color: "rgba(255,255,255,0.9)",
+            marginTop: 12,
           }}
         >
           Squad · {players.length} player{players.length === 1 ? "" : "s"}
         </div>
       </div>
 
-      {/* Player cards, one or two columns */}
-      <div style={{ display: "flex", padding: "24px 30px" }}>
+      {/* Player cards in one column */}
+      <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: "26px 34px" }}>
         {players.length === 0 ? (
           <div
             style={{
@@ -547,19 +571,7 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
             Squad to be confirmed
           </div>
         ) : (
-          columns.map((col, ci) => (
-            <div
-              key={ci}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-                marginRight: ci < columns.length - 1 ? 18 : 0,
-              }}
-            >
-              {col.map((name, i) => row(name, (ci === 0 ? 0 : mid) + i + 1))}
-            </div>
-          ))
+          players.map((name, i) => row(name, i + 1))
         )}
       </div>
     </div>
