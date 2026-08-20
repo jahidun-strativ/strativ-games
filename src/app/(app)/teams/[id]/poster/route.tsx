@@ -20,7 +20,10 @@ export async function GET(
     where: (t, { eq }) => eq(t.id, id),
     with: {
       sport: { columns: { name: true } },
-      players: { columns: { name: true }, orderBy: (p, { asc }) => asc(p.name) },
+      players: {
+        columns: { id: true, name: true, position: true },
+        orderBy: (p, { asc }) => asc(p.name),
+      },
     },
   });
   if (!team) return new Response("Not found", { status: 404 });
@@ -40,6 +43,11 @@ export async function GET(
     variant: "squad",
     kindLabel: "Squad",
     teams: [{ name: team.name, players: team.players.map((p) => p.name) }],
+    roster: team.players.map((p) => ({
+      name: p.name,
+      position: p.position,
+      captain: p.id === team.captainId,
+    })),
     sport: team.sport?.name ?? null,
     league,
   };

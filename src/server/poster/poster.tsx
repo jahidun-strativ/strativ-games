@@ -13,6 +13,10 @@
 
 export type PosterTeam = { name: string; players: string[] };
 
+// Richer per-player row for the standalone squad sheet (position + captain).
+// The match posters just use PosterTeam.players (names); this is squad-only.
+export type PosterPlayer = { name: string; position?: string | null; captain?: boolean };
+
 // One booked slot on the "fixtures" poster: a date badge plus where & when it's
 // played (team names and session type are intentionally omitted).
 export type PosterFixture = {
@@ -28,6 +32,9 @@ export type PosterData =
       variant: "full" | "vs" | "squad";
       kindLabel: string; // "Match day" · "Competitive" · "Round-robin"…
       teams: PosterTeam[];
+      // Squad sheet only: the one team's roster with positions/captain, used to
+      // render the two-column player cards. (teams[0].name still holds the name.)
+      roster?: PosterPlayer[];
       // Omitted for a standalone team squad sheet (no match => no venue/kick-off).
       venue?: string;
       when?: string;
@@ -78,10 +85,14 @@ export function posterHeight(data: PosterData): number {
   // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
   if (data.variant === "vs" || data.variant === "league") return 1080;
 
-  // The standalone squad sheet lists players in one column of roomy cards.
+  // The standalone squad sheet lays players in two columns of cards, so its
+  // height grows with the taller column (ceil(n/2)), not the whole roster.
+  // A card is ~66px tall + 14px gap → 80px stride; over-budget slightly so the
+  // flex body never compresses and clips the last card.
   if (data.variant === "squad") {
-    const n = Math.max(1, data.teams[0]?.players.length ?? 0);
-    const bodyH = 140 + 48 + n * 80; // header band + list padding + row cards
+    const n = Math.max(1, data.roster?.length ?? data.teams[0]?.players.length ?? 0);
+    const rows = Math.ceil(n / 2);
+    const bodyH = 150 + 52 + rows * 86; // header band + list padding + row cards
     const chrome = 348 + (data.league ? 96 : 0);
     return Math.max(720, Math.round(chrome + bodyH));
   }
@@ -420,14 +431,23 @@ function teamInitials(name: string): string {
   return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "") || name[0] || "?").toUpperCase();
 }
 
-// A standalone team squad sheet: a big branded panel with the roster in one
-// column of roomy numbered cards. The look is carried by the panel's layered
-// background — an accent glow behind the header, a large monogram watermark and
-// a soft inner vignette — not by splitting the list. (Match line-ups: TeamColumn.)
-function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
-  const players = team.players;
+// A standalone team squad sheet: a big branded panel with the roster laid out
+// as two columns of numbered player cards (number · name · position, captain
+// marked). The look is carried by the panel's layered background — accent glow,
+// monogram watermark, soft vignette. (Match line-ups keep TeamColumn below.)
+function SquadPanel({
+  name: teamName,
+  roster,
+  accent,
+}: {
+  name: string;
+  roster: PosterPlayer[];
+  accent: string;
+}) {
+  const mid = Math.ceil(roster.length / 2);
+  const columns = roster.length > 0 ? [roster.slice(0, mid), roster.slice(mid)] : [];
 
-  const row = (name: string, n: number) => (
+  const card = (p: PosterPlayer, n: number) => (
     <div
       key={n}
       style={{
@@ -438,22 +458,63 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
         borderLeft: `3px solid ${accent}`,
         borderRadius: 14,
         boxShadow: "0 6px 18px rgba(0,0,0,0.28)",
-        padding: "15px 22px",
+        padding: "12px 18px",
         marginBottom: 14,
       }}
     >
-      <NumberBadge n={n} accent={accent} size={44} />
-      <div
-        style={{
-          display: "flex",
-          fontFamily: "Archivo",
-          fontWeight: 700,
-          fontSize: 32,
-          color: INK_900,
-          lineHeight: 1,
-        }}
-      >
-        {name}
+      <NumberBadge n={n} accent={accent} size={40} />
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Archivo",
+              fontWeight: 700,
+              fontSize: 27,
+              color: INK_900,
+              lineHeight: 1.05,
+            }}
+          >
+            {p.name}
+          </div>
+          {p.captain ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginLeft: 10,
+                width: 24,
+                height: 24,
+                borderRadius: 7,
+                background: "rgba(245,184,31,0.18)",
+                border: "1px solid rgba(245,184,31,0.5)",
+                fontFamily: "Oswald",
+                fontWeight: 700,
+                fontSize: 15,
+                color: "#f5cf6b",
+              }}
+            >
+              C
+            </div>
+          ) : null}
+        </div>
+        {p.position ? (
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Archivo",
+              fontWeight: 600,
+              fontSize: 13,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              color: INK_500,
+              marginTop: 5,
+            }}
+          >
+            {p.position}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -513,7 +574,7 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
           color: "rgba(255,255,255,0.04)",
         }}
       >
-        {teamInitials(team.name)}
+        {teamInitials(teamName)}
       </div>
 
       {/* Accent header band */}
@@ -538,7 +599,7 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
             lineHeight: 1,
           }}
         >
-          {team.name}
+          {teamName}
         </div>
         <div
           style={{
@@ -552,13 +613,13 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
             marginTop: 12,
           }}
         >
-          Squad · {players.length} player{players.length === 1 ? "" : "s"}
+          Squad · {roster.length} player{roster.length === 1 ? "" : "s"}
         </div>
       </div>
 
-      {/* Player cards in one column */}
-      <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: "26px 34px" }}>
-        {players.length === 0 ? (
+      {/* Player cards in two columns */}
+      <div style={{ display: "flex", position: "relative", padding: "26px 34px" }}>
+        {roster.length === 0 ? (
           <div
             style={{
               display: "flex",
@@ -571,7 +632,19 @@ function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
             Squad to be confirmed
           </div>
         ) : (
-          players.map((name, i) => row(name, i + 1))
+          columns.map((col, ci) => (
+            <div
+              key={ci}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                marginRight: ci < columns.length - 1 ? 20 : 0,
+              }}
+            >
+              {col.map((p, i) => card(p, (ci === 0 ? 0 : mid) + i + 1))}
+            </div>
+          ))
         )}
       </div>
     </div>
@@ -1124,9 +1197,11 @@ export function Poster(data: PosterData) {
     // A single team's roster on its own: the wide, two-column squad sheet.
     const accents = data.league ? LEAGUE_ACCENTS : ACCENTS;
     const team = teams[0] ?? { name: "TBD", players: [] };
+    const roster: PosterPlayer[] =
+      data.roster ?? team.players.map((name) => ({ name }));
     body = (
       <div style={{ display: "flex", flex: 1, width: "100%", alignItems: "stretch" }}>
-        <SquadPanel team={team} accent={accents[0]} />
+        <SquadPanel name={team.name} roster={roster} accent={accents[0]} />
       </div>
     );
   } else {
