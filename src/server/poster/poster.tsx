@@ -78,6 +78,16 @@ export function posterHeight(data: PosterData): number {
   // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
   if (data.variant === "vs" || data.variant === "league") return 1080;
 
+  // The standalone squad sheet lays players in two columns past 6, so its height
+  // grows with the taller column, not the full roster.
+  if (data.variant === "squad") {
+    const n = data.teams[0]?.players.length ?? 0;
+    const rows = n > 6 ? Math.ceil(n / 2) : Math.max(1, n);
+    const bodyH = 130 + 48 + rows * 76; // header band + list padding + row cards
+    const chrome = 348 + (data.league ? 96 : 0);
+    return Math.max(720, Math.round(chrome + bodyH));
+  }
+
   const compact = data.teams.length >= 3;
   const maxPlayers = Math.max(1, ...data.teams.map((t) => t.players.length));
 
@@ -403,6 +413,155 @@ function NumberBadge({ n, accent, size }: { n: number; accent: string; size: num
       }}
     >
       {n}
+    </div>
+  );
+}
+
+function teamInitials(name: string): string {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "") || name[0] || "?").toUpperCase();
+}
+
+// A standalone team squad sheet: a big branded panel with the roster laid out as
+// two columns of numbered player cards, plus a faint team monogram watermark.
+// (The multi-team match line-ups keep TeamColumn below.)
+function SquadPanel({ team, accent }: { team: PosterTeam; accent: string }) {
+  const players = team.players;
+  const twoCol = players.length > 6;
+  const mid = Math.ceil(players.length / 2);
+  const columns = twoCol ? [players.slice(0, mid), players.slice(mid)] : [players];
+
+  const row = (name: string, n: number) => (
+    <div
+      key={n}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        background: "linear-gradient(90deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 14,
+        padding: "13px 16px",
+        marginBottom: 12,
+      }}
+    >
+      <NumberBadge n={n} accent={accent} size={40} />
+      <div
+        style={{
+          display: "flex",
+          fontFamily: "Archivo",
+          fontWeight: 700,
+          fontSize: 28,
+          color: INK_900,
+          lineHeight: 1,
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        width: "100%",
+        position: "relative",
+        overflow: "hidden",
+        background: "linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 24,
+      }}
+    >
+      {/* Faint monogram watermark, bleeding off the bottom-right corner */}
+      <div
+        style={{
+          display: "flex",
+          position: "absolute",
+          bottom: -48,
+          right: -12,
+          fontFamily: "Oswald",
+          fontWeight: 700,
+          fontSize: 260,
+          lineHeight: 1,
+          letterSpacing: -6,
+          color: "rgba(255,255,255,0.035)",
+        }}
+      >
+        {teamInitials(team.name)}
+      </div>
+
+      {/* Accent header band */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          padding: "26px 30px 22px",
+          background: `linear-gradient(120deg, ${accent} 0%, ${accent}00 82%)`,
+          borderBottom: `3px solid ${accent}`,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Oswald",
+            fontWeight: 700,
+            fontSize: 52,
+            textTransform: "uppercase",
+            letterSpacing: -0.5,
+            color: INK_900,
+            lineHeight: 1,
+          }}
+        >
+          {team.name}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Archivo",
+            fontWeight: 600,
+            fontSize: 16,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.85)",
+            marginTop: 10,
+          }}
+        >
+          Squad · {players.length} player{players.length === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      {/* Player cards, one or two columns */}
+      <div style={{ display: "flex", padding: "24px 30px" }}>
+        {players.length === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Archivo",
+              fontStyle: "italic",
+              fontSize: 26,
+              color: INK_500,
+            }}
+          >
+            Squad to be confirmed
+          </div>
+        ) : (
+          columns.map((col, ci) => (
+            <div
+              key={ci}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                marginRight: ci < columns.length - 1 ? 18 : 0,
+              }}
+            >
+              {col.map((name, i) => row(name, (ci === 0 ? 0 : mid) + i + 1))}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -949,10 +1108,19 @@ export function Poster(data: PosterData) {
         {side(away.name, ACCENTS[2])}
       </div>
     );
+  } else if (variant === "squad") {
+    // A single team's roster on its own: the wide, two-column squad sheet.
+    const accents = data.league ? LEAGUE_ACCENTS : ACCENTS;
+    const team = teams[0] ?? { name: "TBD", players: [] };
+    body = (
+      <div style={{ display: "flex", flex: 1, width: "100%", alignItems: "stretch" }}>
+        <SquadPanel team={team} accent={accents[0]} />
+      </div>
+    );
   } else {
-    // "full" (all teams) or "squad" (single team). Columns shrink when there
-    // are 3 teams so a full round-robin still fits. League photos use the gold
-    // accent set so they read differently from a regular line-up.
+    // "full" (all teams). Columns shrink when there are 3 teams so a full
+    // round-robin still fits. League photos use the gold accent set so they read
+    // differently from a regular line-up.
     const compact = teams.length >= 3;
     const accents = data.league ? LEAGUE_ACCENTS : ACCENTS;
     body = (
