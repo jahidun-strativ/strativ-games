@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewTeamButton } from "@/components/entity-modals";
 import { ButtonLink } from "@/components/ui/button";
+import { TeamBanner } from "@/components/team-banner";
+import { TeamBannerGenerator } from "@/components/team-banner-generator";
 import { isAdmin } from "@/server/auth";
 import type { Sport } from "@/db/schema";
 
@@ -18,45 +20,64 @@ type TeamCard = {
   name: string;
   kind: string;
   league: string | null;
+  bannerSeed: number | null;
   sport: Sport;
   players: { id: string }[];
 };
 
-function TeamGrid({ items }: { items: TeamCard[] }) {
+function TeamGrid({ items, admin }: { items: TeamCard[]; admin: boolean }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((team) => {
         const external = team.kind === "external";
         return (
-          <Link
+          <div
             key={team.id}
-            href={`/teams/${team.id}`}
-            className="tv-card p-5 transition-transform hover:-translate-y-0.5"
+            className="tv-card relative overflow-hidden transition-transform hover:-translate-y-0.5"
           >
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="font-display text-xl leading-tight">{team.name}</h2>
-              <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase text-white"
-                style={{ backgroundColor: team.sport.color }}
-              >
-                {team.sport.shortName}
-              </span>
-            </div>
-            {team.league ? (
-              <p className="mt-1 text-sm text-ink-500">{team.league}</p>
+            <TeamBanner
+              name={team.name}
+              seed={team.bannerSeed}
+              variant="strip"
+              className="h-20 w-full"
+            />
+            {/* Stretched link covers the whole card; interactive controls sit above it. */}
+            <Link href={`/teams/${team.id}`} aria-label={team.name} className="absolute inset-0" />
+            {admin && !external ? (
+              <div className="absolute right-3 top-3 z-10">
+                <TeamBannerGenerator
+                  teamId={team.id}
+                  teamName={team.name}
+                  currentSeed={team.bannerSeed}
+                />
+              </div>
             ) : null}
-            <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-sm">
-              {external ? (
-                <span className="rounded-full bg-cream-200 px-2.5 py-0.5 text-xs font-semibold uppercase text-ink-500">
-                  Opponent
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="font-display text-xl leading-tight">{team.name}</h2>
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase text-white"
+                  style={{ backgroundColor: team.sport.color }}
+                >
+                  {team.sport.shortName}
                 </span>
-              ) : (
-                <span className="text-ink-500">
-                  {team.players.length} player{team.players.length === 1 ? "" : "s"}
-                </span>
-              )}
+              </div>
+              {team.league ? (
+                <p className="mt-1 text-sm text-ink-500">{team.league}</p>
+              ) : null}
+              <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-sm">
+                {external ? (
+                  <span className="rounded-full bg-cream-200 px-2.5 py-0.5 text-xs font-semibold uppercase text-ink-500">
+                    Opponent
+                  </span>
+                ) : (
+                  <span className="text-ink-500">
+                    {team.players.length} player{team.players.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
             </div>
-          </Link>
+          </div>
         );
       })}
     </div>
@@ -108,7 +129,7 @@ async function TeamsContent() {
             action={canCreate ? <NewTeamButton sports={allSports} label="New team" /> : undefined}
           />
         ) : (
-          <TeamGrid items={ourTeams} />
+          <TeamGrid items={ourTeams} admin={admin} />
         )}
       </section>
 
@@ -132,7 +153,7 @@ async function TeamsContent() {
             }
           />
         ) : (
-          <TeamGrid items={opponents} />
+          <TeamGrid items={opponents} admin={admin} />
         )}
       </section>
     </div>

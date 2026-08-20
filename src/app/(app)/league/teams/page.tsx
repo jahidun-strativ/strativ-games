@@ -8,6 +8,7 @@ import { CaptainPicker } from "@/components/captain-picker";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
 import { TeamBanner } from "@/components/team-banner";
+import { TeamBannerGenerator } from "@/components/team-banner-generator";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = { title: "League teams" };
@@ -91,13 +92,22 @@ export default async function LeagueTeamsPage() {
         ];
 
         return (
-          <div key={team.id} className="tv-card overflow-hidden">
+          <div key={team.id} className="tv-card relative overflow-hidden">
             <TeamBanner
               name={team.name}
               seed={team.bannerSeed}
               variant="strip"
               className="h-16 w-full"
             />
+            {admin ? (
+              <div className="absolute right-3 top-3 z-10">
+                <TeamBannerGenerator
+                  teamId={team.id}
+                  teamName={team.name}
+                  currentSeed={team.bannerSeed}
+                />
+              </div>
+            ) : null}
             <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[260px_1fr]">
             {/* Identity + management rail */}
             <div className="space-y-4">
