@@ -65,13 +65,19 @@ function squadColumns() {
       title: "Saves",
       width: 80,
       align: "center" as const,
-      render: (_: unknown, p: Player) => (
-        <Form.Item name={`stat-${p.id}-saves`} noStyle>
-          <InputNumber min={0} size="small" className="!w-16" />
-        </Form.Item>
-      ),
+      render: (_: unknown, p: Player) => <SavesCell playerId={p.id} />,
     },
   ];
+}
+
+// Saves only make sense for a keeper — greyed out until the GK box is ticked.
+function SavesCell({ playerId }: { playerId: string }) {
+  const isGk = Form.useWatch(`stat-${playerId}-gk`);
+  return (
+    <Form.Item name={`stat-${playerId}-saves`} noStyle>
+      <InputNumber min={0} size="small" className="!w-16" disabled={!isGk} />
+    </Form.Item>
+  );
 }
 
 export function ResultForm({

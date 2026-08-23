@@ -239,8 +239,9 @@ export async function recordResult(id: string, formData: FormData) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
     const fouls = optInt(formData, `stat-${playerId}-fouls`) ?? 0;
-    const saves = optInt(formData, `stat-${playerId}-saves`) ?? 0;
     const goalkeeper = formData.get(`stat-${playerId}-gk`) === "on";
+    // Saves belong to keepers only — ignore any value on an outfield player.
+    const saves = goalkeeper ? optInt(formData, `stat-${playerId}-saves`) ?? 0 : 0;
     // A keeper is on the pitch — count them as played even if the box is unticked.
     const played = formData.get(`stat-${playerId}-played`) === "on" || goalkeeper;
     if (played) playedIds.push(playerId);
