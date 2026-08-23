@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
 import type { MatchWithRefs } from "@/components/match-card";
@@ -27,8 +28,22 @@ const accent: Record<string, string> = {
 export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: string }) {
   const count = slot.fixtures.length;
 
+  const isLeague = Boolean(slot.seasonId);
+
   return (
-    <div className={`tv-card-sm border-l-4 p-4 ${accent[status] ?? "border-l-ink-400"}`}>
+    <div
+      className={`tv-card-sm border-l-4 p-4 ${accent[status] ?? "border-l-ink-400"} ${
+        isLeague ? "bg-gradient-to-br from-gold-400/[0.07] to-transparent ring-1 ring-inset ring-gold-400/25" : ""
+      }`}
+    >
+      {/* League identity: a trophy + matchday eyebrow instead of a badge. */}
+      {isLeague ? (
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300">
+          <Trophy className="h-3.5 w-3.5" />
+          {slot.title || "League matchday"}
+        </div>
+      ) : null}
+
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-xs font-semibold text-ink-500">
           {formatDate(slot.startAt)}
@@ -36,11 +51,7 @@ export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: str
           {formatTime(slot.startAt)}
         </span>
         <div className="flex items-center gap-1.5">
-          {slot.seasonId ? (
-            <span className="rounded-full bg-gold-400/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gold-300">
-              🏆 League
-            </span>
-          ) : slot.kind === "competitive" ? (
+          {!isLeague && slot.kind === "competitive" ? (
             <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>
