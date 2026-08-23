@@ -70,6 +70,58 @@ function RankedList<T>({
   );
 }
 
+// Keepers carry more stats than fit a cramped grid cell, so they get a
+// full-width row with named stat columns instead of RankedList's one value.
+function KeeperList({ rows, gkFloor }: { rows: SeasonView["keepers"]; gkFloor: number }) {
+  if (rows.length === 0)
+    return <p className="p-4 text-sm text-ink-500">No goalkeeper data yet.</p>;
+  return (
+    <ul>
+      {rows.map((r, i) => (
+        <li
+          key={r.playerId}
+          className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0"
+        >
+          <span
+            className={`scoreboard flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+              i === 0 ? "bg-gold-300 text-black" : i < 3 ? "bg-cream-200" : "bg-cream-50"
+            }`}
+          >
+            {i + 1}
+          </span>
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/players/${r.playerId}`}
+              className="block truncate text-sm font-bold hover:text-burnt-400"
+            >
+              {r.name}
+            </Link>
+            <p className="truncate text-xs text-ink-500">
+              {r.teamName ?? "Free agent"}
+              {r.eligible ? "" : ` · ${r.matches}/${gkFloor} apps`}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-4 text-right">
+            {[
+              { label: "CS", value: r.cleanSheets },
+              { label: "SV", value: r.saves },
+              { label: "GA", value: r.conceded },
+              { label: "APP", value: r.matches },
+            ].map((s) => (
+              <div key={s.label} className="w-9">
+                <p className="scoreboard text-base font-bold text-burnt-400">{s.value}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function AwardCard({
   icon,
   label,
@@ -232,22 +284,11 @@ export function LeagueStats({ view }: { view: SeasonView }) {
             empty="Clean so far."
           />
         </Panel>
-        <Panel title={<><Hand className="h-4 w-4" /> Goalkeepers</>}>
-          <RankedList
-            rows={topKeepers}
-            keyOf={(r) => r.playerId}
-            href={(r) => `/players/${r.playerId}`}
-            primary={(r) => r.name}
-            secondary={(r) =>
-              r.eligible
-                ? r.teamName ?? "Free agent"
-                : `${r.teamName ?? "Free agent"} · ${r.matches}/${gkFloor} apps`
-            }
-            value={(r) => `${r.cleanSheets} CS · ${r.saves} SV · ${r.conceded} GA`}
-            empty="No goalkeeper data yet."
-          />
-        </Panel>
       </section>
+
+      <Panel title={<><Hand className="h-4 w-4" /> Goalkeepers</>}>
+        <KeeperList rows={topKeepers} gkFloor={gkFloor} />
+      </Panel>
 
       {fairplay.length > 0 ? (
         <section>
