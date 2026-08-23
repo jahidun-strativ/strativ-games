@@ -21,7 +21,7 @@ export type SeasonScorer = {
 export type FairplayRow = { teamId: string; teamName: string; fouls: number; points: number };
 
 // A goalkeeper's defensive record: goals conceded while they were on the pitch,
-// clean sheets and matches kept. Best GK = lowest goals-against per game.
+// clean sheets and matches kept. Best GK = highest rating (see GK_WEIGHTS).
 export type KeeperRow = {
   playerId: string;
   name: string;
@@ -31,9 +31,28 @@ export type KeeperRow = {
   cleanSheets: number;
   saves: number;
   gaPerGame: number;
+  // Overall goalkeeper rating that drives the ranking (see gkScore).
+  score: number;
   // Played enough of the tournament to qualify for the Best GK award.
   eligible: boolean;
 };
+
+// GK rating = reward shutouts & shot-stopping & availability, punish conceding.
+// Kept as plain integer weights so the formula shown to users matches exactly.
+export const GK_WEIGHTS = { cleanSheet: 4, save: 1, appearance: 1, conceded: 2 } as const;
+export function gkScore(k: {
+  cleanSheets: number;
+  saves: number;
+  matches: number;
+  conceded: number;
+}): number {
+  return (
+    k.cleanSheets * GK_WEIGHTS.cleanSheet +
+    k.saves * GK_WEIGHTS.save +
+    k.matches * GK_WEIGHTS.appearance -
+    k.conceded * GK_WEIGHTS.conceded
+  );
+}
 
 type AwardPlayer = { id: string; name: string; teamName: string | null };
 
@@ -181,7 +200,7 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
     for (const k of keepers) {
       const row =
         byKeeper.get(k.playerId) ??
-        { playerId: k.playerId, name: k.name, teamName: k.teamName, matches: 0, conceded: 0, cleanSheets: 0, saves: 0, gaPerGame: 0 };
+        { playerId: k.playerId, name: k.name, teamName: k.teamName, matches: 0, conceded: 0, cleanSheets: 0, saves: 0, gaPerGame: 0, score: 0 };
       row.matches += 1;
       row.conceded += conceded;
       row.saves += k.saves;
@@ -191,13 +210,16 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
   }
 
   return [...byKeeper.values()]
-    .map((k) => ({ ...k, gaPerGame: k.matches ? k.conceded / k.matches : 0 }))
+    .map((k) => ({
+      ...k,
+      gaPerGame: k.matches ? k.conceded / k.matches : 0,
+      score: gkScore(k),
+    }))
     .sort(
       (a, b) =>
+        b.score - a.score ||
         a.gaPerGame - b.gaPerGame ||
         b.cleanSheets - a.cleanSheets ||
-        b.saves - a.saves ||
-        b.matches - a.matches ||
         a.name.localeCompare(b.name),
     );
 }

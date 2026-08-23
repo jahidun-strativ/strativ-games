@@ -103,13 +103,20 @@ function KeeperList({ rows, gkFloor }: { rows: SeasonView["keepers"]; gkFloor: n
           </div>
           <div className="flex shrink-0 gap-4 text-right">
             {[
-              { label: "CS", value: r.cleanSheets },
-              { label: "SV", value: r.saves },
-              { label: "GA", value: r.conceded },
-              { label: "APP", value: r.matches },
+              { label: "CS", value: r.cleanSheets, strong: false },
+              { label: "SV", value: r.saves, strong: false },
+              { label: "GA", value: r.conceded, strong: false },
+              { label: "APP", value: r.matches, strong: false },
+              { label: "RTG", value: r.score, strong: true },
             ].map((s) => (
               <div key={s.label} className="w-9">
-                <p className="scoreboard text-base font-bold text-burnt-400">{s.value}</p>
+                <p
+                  className={`scoreboard text-base font-bold ${
+                    s.strong ? "text-gold-300" : "text-burnt-400"
+                  }`}
+                >
+                  {s.value}
+                </p>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">
                   {s.label}
                 </p>
@@ -288,6 +295,11 @@ export function LeagueStats({ view }: { view: SeasonView }) {
 
       <Panel title={<><Hand className="h-4 w-4" /> Goalkeepers</>}>
         <KeeperList rows={topKeepers} gkFloor={gkFloor} />
+        <p className="border-t border-line px-4 py-2.5 text-xs text-ink-500">
+          <span className="font-semibold text-ink-400">Rating (RTG)</span> = clean sheets ×4 +
+          saves ×1 + appearances ×1 − goals against ×2. Higher is better; ties break on fewer
+          goals conceded per game.
+        </p>
       </Panel>
 
       {fairplay.length > 0 ? (
