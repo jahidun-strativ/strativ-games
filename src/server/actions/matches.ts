@@ -227,19 +227,21 @@ export async function recordResult(id: string, formData: FormData) {
     .set({ homeScore, awayScore, status: "completed" })
     .where(eq(matches.id, id));
 
-  // Per-player stat rows come in as stat-<playerId>-goals / -assists / -fouls / -played.
+  // Per-player rows: stat-<playerId>-goals / -assists / -fouls / -gk / -played.
   const statements = [];
   const playerIds = new Set<string>();
   const playedIds: string[] = [];
   for (const key of formData.keys()) {
-    const m = key.match(/^stat-(.+)-(goals|assists|fouls|played)$/);
+    const m = key.match(/^stat-(.+)-(goals|assists|fouls|gk|played)$/);
     if (m) playerIds.add(m[1]);
   }
   for (const playerId of playerIds) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
     const fouls = optInt(formData, `stat-${playerId}-fouls`) ?? 0;
-    const played = formData.get(`stat-${playerId}-played`) === "on";
+    const goalkeeper = formData.get(`stat-${playerId}-gk`) === "on";
+    // A keeper is on the pitch — count them as played even if the box is unticked.
+    const played = formData.get(`stat-${playerId}-played`) === "on" || goalkeeper;
     if (played) playedIds.push(playerId);
     if (!played && goals === 0 && assists === 0 && fouls === 0) {
       statements.push(
@@ -254,10 +256,10 @@ export async function recordResult(id: string, formData: FormData) {
     statements.push(
       db
         .insert(playerMatchStats)
-        .values({ matchId: id, playerId, goals, assists, fouls, played: true })
+        .values({ matchId: id, playerId, goals, assists, fouls, goalkeeper, played: true })
         .onConflictDoUpdate({
           target: [playerMatchStats.matchId, playerMatchStats.playerId],
-          set: { goals, assists, fouls, played: true },
+          set: { goals, assists, fouls, goalkeeper, played: true },
         }),
     );
   }

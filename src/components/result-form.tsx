@@ -51,6 +51,16 @@ function squadColumns() {
         </Form.Item>
       ),
     },
+    {
+      title: "🧤 GK",
+      width: 70,
+      align: "center" as const,
+      render: (_: unknown, p: Player) => (
+        <Form.Item name={`stat-${p.id}-gk`} valuePropName="checked" noStyle>
+          <Checkbox />
+        </Form.Item>
+      ),
+    },
   ];
 }
 
@@ -87,6 +97,7 @@ export function ResultForm({
     initialValues[`stat-${p.id}-goals`] = s?.goals ?? 0;
     initialValues[`stat-${p.id}-assists`] = s?.assists ?? 0;
     initialValues[`stat-${p.id}-fouls`] = s?.fouls ?? 0;
+    initialValues[`stat-${p.id}-gk`] = !!s?.goalkeeper;
   }
 
   return (

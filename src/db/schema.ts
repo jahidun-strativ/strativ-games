@@ -187,6 +187,9 @@ export const playerMatchStats = pgTable(
     assists: integer("assists").notNull().default(0),
     // Futsal tracks fouls (accumulate toward the direct free-kick), not cards.
     fouls: integer("fouls").notNull().default(0),
+    // This player kept goal in THIS match. Set per-match (a team's keeper can
+    // change game to game); overrides the team's default GK for Best GK scoring.
+    goalkeeper: boolean("goalkeeper").notNull().default(false),
     // Legacy: kept so old data isn't dropped; the app now tracks fouls instead.
     yellowCards: integer("yellow_cards").notNull().default(0),
     redCards: integer("red_cards").notNull().default(0),

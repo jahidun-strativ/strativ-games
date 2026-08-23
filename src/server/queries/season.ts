@@ -108,10 +108,13 @@ const isKeeperPosition = (pos: string | null | undefined) => {
 // (tie-break: more clean sheets, then more matches). This is what turns a team's
 // defensive solidity into GK credit, recomputed from live results.
 // ponytail: no min-appearances floor — a 1-match keeper can top a small league;
-// add a floor only if a keeper games the table by playing once.
+// add a floor only if a keeper games the table by playing once. If a match flags
+// two keepers for one team (a sub), both are credited the full conceded — we
+// don't track minutes; split only if that ever matters.
 async function seasonKeepers(seasonId: string): Promise<KeeperRow[]> {
   const rows = await db
     .select({
+      matchId: matches.id,
       homeTeamId: matches.homeTeamId,
       awayTeamId: matches.awayTeamId,
       homeScore: matches.homeScore,
@@ -121,8 +124,10 @@ async function seasonKeepers(seasonId: string): Promise<KeeperRow[]> {
       teamId: players.teamId,
       teamName: teams.name,
       position: players.position,
-      // The team's designated GK; when set it beats position-based detection.
+      // The team's default GK; used only when a match names no keeper.
       teamGkId: teams.goalkeeperId,
+      // Whether this player was flagged as keeper in THIS match.
+      keeperFlag: playerMatchStats.goalkeeper,
     })
     .from(playerMatchStats)
     .innerJoin(matches, eq(playerMatchStats.matchId, matches.id))
@@ -137,27 +142,45 @@ async function seasonKeepers(seasonId: string): Promise<KeeperRow[]> {
       ),
     );
 
-  const byKeeper = new Map<string, KeeperRow>();
+  type Row = (typeof rows)[number];
+  // Group the played players by match+team so we can resolve one team's keeper(s)
+  // per match with a clear priority: per-match GK flag → team default → position.
+  const groups = new Map<string, Row[]>();
   for (const r of rows) {
-    // If the team named a GK, only that player counts; otherwise fall back to
-    // anyone whose position reads as a keeper.
-    const isTeamKeeper = r.teamGkId ? r.playerId === r.teamGkId : isKeeperPosition(r.position);
-    if (!isTeamKeeper) continue;
-    if (r.homeScore === null || r.awayScore === null) continue;
+    if (!r.teamId) continue;
+    const key = `${r.matchId}::${r.teamId}`;
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(r);
+  }
+
+  const byKeeper = new Map<string, KeeperRow>();
+  for (const group of groups.values()) {
+    const g = group[0];
+    if (g.homeScore === null || g.awayScore === null) continue;
     const conceded =
-      r.teamId === r.homeTeamId
-        ? r.awayScore
-        : r.teamId === r.awayTeamId
-          ? r.homeScore
+      g.teamId === g.homeTeamId
+        ? g.awayScore
+        : g.teamId === g.awayTeamId
+          ? g.homeScore
           : null;
-    if (conceded === null) continue; // keeper's team wasn't in this match
-    const row =
-      byKeeper.get(r.playerId) ??
-      { playerId: r.playerId, name: r.name, teamName: r.teamName, matches: 0, conceded: 0, cleanSheets: 0, gaPerGame: 0 };
-    row.matches += 1;
-    row.conceded += conceded;
-    if (conceded === 0) row.cleanSheets += 1;
-    byKeeper.set(r.playerId, row);
+    if (conceded === null) continue; // team wasn't in this match
+
+    const flagged = group.filter((r) => r.keeperFlag);
+    const keepers =
+      flagged.length > 0
+        ? flagged
+        : g.teamGkId
+          ? group.filter((r) => r.playerId === g.teamGkId)
+          : group.filter((r) => isKeeperPosition(r.position));
+
+    for (const k of keepers) {
+      const row =
+        byKeeper.get(k.playerId) ??
+        { playerId: k.playerId, name: k.name, teamName: k.teamName, matches: 0, conceded: 0, cleanSheets: 0, gaPerGame: 0 };
+      row.matches += 1;
+      row.conceded += conceded;
+      if (conceded === 0) row.cleanSheets += 1;
+      byKeeper.set(k.playerId, row);
+    }
   }
 
   return [...byKeeper.values()]
