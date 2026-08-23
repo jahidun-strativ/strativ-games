@@ -97,6 +97,7 @@ async function CostsContent() {
       return {
         id: s.id,
         label,
+        isLeague: Boolean(s.seasonId),
         at: s.startAt,
         venue: s.venue.name,
         cost: total,
@@ -142,7 +143,16 @@ async function CostsContent() {
           {toSettle.map((s) => (
             <div key={s.id} className="tv-card-sm p-4">
               <div className="flex items-baseline justify-between gap-3">
-                <p className="min-w-0 truncate font-display text-base text-ink-900">{s.label}</p>
+                <p className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      s.isLeague ? "bg-gold-400/20 text-gold-300" : "bg-ink-900/5 text-ink-500"
+                    }`}
+                  >
+                    {s.isLeague ? "🏆 League" : "Regular"}
+                  </span>
+                  <span className="min-w-0 truncate font-display text-base text-ink-900">{s.label}</span>
+                </p>
                 <p className="scoreboard shrink-0 font-bold text-gold-400">
                   {formatBdt(s.outstanding)}
                 </p>
