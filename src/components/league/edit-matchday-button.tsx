@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, DatePicker, Form, Input, Select } from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, Segmented, Select } from "antd";
 import { FormModal } from "@/components/form-modal";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { utcToPickerValue } from "@/lib/timezone";
@@ -22,6 +22,8 @@ export function EditMatchdayButton({
   title,
   startAt,
   venueId,
+  cost,
+  paidBy,
   fixtures,
   venues,
   teams,
@@ -30,6 +32,8 @@ export function EditMatchdayButton({
   title: string | null;
   startAt: Date;
   venueId: string;
+  cost: number | null;
+  paidBy: string;
   fixtures: Fixture[];
   venues: Venue[];
   teams: TeamOpt[];
@@ -42,6 +46,8 @@ export function EditMatchdayButton({
           title={title}
           startAt={startAt}
           venueId={venueId}
+          cost={cost}
+          paidBy={paidBy}
           fixtures={fixtures}
           venues={venues}
           teams={teams}
@@ -57,6 +63,8 @@ function EditMatchdayForm({
   title,
   startAt,
   venueId,
+  cost,
+  paidBy,
   fixtures,
   venues,
   teams,
@@ -66,18 +74,23 @@ function EditMatchdayForm({
   title: string | null;
   startAt: Date;
   venueId: string;
+  cost: number | null;
+  paidBy: string;
   fixtures: Fixture[];
   venues: Venue[];
   teams: TeamOpt[];
   onSuccess: () => void;
 }) {
   const { onFinish, isPending } = useActionSubmit(updateMatchday.bind(null, sessionId), onSuccess);
+  const [form] = Form.useForm();
   const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
 
   const initialValues: Record<string, unknown> = {
     title: title ?? "",
     venueId,
     startAt: utcToPickerValue(startAt),
+    cost: cost ?? undefined,
+    paidBy: paidBy === "self" ? "self" : "office",
   };
   for (const f of fixtures) {
     initialValues[`home_${f.id}`] = f.homeTeamId ?? undefined;
@@ -85,13 +98,21 @@ function EditMatchdayForm({
   }
 
   return (
-    <Form layout="vertical" onFinish={onFinish} initialValues={initialValues}>
+    <Form form={form} layout="vertical" onFinish={onFinish} initialValues={initialValues}>
       <Form.Item label="Title" name="title">
         <Input placeholder="Matchday 1" />
       </Form.Item>
       <div className="grid gap-x-4 sm:grid-cols-2">
-        <Form.Item label="Venue" name="venueId" rules={[{ required: true, message: "Pick the venue" }]}>
-          <Select options={venues.map((v) => ({ value: v.id, label: v.name }))} />
+        <Form.Item label="Venue (booking)" name="venueId" rules={[{ required: true, message: "Pick the venue" }]}>
+          <Select
+            options={venues.map((v) => ({ value: v.id, label: v.name }))}
+            onChange={(id) => {
+              const v = venues.find((x) => x.id === id);
+              if (v?.defaultCost != null && !form.getFieldValue("cost")) {
+                form.setFieldValue("cost", v.defaultCost);
+              }
+            }}
+          />
         </Form.Item>
         <Form.Item label="Start (Bangladesh time)" name="startAt" rules={[{ required: true }]}>
           <DatePicker
@@ -100,6 +121,21 @@ function EditMatchdayForm({
             inputReadOnly
             className="!w-full"
             classNames={{ popup: { root: "ssm-datetime-popup" } }}
+          />
+        </Form.Item>
+      </div>
+
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <Form.Item label="Slot cost (৳)" name="cost">
+          <InputNumber min={0} step={100} className="!w-full" placeholder="e.g. 3000" />
+        </Form.Item>
+        <Form.Item label="Paid by" name="paidBy">
+          <Segmented
+            block
+            options={[
+              { label: "Office", value: "office" },
+              { label: "We pay", value: "self" },
+            ]}
           />
         </Form.Item>
       </div>

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matches, seasons, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
-import { int, opt, str } from "@/server/form";
+import { int, opt, optInt, str } from "@/server/form";
 import { threeTeamRoundRobin } from "@/server/round-robin";
 import { seedDefaultAvailability } from "@/server/seed-availability";
 import { notifyLeagueMatchday, notifyLeagueChampion } from "@/server/notify-match";
@@ -16,6 +16,7 @@ function revalidateLeague(seasonId?: string) {
   revalidatePath("/league");
   revalidatePath("/league/matches");
   revalidatePath("/matches");
+  revalidatePath("/costs");
   revalidatePath("/");
   if (seasonId) revalidatePath(`/league/${seasonId}`);
 }
@@ -47,6 +48,8 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   const venueId = str(formData, "venueId");
   const startAt = new Date(str(formData, "startAt"));
   if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start time.");
+  const cost = optInt(formData, "cost");
+  const paidBy = opt(formData, "paidBy") === "self" ? "self" : "office";
 
   const internal = await db.query.teams.findMany({
     where: eq(teams.sportId, season.sportId),
@@ -71,6 +74,8 @@ export async function addMatchday(seasonId: string, formData: FormData) {
       kind: "internal",
       title: `Matchday ${existing + 1}`,
       startAt,
+      cost,
+      paidBy,
       status: "scheduled",
     })
     .returning();
@@ -121,11 +126,13 @@ export async function updateMatchday(sessionId: string, formData: FormData) {
   const venueId = str(formData, "venueId");
   const startAt = new Date(str(formData, "startAt"));
   if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start time.");
+  const cost = optInt(formData, "cost");
+  const paidBy = opt(formData, "paidBy") === "self" ? "self" : "office";
   const delta = startAt.getTime() - session.startAt.getTime();
 
   await db
     .update(sessions)
-    .set({ title: title ?? session.title, venueId, startAt })
+    .set({ title: title ?? session.title, venueId, startAt, cost, paidBy })
     .where(eq(sessions.id, sessionId));
 
   for (const f of session.fixtures) {

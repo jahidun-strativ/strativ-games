@@ -7,7 +7,7 @@ import { getActiveSeason, getSeasonMatchdays } from "@/server/queries/season";
 import { AddMatchdayButton } from "@/components/league/add-matchday-button";
 import { EditMatchdayButton } from "@/components/league/edit-matchday-button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
 
 export const metadata = { title: "League matches" };
 export const dynamic = "force-dynamic";
@@ -59,6 +59,7 @@ export default async function LeagueMatchesPage() {
                     <p className="truncate text-xs text-ink-500">
                       {formatDate(md.startAt)} · {formatTime(md.startAt)}
                       {md.venue ? ` · 📍 ${md.venue.name}` : ""}
+                      {md.cost != null ? ` · 💰 ${formatBdt(md.cost)} · ${paidByLabel(md.paidBy)}` : ""}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold text-ink-500">
@@ -70,6 +71,8 @@ export default async function LeagueMatchesPage() {
                       title={md.title}
                       startAt={md.startAt}
                       venueId={md.venueId}
+                      cost={md.cost}
+                      paidBy={md.paidBy}
                       venues={venues}
                       teams={pairingTeams}
                       fixtures={md.fixtures.map((f) => ({
