@@ -227,22 +227,21 @@ export async function recordResult(id: string, formData: FormData) {
     .set({ homeScore, awayScore, status: "completed" })
     .where(eq(matches.id, id));
 
-  // Per-player stat rows come in as stat-<playerId>-goals / -assists / -played.
+  // Per-player stat rows come in as stat-<playerId>-goals / -assists / -fouls / -played.
   const statements = [];
   const playerIds = new Set<string>();
   const playedIds: string[] = [];
   for (const key of formData.keys()) {
-    const m = key.match(/^stat-(.+)-(goals|assists|yellow|red|played)$/);
+    const m = key.match(/^stat-(.+)-(goals|assists|fouls|played)$/);
     if (m) playerIds.add(m[1]);
   }
   for (const playerId of playerIds) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
-    const yellowCards = optInt(formData, `stat-${playerId}-yellow`) ?? 0;
-    const redCards = optInt(formData, `stat-${playerId}-red`) ?? 0;
+    const fouls = optInt(formData, `stat-${playerId}-fouls`) ?? 0;
     const played = formData.get(`stat-${playerId}-played`) === "on";
     if (played) playedIds.push(playerId);
-    if (!played && goals === 0 && assists === 0 && yellowCards === 0 && redCards === 0) {
+    if (!played && goals === 0 && assists === 0 && fouls === 0) {
       statements.push(
         db
           .delete(playerMatchStats)
@@ -255,10 +254,10 @@ export async function recordResult(id: string, formData: FormData) {
     statements.push(
       db
         .insert(playerMatchStats)
-        .values({ matchId: id, playerId, goals, assists, yellowCards, redCards, played: true })
+        .values({ matchId: id, playerId, goals, assists, fouls, played: true })
         .onConflictDoUpdate({
           target: [playerMatchStats.matchId, playerMatchStats.playerId],
-          set: { goals, assists, yellowCards, redCards, played: true },
+          set: { goals, assists, fouls, played: true },
         }),
     );
   }

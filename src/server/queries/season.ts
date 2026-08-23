@@ -5,10 +5,6 @@ import { matches, playerMatchStats, players, seasons, sessions, teams } from "@/
 import { computeStandings, type StandingsRow } from "@/server/queries/standings";
 import type { Season } from "@/db/schema";
 
-// Red weighs more than yellow — standard fair-play scoring. Fewest points wins.
-// ponytail: fixed 1/3 weighting; make it a season setting only if a league asks.
-const CARD_POINTS = { yellow: 1, red: 3 };
-
 export type SeasonScorer = {
   playerId: string;
   name: string;
@@ -17,12 +13,12 @@ export type SeasonScorer = {
   position: string;
   goals: number;
   assists: number;
-  yellow: number;
-  red: number;
+  fouls: number;
   appearances: number;
 };
 
-export type FairplayRow = { teamId: string; teamName: string; yellow: number; red: number; points: number };
+// Fair play = fewest fouls. points === fouls (kept for the table's "Pts" column).
+export type FairplayRow = { teamId: string; teamName: string; fouls: number; points: number };
 
 type AwardPlayer = { id: string; name: string; teamName: string | null };
 
@@ -75,8 +71,7 @@ async function seasonScorers(seasonId: string): Promise<SeasonScorer[]> {
       position: players.position,
       goals: sum(playerMatchStats.goals).mapWith(Number),
       assists: sum(playerMatchStats.assists).mapWith(Number),
-      yellow: sum(playerMatchStats.yellowCards).mapWith(Number),
-      red: sum(playerMatchStats.redCards).mapWith(Number),
+      fouls: sum(playerMatchStats.fouls).mapWith(Number),
       appearances: count(playerMatchStats.id).mapWith(Number),
     })
     .from(playerMatchStats)
@@ -177,21 +172,20 @@ export const getSeasonView = cache(async (season: Season) => {
   const leagueMatches = matchdays.flatMap((m) => m.fixtures);
   const standings = computeStandings(internalTeams, leagueMatches);
 
-  // Team discipline, only for teams that have actually played. A player's cards
+  // Team discipline, only for teams that have actually played. A player's fouls
   // fall to their current roster team (rosters are stable within a season).
   const playedTeamIds = new Set(standings.filter((r) => r.played > 0).map((r) => r.teamId));
   const disc = new Map<string, FairplayRow>(
     internalTeams
       .filter((t) => playedTeamIds.has(t.id))
-      .map((t) => [t.id, { teamId: t.id, teamName: t.name, yellow: 0, red: 0, points: 0 }]),
+      .map((t) => [t.id, { teamId: t.id, teamName: t.name, fouls: 0, points: 0 }]),
   );
   for (const s of scorers) {
     if (!s.teamId) continue;
     const row = disc.get(s.teamId);
     if (!row) continue;
-    row.yellow += s.yellow;
-    row.red += s.red;
-    row.points += s.yellow * CARD_POINTS.yellow + s.red * CARD_POINTS.red;
+    row.fouls += s.fouls;
+    row.points += s.fouls;
   }
   const fairplay = [...disc.values()].sort(
     (a, b) => a.points - b.points || a.teamName.localeCompare(b.teamName),

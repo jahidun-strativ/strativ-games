@@ -181,6 +181,9 @@ export const playerMatchStats = pgTable(
       .references(() => players.id, { onDelete: "cascade" }),
     goals: integer("goals").notNull().default(0),
     assists: integer("assists").notNull().default(0),
+    // Futsal tracks fouls (accumulate toward the direct free-kick), not cards.
+    fouls: integer("fouls").notNull().default(0),
+    // Legacy: kept so old data isn't dropped; the app now tracks fouls instead.
     yellowCards: integer("yellow_cards").notNull().default(0),
     redCards: integer("red_cards").notNull().default(0),
     played: boolean("played").notNull().default(true),

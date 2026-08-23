@@ -4,15 +4,12 @@ import { StandingsTable } from "@/components/tables/standings-table";
 import { formatDate, formatTime } from "@/lib/format";
 import type { SeasonView } from "@/server/queries/season";
 
-// Small football-card chip — a rounded rectangle in the yellow/red tone.
-function CardChip({ tone }: { tone: "yellow" | "red" }) {
+// Futsal tracks fouls, not cards — a small flag marks the discipline columns.
+function FoulFlag() {
   return (
-    <span
-      aria-label={tone === "yellow" ? "yellow card" : "red card"}
-      className={`inline-block h-3.5 w-2.5 shrink-0 rounded-[2px] align-middle ${
-        tone === "yellow" ? "bg-gold-400" : "bg-tvred-500"
-      }`}
-    />
+    <span aria-label="fouls" className="align-middle">
+      🚩
+    </span>
   );
 }
 
@@ -161,7 +158,7 @@ export function LeagueAwards({ view }: { view: SeasonView }) {
           icon={<ShieldCheck className="h-5 w-5 text-pitch-500" />}
           label="Fair play"
           winner={awards.fairplay?.teamName ?? null}
-          sub={awards.fairplay ? `${awards.fairplay.points} disciplinary pts` : null}
+          sub={awards.fairplay ? `${awards.fairplay.points} fouls` : null}
           auto={awards.fairplay?.auto}
         />
         <AwardCard
@@ -186,8 +183,8 @@ export function LeagueStats({ view }: { view: SeasonView }) {
   const scorersWithGoals = scorers.filter((s) => s.goals > 0).slice(0, 8);
   const assisters = [...scorers].filter((s) => s.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 8);
   const booked = [...scorers]
-    .filter((s) => s.yellow + s.red > 0)
-    .sort((a, b) => b.red * 3 + b.yellow - (a.red * 3 + a.yellow))
+    .filter((s) => s.fouls > 0)
+    .sort((a, b) => b.fouls - a.fouls)
     .slice(0, 8);
 
   return (
@@ -215,20 +212,14 @@ export function LeagueStats({ view }: { view: SeasonView }) {
             empty="No assists yet."
           />
         </Panel>
-        <Panel title={<><CardChip tone="yellow" /> Discipline</>}>
+        <Panel title={<><FoulFlag /> Most fouls</>}>
           <RankedList
             rows={booked}
             keyOf={(r) => r.playerId}
             href={(r) => `/players/${r.playerId}`}
             primary={(r) => r.name}
             secondary={(r) => r.teamName ?? "Free agent"}
-            value={(r) => (
-              <span className="flex items-center gap-1.5 text-sm">
-                {r.yellow}
-                <CardChip tone="yellow" /> {r.red}
-                <CardChip tone="red" />
-              </span>
-            )}
+            value={(r) => `${r.fouls} fouls`}
             empty="Clean so far."
           />
         </Panel>
@@ -242,18 +233,14 @@ export function LeagueStats({ view }: { view: SeasonView }) {
               <thead>
                 <tr className="bg-black/60 text-left font-display text-gold-300">
                   <th className="px-4 py-2">Team</th>
-                  <th className="px-4 py-2 text-center"><CardChip tone="yellow" /></th>
-                  <th className="px-4 py-2 text-center"><CardChip tone="red" /></th>
-                  <th className="px-4 py-2 text-center">Pts</th>
+                  <th className="px-4 py-2 text-center"><FoulFlag /> Fouls</th>
                 </tr>
               </thead>
               <tbody>
                 {fairplay.map((f, i) => (
                   <tr key={f.teamId} className={`border-b border-line last:border-b-0 ${i === 0 ? "bg-gold-400/10" : ""}`}>
                     <td className="px-4 py-2 font-bold">{f.teamName}</td>
-                    <td className="px-4 py-2 text-center">{f.yellow}</td>
-                    <td className="px-4 py-2 text-center">{f.red}</td>
-                    <td className="scoreboard px-4 py-2 text-center font-bold">{f.points}</td>
+                    <td className="scoreboard px-4 py-2 text-center font-bold">{f.fouls}</td>
                   </tr>
                 ))}
               </tbody>

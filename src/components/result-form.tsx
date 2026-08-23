@@ -42,22 +42,12 @@ function squadColumns() {
       ),
     },
     {
-      title: "🟨",
-      width: 70,
+      title: "Fouls",
+      width: 80,
       align: "center" as const,
       render: (_: unknown, p: Player) => (
-        <Form.Item name={`stat-${p.id}-yellow`} noStyle>
-          <InputNumber min={0} size="small" className="!w-14" />
-        </Form.Item>
-      ),
-    },
-    {
-      title: "🟥",
-      width: 70,
-      align: "center" as const,
-      render: (_: unknown, p: Player) => (
-        <Form.Item name={`stat-${p.id}-red`} noStyle>
-          <InputNumber min={0} size="small" className="!w-14" />
+        <Form.Item name={`stat-${p.id}-fouls`} noStyle>
+          <InputNumber min={0} size="small" className="!w-16" />
         </Form.Item>
       ),
     },
@@ -96,8 +86,7 @@ export function ResultForm({
     initialValues[`stat-${p.id}-played`] = !!s?.played;
     initialValues[`stat-${p.id}-goals`] = s?.goals ?? 0;
     initialValues[`stat-${p.id}-assists`] = s?.assists ?? 0;
-    initialValues[`stat-${p.id}-yellow`] = s?.yellowCards ?? 0;
-    initialValues[`stat-${p.id}-red`] = s?.redCards ?? 0;
+    initialValues[`stat-${p.id}-fouls`] = s?.fouls ?? 0;
   }
 
   return (

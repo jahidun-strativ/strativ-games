@@ -73,7 +73,7 @@ export function AwardEditor({
   return (
     <div className="tv-card-sm grid gap-4 p-4 sm:grid-cols-2">
       {row(<Medal className="h-4 w-4 text-gold-300" />, "Top scorer", "Blank = auto (most goals)", "topScorerId", season.topScorerId, playerOpts)}
-      {row(<ShieldCheck className="h-4 w-4 text-pitch-500" />, "Fair play", "Blank = auto (fewest cards)", "fairplayTeamId", season.fairplayTeamId, teamOpts)}
+      {row(<ShieldCheck className="h-4 w-4 text-pitch-500" />, "Fair play", "Blank = auto (fewest fouls)", "fairplayTeamId", season.fairplayTeamId, teamOpts)}
       {row(<Star className="h-4 w-4 text-burnt-400" />, "Player of the season", "Admin pick", "playerOfSeasonId", season.playerOfSeasonId, playerOpts)}
       {row(<Hand className="h-4 w-4 text-sky-400" />, "Best goalkeeper", "Admin pick", "bestGkId", season.bestGkId, playerOpts)}
     </div>
