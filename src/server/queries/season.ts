@@ -29,6 +29,7 @@ export type KeeperRow = {
   matches: number;
   conceded: number;
   cleanSheets: number;
+  saves: number;
   gaPerGame: number;
   // Played enough of the tournament to qualify for the Best GK award.
   eligible: boolean;
@@ -40,7 +41,7 @@ export type SeasonAwards = {
   topScorer: { player: AwardPlayer; goals: number; auto: boolean } | null;
   fairplay: { teamId: string; teamName: string; points: number; auto: boolean } | null;
   playerOfSeason: AwardPlayer | null;
-  bestGk: { player: AwardPlayer; cleanSheets: number; conceded: number; matches: number; auto: boolean } | null;
+  bestGk: { player: AwardPlayer; cleanSheets: number; conceded: number; saves: number; matches: number; auto: boolean } | null;
 };
 
 // cache(): the league layout and the active sub-page both resolve the season —
@@ -130,8 +131,9 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
       position: players.position,
       // The team's default GK; used only when a match names no keeper.
       teamGkId: teams.goalkeeperId,
-      // Whether this player was flagged as keeper in THIS match.
+      // Whether this player was flagged as keeper in THIS match, and their saves.
       keeperFlag: playerMatchStats.goalkeeper,
+      saves: playerMatchStats.saves,
     })
     .from(playerMatchStats)
     .innerJoin(matches, eq(playerMatchStats.matchId, matches.id))
@@ -179,9 +181,10 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
     for (const k of keepers) {
       const row =
         byKeeper.get(k.playerId) ??
-        { playerId: k.playerId, name: k.name, teamName: k.teamName, matches: 0, conceded: 0, cleanSheets: 0, gaPerGame: 0 };
+        { playerId: k.playerId, name: k.name, teamName: k.teamName, matches: 0, conceded: 0, cleanSheets: 0, saves: 0, gaPerGame: 0 };
       row.matches += 1;
       row.conceded += conceded;
+      row.saves += k.saves;
       if (conceded === 0) row.cleanSheets += 1;
       byKeeper.set(k.playerId, row);
     }
@@ -193,6 +196,7 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
       (a, b) =>
         a.gaPerGame - b.gaPerGame ||
         b.cleanSheets - a.cleanSheets ||
+        b.saves - a.saves ||
         b.matches - a.matches ||
         a.name.localeCompare(b.name),
     );
@@ -235,10 +239,14 @@ async function resolveAwards(
   // `scorers`, but admin overrides/picks may not be — fetch them all to be safe).
   const topScorerAuto = scorers.find((s) => s.goals > 0) ?? null;
   const topScorerId = season.topScorerId ?? topScorerAuto?.playerId ?? null;
-  // Best GK auto = best defensive record AMONG keepers who've kept in at least
-  // half the tournament (keepers is pre-sorted best-first, so first match wins).
-  // A one-match keeper can't out-rank a regular starter on a lucky clean sheet.
-  const bestGkAuto = keepers.find((k) => k.matches >= minGkMatches) ?? null;
+  // Best GK is an END-OF-SEASON award: only auto-picked once the season is
+  // ended, so a mid-season leader on a small sample never gets crowned. Among
+  // keepers who kept at least half the tournament, best defensive record wins
+  // (keepers is pre-sorted best-first). An admin pick still shows any time.
+  const bestGkAuto =
+    season.status === "ended"
+      ? keepers.find((k) => k.matches >= minGkMatches) ?? null
+      : null;
   const bestGkId = season.bestGkId ?? bestGkAuto?.playerId ?? null;
   const ids = [topScorerId, season.playerOfSeasonId, bestGkId].filter(
     (v): v is string => Boolean(v),
@@ -281,6 +289,7 @@ async function resolveAwards(
         player,
         cleanSheets: rec?.cleanSheets ?? 0,
         conceded: rec?.conceded ?? 0,
+        saves: rec?.saves ?? 0,
         matches: rec?.matches ?? 0,
         auto: !season.bestGkId,
       };

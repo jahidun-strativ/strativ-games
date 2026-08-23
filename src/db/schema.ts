@@ -190,6 +190,8 @@ export const playerMatchStats = pgTable(
     // This player kept goal in THIS match. Set per-match (a team's keeper can
     // change game to game); overrides the team's default GK for Best GK scoring.
     goalkeeper: boolean("goalkeeper").notNull().default(false),
+    // Shots the keeper saved in this match (goalkeeping tally).
+    saves: integer("saves").notNull().default(0),
     // Legacy: kept so old data isn't dropped; the app now tracks fouls instead.
     yellowCards: integer("yellow_cards").notNull().default(0),
     redCards: integer("red_cards").notNull().default(0),

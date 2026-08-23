@@ -232,18 +232,19 @@ export async function recordResult(id: string, formData: FormData) {
   const playerIds = new Set<string>();
   const playedIds: string[] = [];
   for (const key of formData.keys()) {
-    const m = key.match(/^stat-(.+)-(goals|assists|fouls|gk|played)$/);
+    const m = key.match(/^stat-(.+)-(goals|assists|fouls|gk|saves|played)$/);
     if (m) playerIds.add(m[1]);
   }
   for (const playerId of playerIds) {
     const goals = optInt(formData, `stat-${playerId}-goals`) ?? 0;
     const assists = optInt(formData, `stat-${playerId}-assists`) ?? 0;
     const fouls = optInt(formData, `stat-${playerId}-fouls`) ?? 0;
+    const saves = optInt(formData, `stat-${playerId}-saves`) ?? 0;
     const goalkeeper = formData.get(`stat-${playerId}-gk`) === "on";
     // A keeper is on the pitch — count them as played even if the box is unticked.
     const played = formData.get(`stat-${playerId}-played`) === "on" || goalkeeper;
     if (played) playedIds.push(playerId);
-    if (!played && goals === 0 && assists === 0 && fouls === 0) {
+    if (!played && goals === 0 && assists === 0 && fouls === 0 && saves === 0) {
       statements.push(
         db
           .delete(playerMatchStats)
@@ -256,10 +257,10 @@ export async function recordResult(id: string, formData: FormData) {
     statements.push(
       db
         .insert(playerMatchStats)
-        .values({ matchId: id, playerId, goals, assists, fouls, goalkeeper, played: true })
+        .values({ matchId: id, playerId, goals, assists, fouls, saves, goalkeeper, played: true })
         .onConflictDoUpdate({
           target: [playerMatchStats.matchId, playerMatchStats.playerId],
-          set: { goals, assists, fouls, goalkeeper, played: true },
+          set: { goals, assists, fouls, saves, goalkeeper, played: true },
         }),
     );
   }

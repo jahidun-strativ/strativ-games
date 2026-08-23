@@ -173,7 +173,7 @@ export function LeagueAwards({ view }: { view: SeasonView }) {
           winner={awards.bestGk?.player.name ?? null}
           sub={
             awards.bestGk
-              ? `${awards.bestGk.cleanSheets} clean sheet${awards.bestGk.cleanSheets === 1 ? "" : "s"} · ${awards.bestGk.conceded} conceded${awards.bestGk.player.teamName ? ` · ${awards.bestGk.player.teamName}` : ""}`
+              ? `${awards.bestGk.cleanSheets} clean sheet${awards.bestGk.cleanSheets === 1 ? "" : "s"} · ${awards.bestGk.saves} saves · ${awards.bestGk.conceded} conceded`
               : null
           }
           auto={awards.bestGk?.auto}
@@ -243,7 +243,7 @@ export function LeagueStats({ view }: { view: SeasonView }) {
                 ? r.teamName ?? "Free agent"
                 : `${r.teamName ?? "Free agent"} · ${r.matches}/${gkFloor} apps`
             }
-            value={(r) => `${r.cleanSheets} CS · ${r.conceded} GA`}
+            value={(r) => `${r.cleanSheets} CS · ${r.saves} SV · ${r.conceded} GA`}
             empty="No goalkeeper data yet."
           />
         </Panel>

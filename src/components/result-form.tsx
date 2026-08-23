@@ -61,6 +61,16 @@ function squadColumns() {
         </Form.Item>
       ),
     },
+    {
+      title: "Saves",
+      width: 80,
+      align: "center" as const,
+      render: (_: unknown, p: Player) => (
+        <Form.Item name={`stat-${p.id}-saves`} noStyle>
+          <InputNumber min={0} size="small" className="!w-16" />
+        </Form.Item>
+      ),
+    },
   ];
 }
 
@@ -98,6 +108,7 @@ export function ResultForm({
     initialValues[`stat-${p.id}-assists`] = s?.assists ?? 0;
     initialValues[`stat-${p.id}-fouls`] = s?.fouls ?? 0;
     initialValues[`stat-${p.id}-gk`] = !!s?.goalkeeper;
+    initialValues[`stat-${p.id}-saves`] = s?.saves ?? 0;
   }
 
   return (
