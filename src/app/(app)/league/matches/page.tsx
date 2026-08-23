@@ -8,7 +8,7 @@ import { slotTotal } from "@/server/queries/session-costs";
 import { AddMatchdayButton } from "@/components/league/add-matchday-button";
 import { EditMatchdayButton } from "@/components/league/edit-matchday-button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
+import { formatDate, formatTime, formatBdt, paidByLabel, matchdayLabel } from "@/lib/format";
 
 export const metadata = { title: "League matches" };
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export default async function LeagueMatchesPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-lg text-ink-900">
-                      {md.title ?? `Matchday ${i + 1}`}
+                      {matchdayLabel(md.title, i)}
                     </p>
                     <p className="truncate text-xs text-ink-500">
                       {formatDate(md.startAt)} · {formatTime(md.startAt)}
@@ -71,7 +71,7 @@ export default async function LeagueMatchesPage() {
                   {admin ? (
                     <EditMatchdayButton
                       sessionId={md.id}
-                      title={md.title}
+                      title={matchdayLabel(md.title, i)}
                       startAt={md.startAt}
                       venueId={md.venueId}
                       cost={md.cost}

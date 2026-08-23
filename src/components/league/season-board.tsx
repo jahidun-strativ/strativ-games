@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Trophy, Medal, ShieldCheck, Star, Hand, Goal, Handshake } from "lucide-react";
 import { StandingsTable } from "@/components/tables/standings-table";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, matchdayLabel } from "@/lib/format";
 import type { SeasonView } from "@/server/queries/season";
 
 // Futsal tracks fouls, not cards — a small flag marks the discipline columns.
@@ -289,7 +289,7 @@ export function LeagueMatchdays({ matchdays }: { matchdays: SeasonView["matchday
               {/* Slim matchday divider */}
               <div className="flex items-baseline justify-between gap-x-3 bg-cream-100 px-3 py-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700">
-                  {md.title ?? `Matchday ${i + 1}`}
+                  {matchdayLabel(md.title, i)}
                 </span>
                 <span className="truncate text-[11px] text-ink-500">
                   {formatDate(md.startAt)}

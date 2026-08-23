@@ -55,6 +55,15 @@ export const formatBdt = (amount: number) => `৳${bdtFmt.format(amount)}`;
 /** Human label for who covered a booking. */
 export const paidByLabel = (paidBy: string) => (paidBy === "self" ? "We pay" : "Office");
 
+// A matchday's display name. The stored title is the frozen creation number
+// ("Matchday 3"), which drifts out of order once dates are edited — so for a
+// default-pattern title we renumber from the chronological index (0-based).
+// A custom title (anything not "Matchday <n>") is kept as-is.
+export function matchdayLabel(title: string | null, index: number): string {
+  if (!title || /^matchday\s+\d+$/i.test(title.trim())) return `Matchday ${index + 1}`;
+  return title;
+}
+
 // Value for <input type="datetime-local"> in local time.
 export function toDatetimeLocal(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
