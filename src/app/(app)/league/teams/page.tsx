@@ -5,6 +5,7 @@ import { teams } from "@/db/schema";
 import { isAdmin, canManageTeam } from "@/server/auth";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
+import { GkPicker } from "@/components/gk-picker";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
 import { TeamBanner } from "@/components/team-banner";
@@ -154,6 +155,24 @@ export default async function LeagueTeamsPage() {
                 ) : (
                   <p className="text-sm font-semibold text-ink-900">
                     {team.captain?.name ?? "Not assigned"}
+                  </p>
+                )}
+              </div>
+
+              {/* Goalkeeper */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Goalkeeper
+                </p>
+                {admin ? (
+                  <GkPicker
+                    teamId={team.id}
+                    goalkeeperId={team.goalkeeperId}
+                    players={team.players.map((p) => ({ id: p.id, name: p.name }))}
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-ink-900">
+                    {team.players.find((p) => p.id === team.goalkeeperId)?.name ?? "Not assigned"}
                   </p>
                 )}
               </div>

@@ -121,6 +121,8 @@ async function seasonKeepers(seasonId: string): Promise<KeeperRow[]> {
       teamId: players.teamId,
       teamName: teams.name,
       position: players.position,
+      // The team's designated GK; when set it beats position-based detection.
+      teamGkId: teams.goalkeeperId,
     })
     .from(playerMatchStats)
     .innerJoin(matches, eq(playerMatchStats.matchId, matches.id))
@@ -137,7 +139,10 @@ async function seasonKeepers(seasonId: string): Promise<KeeperRow[]> {
 
   const byKeeper = new Map<string, KeeperRow>();
   for (const r of rows) {
-    if (!isKeeperPosition(r.position)) continue;
+    // If the team named a GK, only that player counts; otherwise fall back to
+    // anyone whose position reads as a keeper.
+    const isTeamKeeper = r.teamGkId ? r.playerId === r.teamGkId : isKeeperPosition(r.position);
+    if (!isTeamKeeper) continue;
     if (r.homeScore === null || r.awayScore === null) continue;
     const conceded =
       r.teamId === r.homeTeamId
