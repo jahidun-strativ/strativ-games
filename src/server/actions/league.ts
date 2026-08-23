@@ -63,7 +63,8 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   }
 
   const existing = await db.$count(sessions, eq(sessions.seasonId, seasonId));
-  const planned = threeTeamRoundRobin(leagueTeams.map((t) => t.id));
+  // Rotate the rest roles by matchday number so no team is permanently favoured.
+  const planned = threeTeamRoundRobin(leagueTeams.map((t) => t.id), existing);
 
   const [session] = await db
     .insert(sessions)

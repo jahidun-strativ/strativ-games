@@ -38,7 +38,9 @@ function AddMatchdayForm({
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ paidBy: "office" }}>
       <p className="mb-3 text-sm text-ink-500">
-        Books a 90-min slot and generates the 3-team round-robin (3 games) automatically.
+        Books a 90-min slot and generates the 3-team round-robin (3 games). The
+        rest order rotates each matchday, so every team gets the mid-slot rest
+        equally over the season — you can still fine-tune pairings after.
       </p>
       <Form.Item
         label="Venue (booking)"
