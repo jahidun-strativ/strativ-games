@@ -11,8 +11,12 @@ function squadColumns() {
       dataIndex: "name",
       fixed: "left" as const,
       width: 160,
+      // Cells are transparent in this dark theme, so a pinned column would let
+      // the scrolling columns show through — force an opaque surface behind it.
+      onCell: () => ({ className: "!bg-cream-50" }),
+      onHeaderCell: () => ({ className: "!bg-cream-50" }),
       render: (_: unknown, p: Player) => (
-        <span className="block font-medium leading-tight">{p.name}</span>
+        <span className="block break-words font-medium leading-tight">{p.name}</span>
       ),
     },
     {
