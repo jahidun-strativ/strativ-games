@@ -23,6 +23,8 @@ export function EditMatchdayButton({
   startAt,
   venueId,
   cost,
+  extraCost,
+  extraCostNote,
   paidBy,
   fixtures,
   venues,
@@ -33,6 +35,8 @@ export function EditMatchdayButton({
   startAt: Date;
   venueId: string;
   cost: number | null;
+  extraCost: number | null;
+  extraCostNote: string | null;
   paidBy: string;
   fixtures: Fixture[];
   venues: Venue[];
@@ -47,6 +51,8 @@ export function EditMatchdayButton({
           startAt={startAt}
           venueId={venueId}
           cost={cost}
+          extraCost={extraCost}
+          extraCostNote={extraCostNote}
           paidBy={paidBy}
           fixtures={fixtures}
           venues={venues}
@@ -64,6 +70,8 @@ function EditMatchdayForm({
   startAt,
   venueId,
   cost,
+  extraCost,
+  extraCostNote,
   paidBy,
   fixtures,
   venues,
@@ -75,6 +83,8 @@ function EditMatchdayForm({
   startAt: Date;
   venueId: string;
   cost: number | null;
+  extraCost: number | null;
+  extraCostNote: string | null;
   paidBy: string;
   fixtures: Fixture[];
   venues: Venue[];
@@ -90,6 +100,8 @@ function EditMatchdayForm({
     venueId,
     startAt: utcToPickerValue(startAt),
     cost: cost ?? undefined,
+    extraCost: extraCost ?? undefined,
+    extraCostNote: extraCostNote ?? "",
     paidBy: paidBy === "self" ? "self" : "office",
   };
   for (const f of fixtures) {
@@ -137,6 +149,15 @@ function EditMatchdayForm({
               { label: "We pay", value: "self" },
             ]}
           />
+        </Form.Item>
+      </div>
+
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <Form.Item label="Other cost (৳)" name="extraCost" tooltip="Water, extra time, a ball…">
+          <InputNumber min={0} step={50} className="!w-full" placeholder="e.g. 300" />
+        </Form.Item>
+        <Form.Item label="Other cost — what for?" name="extraCostNote">
+          <Input placeholder="e.g. water, extra 30 min" maxLength={80} />
         </Form.Item>
       </div>
 

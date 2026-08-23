@@ -49,6 +49,8 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   const startAt = new Date(str(formData, "startAt"));
   if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start time.");
   const cost = optInt(formData, "cost");
+  const extraCost = optInt(formData, "extraCost");
+  const extraCostNote = opt(formData, "extraCostNote");
   const paidBy = opt(formData, "paidBy") === "self" ? "self" : "office";
 
   const internal = await db.query.teams.findMany({
@@ -76,6 +78,8 @@ export async function addMatchday(seasonId: string, formData: FormData) {
       title: `Matchday ${existing + 1}`,
       startAt,
       cost,
+      extraCost,
+      extraCostNote,
       paidBy,
       status: "scheduled",
     })
@@ -128,12 +132,14 @@ export async function updateMatchday(sessionId: string, formData: FormData) {
   const startAt = new Date(str(formData, "startAt"));
   if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start time.");
   const cost = optInt(formData, "cost");
+  const extraCost = optInt(formData, "extraCost");
+  const extraCostNote = opt(formData, "extraCostNote");
   const paidBy = opt(formData, "paidBy") === "self" ? "self" : "office";
   const delta = startAt.getTime() - session.startAt.getTime();
 
   await db
     .update(sessions)
-    .set({ title: title ?? session.title, venueId, startAt, cost, paidBy })
+    .set({ title: title ?? session.title, venueId, startAt, cost, extraCost, extraCostNote, paidBy })
     .where(eq(sessions.id, sessionId));
 
   for (const f of session.fixtures) {

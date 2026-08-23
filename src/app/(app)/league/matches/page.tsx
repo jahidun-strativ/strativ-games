@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { teams } from "@/db/schema";
 import { isAdmin } from "@/server/auth";
 import { getActiveSeason, getSeasonMatchdays } from "@/server/queries/season";
+import { slotTotal } from "@/server/queries/session-costs";
 import { AddMatchdayButton } from "@/components/league/add-matchday-button";
 import { EditMatchdayButton } from "@/components/league/edit-matchday-button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -59,7 +60,9 @@ export default async function LeagueMatchesPage() {
                     <p className="truncate text-xs text-ink-500">
                       {formatDate(md.startAt)} · {formatTime(md.startAt)}
                       {md.venue ? ` · 📍 ${md.venue.name}` : ""}
-                      {md.cost != null ? ` · 💰 ${formatBdt(md.cost)} · ${paidByLabel(md.paidBy)}` : ""}
+                      {slotTotal(md) > 0
+                        ? ` · 💰 ${formatBdt(slotTotal(md))} · ${paidByLabel(md.paidBy)}`
+                        : ""}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold text-ink-500">
@@ -72,6 +75,8 @@ export default async function LeagueMatchesPage() {
                       startAt={md.startAt}
                       venueId={md.venueId}
                       cost={md.cost}
+                      extraCost={md.extraCost}
+                      extraCostNote={md.extraCostNote}
                       paidBy={md.paidBy}
                       venues={venues}
                       teams={pairingTeams}

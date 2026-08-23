@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, DatePicker, Form, InputNumber, Segmented, Select } from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, Segmented, Select } from "antd";
 import { FormModal } from "@/components/form-modal";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { addMatchday } from "@/server/actions/league";
@@ -82,6 +82,14 @@ function AddMatchdayForm({
               { label: "We pay", value: "self" },
             ]}
           />
+        </Form.Item>
+      </div>
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <Form.Item label="Other cost (৳)" name="extraCost" tooltip="Water, extra time, a ball…">
+          <InputNumber min={0} step={50} className="!w-full" placeholder="e.g. 300" />
+        </Form.Item>
+        <Form.Item label="Other cost — what for?" name="extraCostNote">
+          <Input placeholder="e.g. water, extra 30 min" maxLength={80} />
         </Form.Item>
       </div>
       <Button type="primary" htmlType="submit" loading={isPending}>
