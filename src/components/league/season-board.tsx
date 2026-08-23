@@ -273,42 +273,68 @@ export function LeagueStats({ view }: { view: SeasonView }) {
 export function LeagueMatchdays({ matchdays }: { matchdays: SeasonView["matchdays"] }) {
   return (
     <section>
-      <h2 className="font-display mb-3 text-xl text-ink-900">Matchdays</h2>
+      <h2 className="font-display mb-3 text-xl text-ink-900">Fixtures</h2>
       {matchdays.length === 0 ? (
         <p className="tv-card px-4 py-6 text-sm text-ink-500">No matchdays scheduled yet.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="tv-card-sm divide-y divide-line overflow-hidden">
           {matchdays.map((md, i) => (
-            <div key={md.id} className="tv-card-sm overflow-hidden">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-line bg-cream-100 px-4 py-2">
-                <p className="font-display text-ink-900">{md.title ?? `Matchday ${i + 1}`}</p>
-                <p className="text-xs text-ink-500">
-                  {formatDate(md.startAt)} · {formatTime(md.startAt)}
-                  {md.venue ? ` · 📍 ${md.venue.name}` : ""}
-                </p>
+            <div key={md.id}>
+              {/* Slim matchday divider */}
+              <div className="flex items-baseline justify-between gap-x-3 bg-cream-100 px-3 py-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-700">
+                  {md.title ?? `Matchday ${i + 1}`}
+                </span>
+                <span className="truncate text-[11px] text-ink-500">
+                  {formatDate(md.startAt)}
+                  {md.venue ? ` · ${md.venue.name}` : ""}
+                </span>
               </div>
-              <ul>
-                {md.fixtures.map((g) => (
-                  <li
+              {md.fixtures.map((g) => {
+                const done = g.status === "completed" && g.homeScore !== null;
+                const cancelled = g.status === "cancelled";
+                const homeWin = done && g.homeScore! > g.awayScore!;
+                const awayWin = done && g.awayScore! > g.homeScore!;
+                return (
+                  <Link
                     key={g.id}
-                    className="flex items-center gap-2 px-4 py-2 text-sm last:border-b-0 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line"
+                    href={`/matches/${g.id}`}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-cream-100/70 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line/60"
                   >
-                    <Link href={`/matches/${g.id}`} className="flex-1 truncate text-right hover:text-burnt-400">
+                    <span
+                      className={`flex-1 truncate text-right ${
+                        cancelled ? "text-ink-400 line-through" : homeWin ? "font-bold text-ink-900" : "text-ink-700"
+                      }`}
+                    >
                       {g.homeTeam?.name ?? "TBD"}
-                    </Link>
-                    <span className="scoreboard w-16 shrink-0 text-center font-bold">
-                      {g.status === "completed" && g.homeScore !== null
-                        ? `${g.homeScore}–${g.awayScore}`
-                        : g.status === "cancelled"
-                          ? "—"
-                          : "vs"}
                     </span>
-                    <Link href={`/matches/${g.id}`} className="flex-1 truncate hover:text-burnt-400">
+                    <span
+                      className={`scoreboard w-12 shrink-0 rounded text-center text-sm font-bold ${
+                        done ? "bg-cream-200 text-ink-900" : "text-ink-400"
+                      }`}
+                    >
+                      {done ? `${g.homeScore}–${g.awayScore}` : cancelled ? "—" : "vs"}
+                    </span>
+                    <span
+                      className={`flex-1 truncate ${
+                        cancelled ? "text-ink-400 line-through" : awayWin ? "font-bold text-ink-900" : "text-ink-700"
+                      }`}
+                    >
                       {g.awayTeam?.name ?? "TBD"}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                    </span>
+                    {/* Status indicator */}
+                    <span className="w-16 shrink-0 text-right text-[11px] font-semibold">
+                      {done ? (
+                        <span className="rounded bg-pitch-500/15 px-1.5 py-0.5 uppercase text-pitch-500">FT</span>
+                      ) : cancelled ? (
+                        <span className="uppercase text-tvred-500">Canc.</span>
+                      ) : (
+                        <span className="text-ink-500">{formatTime(g.kickoffAt)}</span>
+                      )}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </div>
