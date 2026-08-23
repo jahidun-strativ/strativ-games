@@ -10,8 +10,9 @@ function squadColumns() {
       title: "Player",
       dataIndex: "name",
       fixed: "left" as const,
+      width: 160,
       render: (_: unknown, p: Player) => (
-        <span className="whitespace-nowrap font-medium">{p.name}</span>
+        <span className="block font-medium leading-tight">{p.name}</span>
       ),
     },
     {
