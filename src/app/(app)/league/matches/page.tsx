@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
+import { teams } from "@/db/schema";
 import { isAdmin } from "@/server/auth";
 import { getActiveSeason, getSeasonMatchdays } from "@/server/queries/season";
 import { AddMatchdayButton } from "@/components/league/add-matchday-button";
+import { EditMatchdayButton } from "@/components/league/edit-matchday-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatTime } from "@/lib/format";
 
@@ -12,10 +15,20 @@ export const dynamic = "force-dynamic";
 export default async function LeagueMatchesPage() {
   const [admin, season] = await Promise.all([isAdmin(), getActiveSeason()]);
   if (!season) return null;
-  const [matchdays, venues] = await Promise.all([
+  const [matchdays, venues, leagueTeams] = await Promise.all([
     getSeasonMatchdays(season.id),
     admin ? db.query.venues.findMany() : Promise.resolve([]),
+    admin
+      ? db.query.teams.findMany({
+          where: eq(teams.sportId, season.sportId),
+          columns: { id: true, name: true, kind: true },
+          orderBy: (t, { asc }) => asc(t.name),
+        })
+      : Promise.resolve([]),
   ]);
+  const pairingTeams = leagueTeams
+    .filter((t) => t.kind !== "external")
+    .map((t) => ({ id: t.id, name: t.name }));
 
   return (
     <div className="space-y-5">
@@ -51,6 +64,24 @@ export default async function LeagueMatchesPage() {
                   <span className="shrink-0 text-xs font-semibold text-ink-500">
                     {done}/{md.fixtures.length} played
                   </span>
+                  {admin ? (
+                    <EditMatchdayButton
+                      sessionId={md.id}
+                      title={md.title}
+                      startAt={md.startAt}
+                      venueId={md.venueId}
+                      venues={venues}
+                      teams={pairingTeams}
+                      fixtures={md.fixtures.map((f) => ({
+                        id: f.id,
+                        homeTeamId: f.homeTeamId,
+                        awayTeamId: f.awayTeamId,
+                        status: f.status,
+                        homeName: f.homeTeam?.name ?? "TBD",
+                        awayName: f.awayTeam?.name ?? "TBD",
+                      }))}
+                    />
+                  ) : null}
                 </div>
 
                 {/* Fixtures */}

@@ -14,6 +14,7 @@ import { getNotificationSettings } from "@/server/queries/notification-settings"
 
 function revalidateLeague(seasonId?: string) {
   revalidatePath("/league");
+  revalidatePath("/league/matches");
   revalidatePath("/matches");
   revalidatePath("/");
   if (seasonId) revalidatePath(`/league/${seasonId}`);
@@ -102,6 +103,50 @@ export async function addMatchday(seasonId: string, formData: FormData) {
 
   revalidateLeague(seasonId);
   redirect(`/sessions/${session.id}`);
+}
+
+// Edit a matchday: its title, venue, start slot and the per-game pairings.
+// Rescheduling shifts each still-to-play game by the same delta so the round-
+// robin timing stays intact; completed/cancelled games keep their recorded slot
+// and locked pairing. A reassigned game reseeds availability for its new teams.
+export async function updateMatchday(sessionId: string, formData: FormData) {
+  await requireAdmin();
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+    with: { fixtures: true },
+  });
+  if (!session?.seasonId) throw new Error("Matchday not found.");
+
+  const title = opt(formData, "title");
+  const venueId = str(formData, "venueId");
+  const startAt = new Date(str(formData, "startAt"));
+  if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start time.");
+  const delta = startAt.getTime() - session.startAt.getTime();
+
+  await db
+    .update(sessions)
+    .set({ title: title ?? session.title, venueId, startAt })
+    .where(eq(sessions.id, sessionId));
+
+  for (const f of session.fixtures) {
+    if (f.status !== "scheduled") continue; // don't touch played/cancelled games
+    const home = opt(formData, `home_${f.id}`);
+    const away = opt(formData, `away_${f.id}`);
+    if (home && away && home === away) {
+      throw new Error("A game can't have the same team on both sides.");
+    }
+    await db
+      .update(matches)
+      .set({
+        venueId,
+        kickoffAt: new Date(f.kickoffAt.getTime() + delta),
+        ...(home && away ? { homeTeamId: home, awayTeamId: away } : {}),
+      })
+      .where(eq(matches.id, f.id));
+    if (home && away) await seedDefaultAvailability(f.id, [home, away]);
+  }
+
+  revalidateLeague(session.seasonId);
 }
 
 // Edit an existing season's details. sportId stays fixed — matchdays and the
