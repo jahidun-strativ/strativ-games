@@ -37,9 +37,8 @@ async function MatchesContent({
 
   const [allSlots, standaloneMatches, allSports, allTeams, allVenues] = await Promise.all([
     // Slots group their games; each fixture keeps its own teams/scores. League
-    // matchdays (seasonId set) are excluded — they live only inside /league.
+    // matchdays (seasonId set) are included too, tagged with a League badge.
     db.query.sessions.findMany({
-      where: isNull(sessions.seasonId),
       with: {
         venue: true,
         fixtures: {

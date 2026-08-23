@@ -10,6 +10,8 @@ export type SlotWithFixtures = {
   cost: number | null;
   paidBy: string;
   startAt: Date;
+  // Set when this slot is a league matchday — shown with a League badge.
+  seasonId: string | null;
   venue: { name: string; city: string | null };
   fixtures: MatchWithRefs[];
 };
@@ -34,7 +36,11 @@ export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: str
           {formatTime(slot.startAt)}
         </span>
         <div className="flex items-center gap-1.5">
-          {slot.kind === "competitive" ? (
+          {slot.seasonId ? (
+            <span className="rounded-full bg-gold-400/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gold-300">
+              🏆 League
+            </span>
+          ) : slot.kind === "competitive" ? (
             <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive
             </span>
@@ -72,10 +78,10 @@ export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: str
       </div>
 
       <Link
-        href={`/sessions/${slot.id}`}
+        href={slot.seasonId ? "/league/matches" : `/sessions/${slot.id}`}
         className="mt-3 inline-flex items-center gap-1 text-xs font-bold !text-burnt-400 hover:underline"
       >
-        Open slot →
+        {slot.seasonId ? "Open in league →" : "Open slot →"}
       </Link>
     </div>
   );
