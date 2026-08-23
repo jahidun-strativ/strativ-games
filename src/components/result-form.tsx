@@ -9,7 +9,10 @@ function squadColumns() {
     {
       title: "Player",
       dataIndex: "name",
-      render: (_: unknown, p: Player) => <span>{p.name}</span>,
+      fixed: "left" as const,
+      render: (_: unknown, p: Player) => (
+        <span className="whitespace-nowrap font-medium">{p.name}</span>
+      ),
     },
     {
       title: "Played",
@@ -147,6 +150,7 @@ export function ResultForm({
               dataSource={squad}
               pagination={false}
               size="small"
+              scroll={{ x: "max-content" }}
             />
           </div>
         ))}
