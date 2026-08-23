@@ -170,8 +170,13 @@ export function LeagueAwards({ view }: { view: SeasonView }) {
         <AwardCard
           icon={<Hand className="h-5 w-5 text-sky-400" />}
           label="Best goalkeeper"
-          winner={awards.bestGk?.name ?? null}
-          sub={awards.bestGk?.teamName ?? null}
+          winner={awards.bestGk?.player.name ?? null}
+          sub={
+            awards.bestGk
+              ? `${awards.bestGk.cleanSheets} clean sheet${awards.bestGk.cleanSheets === 1 ? "" : "s"} · ${awards.bestGk.conceded} conceded${awards.bestGk.player.teamName ? ` · ${awards.bestGk.player.teamName}` : ""}`
+              : null
+          }
+          auto={awards.bestGk?.auto}
         />
       </div>
     </section>
@@ -179,13 +184,15 @@ export function LeagueAwards({ view }: { view: SeasonView }) {
 }
 
 export function LeagueStats({ view }: { view: SeasonView }) {
-  const { scorers, fairplay } = view;
+  const { scorers, fairplay, keepers } = view;
   const scorersWithGoals = scorers.filter((s) => s.goals > 0).slice(0, 8);
   const assisters = [...scorers].filter((s) => s.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 8);
   const booked = [...scorers]
     .filter((s) => s.fouls > 0)
     .sort((a, b) => b.fouls - a.fouls)
     .slice(0, 8);
+  // Keepers ranked by defensive solidity (already sorted: fewest goals/game).
+  const topKeepers = keepers.filter((k) => k.matches > 0).slice(0, 8);
 
   return (
     <div className="space-y-8">
@@ -221,6 +228,17 @@ export function LeagueStats({ view }: { view: SeasonView }) {
             secondary={(r) => r.teamName ?? "Free agent"}
             value={(r) => `${r.fouls} fouls`}
             empty="Clean so far."
+          />
+        </Panel>
+        <Panel title={<><Hand className="h-4 w-4" /> Goalkeepers</>}>
+          <RankedList
+            rows={topKeepers}
+            keyOf={(r) => r.playerId}
+            href={(r) => `/players/${r.playerId}`}
+            primary={(r) => r.name}
+            secondary={(r) => r.teamName ?? "Free agent"}
+            value={(r) => `${r.cleanSheets} CS · ${r.conceded} GA`}
+            empty="No goalkeeper data yet."
           />
         </Panel>
       </section>
