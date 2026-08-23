@@ -191,8 +191,10 @@ export function LeagueStats({ view }: { view: SeasonView }) {
     .filter((s) => s.fouls > 0)
     .sort((a, b) => b.fouls - a.fouls)
     .slice(0, 8);
-  // Keepers ranked by defensive solidity (already sorted: fewest goals/game).
+  // Keepers ranked by defensive solidity (already sorted: eligible first, then
+  // fewest goals/game). Ones short of the appearance floor are flagged.
   const topKeepers = keepers.filter((k) => k.matches > 0).slice(0, 8);
+  const gkFloor = view.gkFloor;
 
   return (
     <div className="space-y-8">
@@ -236,7 +238,11 @@ export function LeagueStats({ view }: { view: SeasonView }) {
             keyOf={(r) => r.playerId}
             href={(r) => `/players/${r.playerId}`}
             primary={(r) => r.name}
-            secondary={(r) => r.teamName ?? "Free agent"}
+            secondary={(r) =>
+              r.eligible
+                ? r.teamName ?? "Free agent"
+                : `${r.teamName ?? "Free agent"} · ${r.matches}/${gkFloor} apps`
+            }
             value={(r) => `${r.cleanSheets} CS · ${r.conceded} GA`}
             empty="No goalkeeper data yet."
           />
