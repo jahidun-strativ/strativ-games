@@ -148,8 +148,8 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
       teamId: players.teamId,
       teamName: teams.name,
       position: players.position,
-      // The team's default GK; used only when a match names no keeper.
-      teamGkId: teams.goalkeeperId,
+      // The team's default GKs; used only when a match names no keeper.
+      teamGkIds: teams.goalkeeperIds,
       // Whether this player was flagged as keeper in THIS match, and their saves.
       keeperFlag: playerMatchStats.goalkeeper,
       saves: playerMatchStats.saves,
@@ -193,8 +193,8 @@ async function seasonKeepers(seasonId: string): Promise<RawKeeper[]> {
     const keepers =
       flagged.length > 0
         ? flagged
-        : g.teamGkId
-          ? group.filter((r) => r.playerId === g.teamGkId)
+        : g.teamGkIds && g.teamGkIds.length > 0
+          ? group.filter((r) => g.teamGkIds!.includes(r.playerId))
           : group.filter((r) => isKeeperPosition(r.position));
 
     for (const k of keepers) {

@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -55,25 +55,27 @@ export async function setTeamBanner(teamId: string, seed: number) {
   revalidatePath("/league/teams");
 }
 
-// Assign (or clear, with playerId=null) a team's goalkeeper. Admin-only. The GK
-// must be a player on this team; the Best GK award reads goals conceded while
-// this player was on the pitch.
-export async function setTeamGoalkeeper(teamId: string, playerId: string | null) {
+// Set a team's designated goalkeepers (zero or more). Admin-only. Every GK must
+// be a player on this team; the Best GK award and the live-scorecard save picker
+// read this list.
+export async function setTeamGoalkeepers(teamId: string, playerIds: string[]) {
   await requireAdmin();
 
   const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
   if (!team) throw new Error("Team not found.");
 
-  if (playerId) {
-    const gk = await db.query.players.findFirst({
-      where: eq(players.id, playerId),
-      columns: { id: true, teamId: true },
+  const ids = [...new Set(playerIds)];
+  if (ids.length > 0) {
+    const onTeam = await db.query.players.findMany({
+      where: and(inArray(players.id, ids), eq(players.teamId, teamId)),
+      columns: { id: true },
     });
-    if (!gk) throw new Error("Player not found.");
-    if (gk.teamId !== teamId) throw new Error("The goalkeeper must be a player on this team.");
+    if (onTeam.length !== ids.length) {
+      throw new Error("Every goalkeeper must be a player on this team.");
+    }
   }
 
-  await db.update(teams).set({ goalkeeperId: playerId }).where(eq(teams.id, teamId));
+  await db.update(teams).set({ goalkeeperIds: ids }).where(eq(teams.id, teamId));
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");
   revalidatePath("/league/teams");

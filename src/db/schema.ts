@@ -41,10 +41,10 @@ export const teams = pgTable("teams", {
   // player is linked to gets captain powers for this team: editing per-match
   // lineups and managing the roster. Admin-assigned; null = no captain yet.
   captainId: uuid("captain_id"),
-  // The team's designated goalkeeper (a player on this team). Drives the Best GK
-  // award: the goals this team concedes in matches they play count to this GK.
-  // Admin-assigned; null falls back to detecting keepers by their position text.
-  goalkeeperId: uuid("goalkeeper_id"),
+  // The team's designated goalkeepers (players on this team). Drives the Best GK
+  // award and the live-scorecard save picker. Admin-assigned; an empty list falls
+  // back to detecting keepers by their position text.
+  goalkeeperIds: uuid("goalkeeper_ids").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

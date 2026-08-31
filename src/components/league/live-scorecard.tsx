@@ -7,7 +7,12 @@ import { addMatchEvent, deleteMatchEvent, finalizeMatch } from "@/server/actions
 import { useActionSubmit } from "@/components/forms/form-utils";
 import type { TimelineEvent } from "@/server/queries/match-events";
 
-type Side = { teamId: string; teamName: string; players: { id: string; name: string }[] };
+type Side = {
+  teamId: string;
+  teamName: string;
+  players: { id: string; name: string }[];
+  goalkeeperIds: string[];
+};
 
 // The assigned scorekeeper's live console: log goals/saves as they happen (each
 // save re-derives the score server-side), review the timeline, then finalize to
@@ -36,7 +41,12 @@ export function LiveScorecard({
   const kind = Form.useWatch("kind", form) ?? "goal";
   const teamId = Form.useWatch("teamId", form) ?? home.teamId;
   const scorerId = Form.useWatch("playerId", form);
-  const squad = teamId === away.teamId ? away.players : home.players;
+  const side = teamId === away.teamId ? away : home;
+  const squad = side.players;
+  // A save can only be credited to a designated goalkeeper. If the team has none
+  // set, fall back to the whole squad so the scorer is never blocked.
+  const keepers = squad.filter((p) => side.goalkeeperIds.includes(p.id));
+  const playerPool = kind === "save" && keepers.length > 0 ? keepers : squad;
 
   // Poll for events logged elsewhere (another scorer, another device) so the
   // console stays in sync. ponytail: 10s poll, swap for SSE only if load demands.
@@ -74,7 +84,10 @@ export function LiveScorecard({
           initialValues={{ kind: "goal", teamId: home.teamId }}
           onValuesChange={(changed) => {
             // Switching side clears the picked players — they belong to the old squad.
-            if ("teamId" in changed) form.resetFields(["playerId", "assistPlayerId"]);
+            // Switching kind clears the scorer — a goal's scorer may not be a keeper.
+            if ("teamId" in changed || "kind" in changed) {
+              form.resetFields(["playerId", "assistPlayerId"]);
+            }
           }}
         >
           <div className="flex flex-wrap items-end gap-3">
@@ -98,9 +111,9 @@ export function LiveScorecard({
               <Select
                 showSearch
                 optionFilterProp="label"
-                placeholder="Player"
+                placeholder={kind === "save" ? "Goalkeeper" : "Player"}
                 className="!w-52"
-                options={squad.map((p) => ({ label: p.name, value: p.id }))}
+                options={playerPool.map((p) => ({ label: p.name, value: p.id }))}
               />
             </Form.Item>
             {kind === "goal" ? (

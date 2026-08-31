@@ -130,11 +130,13 @@ export default async function LeagueMatchManagePage({
                 teamId: match.homeTeamId!,
                 teamName: match.homeTeam!.name,
                 players: homeSquad.players.map((p) => ({ id: p.id, name: p.name })),
+                goalkeeperIds: match.homeTeam!.goalkeeperIds,
               }}
               away={{
                 teamId: match.awayTeamId!,
                 teamName: match.awayTeam!.name,
                 players: awaySquad.players.map((p) => ({ id: p.id, name: p.name })),
+                goalkeeperIds: match.awayTeam!.goalkeeperIds,
               }}
               events={events}
             />

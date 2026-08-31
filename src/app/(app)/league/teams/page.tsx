@@ -159,20 +159,23 @@ export default async function LeagueTeamsPage() {
                 )}
               </div>
 
-              {/* Goalkeeper */}
+              {/* Goalkeepers */}
               <div className="space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-                  Goalkeeper
+                  Goalkeepers
                 </p>
                 {admin ? (
                   <GkPicker
                     teamId={team.id}
-                    goalkeeperId={team.goalkeeperId}
+                    goalkeeperIds={team.goalkeeperIds}
                     players={team.players.map((p) => ({ id: p.id, name: p.name }))}
                   />
                 ) : (
                   <p className="text-sm font-semibold text-ink-900">
-                    {team.players.find((p) => p.id === team.goalkeeperId)?.name ?? "Not assigned"}
+                    {team.players
+                      .filter((p) => team.goalkeeperIds.includes(p.id))
+                      .map((p) => p.name)
+                      .join(", ") || "Not assigned"}
                   </p>
                 )}
               </div>
