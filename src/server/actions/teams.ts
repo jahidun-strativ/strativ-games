@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { players, teams } from "@/db/schema";
-import { requireAdmin } from "@/server/auth";
+import { requireAdmin, requireTeamManager } from "@/server/auth";
 import { sendPushToUser } from "@/lib/push";
 import { opt, str } from "@/server/form";
 
@@ -27,11 +27,15 @@ export async function createTeam(formData: FormData) {
   revalidatePath("/");
 }
 
+// Team details (name/sport/kind/league). Admin, captain or manager of the team.
+// ponytail: managers can change sport/kind here too (their own team, trusted);
+// split into a constrained form if that ever needs locking down.
 export async function updateTeam(id: string, formData: FormData) {
-  await requireAdmin();
+  await requireTeamManager(id);
   await db.update(teams).set(teamValues(formData)).where(eq(teams.id, id));
   revalidatePath("/teams");
   revalidatePath(`/teams/${id}`);
+  revalidatePath("/league/teams");
 }
 
 export async function deleteTeam(id: string) {
@@ -45,7 +49,7 @@ export async function deleteTeam(id: string) {
 // Save a team's generated-banner seed (admin "shuffle → save"). No image is
 // stored — just the seed that drives the procedural banner.
 export async function setTeamBanner(teamId: string, seed: number) {
-  await requireAdmin();
+  await requireTeamManager(teamId);
   await db
     .update(teams)
     .set({ bannerSeed: Math.trunc(seed) })
@@ -55,11 +59,11 @@ export async function setTeamBanner(teamId: string, seed: number) {
   revalidatePath("/league/teams");
 }
 
-// Set a team's designated goalkeepers (zero or more). Admin-only. Every GK must
-// be a player on this team; the Best GK award and the live-scorecard save picker
-// read this list.
+// Set a team's designated goalkeepers (zero or more). Admin, captain or manager.
+// Every GK must be a player on this team; the Best GK award and the live-scorecard
+// save picker read this list.
 export async function setTeamGoalkeepers(teamId: string, playerIds: string[]) {
-  await requireAdmin();
+  await requireTeamManager(teamId);
 
   const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
   if (!team) throw new Error("Team not found.");
@@ -82,10 +86,10 @@ export async function setTeamGoalkeepers(teamId: string, playerIds: string[]) {
   revalidatePath("/league");
 }
 
-// Assign (or clear, with playerId=null) a team's captain. Admin-only. The
-// captain must be a player currently on this team. Notifies the new captain.
+// Assign (or clear, with playerId=null) a team's captain. Admin, captain or
+// manager. The captain must be a player currently on this team. Notifies them.
 export async function setTeamCaptain(teamId: string, playerId: string | null) {
-  await requireAdmin();
+  await requireTeamManager(teamId);
 
   const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
   if (!team) throw new Error("Team not found.");
@@ -108,6 +112,7 @@ export async function setTeamCaptain(teamId: string, playerId: string | null) {
   await db.update(teams).set({ captainId: playerId }).where(eq(teams.id, teamId));
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");
+  revalidatePath("/league/teams");
 
   // Let a newly-appointed captain know (best-effort; never fails the action).
   if (changed && captain?.userId) {
@@ -116,6 +121,37 @@ export async function setTeamCaptain(teamId: string, playerId: string | null) {
         title: `You're the captain of ${team.name} 🧢`,
         body: "You can now set match lineups and manage the squad on Strativ Games.",
         url: `/teams/${teamId}`,
+      });
+    } catch {
+      // ignore
+    }
+  }
+}
+
+// Assign (or clear, with userId=null) a team's manager. Admin-only — a manager
+// can't perpetuate themselves. The manager gets captain-level powers over the
+// team (roster, lineups, staff, details). Notifies the new manager.
+export async function setTeamManager(teamId: string, userId: string | null) {
+  await requireAdmin();
+
+  const team = await db.query.teams.findFirst({
+    where: eq(teams.id, teamId),
+    columns: { id: true, name: true, managerUserId: true },
+  });
+  if (!team) throw new Error("Team not found.");
+
+  const changed = team.managerUserId !== (userId ?? null);
+  await db.update(teams).set({ managerUserId: userId }).where(eq(teams.id, teamId));
+  revalidatePath(`/teams/${teamId}`);
+  revalidatePath("/teams");
+  revalidatePath("/league/teams");
+
+  if (changed && userId) {
+    try {
+      await sendPushToUser(userId, {
+        title: `You're managing ${team.name} 📋`,
+        body: "You can now manage the roster, line-ups, staff and team details on Strativ Games.",
+        url: `/league/teams`,
       });
     } catch {
       // ignore

@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { asc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import { teams } from "@/db/schema";
+import { appUsers, players as playersTable, teams } from "@/db/schema";
 import { isAdmin, canManageTeam } from "@/server/auth";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
 import { GkPicker } from "@/components/gk-picker";
+import { ManagerPicker } from "@/components/league/manager-picker";
+import { TeamStaffManager } from "@/components/league/team-staff-manager";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
 import { TeamBanner } from "@/components/team-banner";
@@ -42,6 +44,7 @@ export default async function LeagueTeamsPage() {
       with: {
         players: { orderBy: (p, { asc }) => asc(p.name) },
         captain: { columns: { id: true, name: true } },
+        staff: { orderBy: (s, { asc }) => asc(s.name) },
       },
       orderBy: (t, { asc }) => asc(t.name),
     }),
@@ -52,6 +55,22 @@ export default async function LeagueTeamsPage() {
       with: { team: { columns: { name: true } } },
     }),
   ]);
+
+  // Admin's manager picker: every app user, labelled by their player name if any.
+  const managerOptions = admin
+    ? await (async () => {
+        const [users, named] = await Promise.all([
+          db.select({ userId: appUsers.userId, email: appUsers.email }).from(appUsers),
+          db
+            .select({ userId: playersTable.userId, name: playersTable.name })
+            .from(playersTable)
+            .where(isNotNull(playersTable.userId))
+            .orderBy(asc(playersTable.name)),
+        ]);
+        const nameByUser = new Map(named.map((n) => [n.userId, n.name] as const));
+        return users.map((u) => ({ userId: u.userId, label: nameByUser.get(u.userId) ?? u.email }));
+      })()
+    : [];
 
   const internal = sportTeams.filter((t) => t.kind !== "external");
   if (internal.length === 0) {
@@ -180,6 +199,20 @@ export default async function LeagueTeamsPage() {
                 )}
               </div>
 
+              {/* Manager — admin assigns; the manager gets captain-level powers. */}
+              {admin ? (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                    Manager
+                  </p>
+                  <ManagerPicker
+                    teamId={team.id}
+                    managerUserId={team.managerUserId}
+                    users={managerOptions}
+                  />
+                </div>
+              ) : null}
+
               {/* Actions — one column of consistent full-width buttons: primary
                   CTA, then Lineup/Edit paired, then the share action. */}
               <div className="space-y-2 border-t border-line pt-4 [&_.ant-btn]:w-full [&_.ant-btn]:justify-center">
@@ -199,7 +232,7 @@ export default async function LeagueTeamsPage() {
                   <ButtonLink variant="secondary" href={`/teams/${team.id}/lineup`}>
                     Lineup
                   </ButtonLink>
-                  {admin ? <EditTeamButton sports={allSports} team={team} /> : null}
+                  {canManage ? <EditTeamButton sports={allSports} team={team} /> : null}
                 </div>
                 <div className="[&>span]:block">
                   <PosterButton
@@ -256,6 +289,17 @@ export default async function LeagueTeamsPage() {
                   })}
                 </div>
               )}
+
+              {/* Staff — captains/managers add coaches, physios, etc. for their team */}
+              <div className="mt-6 border-t border-line pt-5">
+                <h3 className="font-display mb-3 text-base text-ink-900">Staff</h3>
+                <TeamStaffManager
+                  teamId={team.id}
+                  sportId={team.sportId}
+                  staff={team.staff}
+                  canManage={canManage}
+                />
+              </div>
             </div>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Trophy } from "lucide-react";
 import { db } from "@/db";
 import { appUsers, players } from "@/db/schema";
 import { recordResult, rescheduleMatch, cancelMatch } from "@/server/actions/matches";
-import { getSession, isAdmin, isCaptainOf } from "@/server/auth";
+import { getSession, isAdmin, canSetLineup } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 import { getMatchEvents } from "@/server/queries/match-events";
 import { ResultForm } from "@/components/result-form";
@@ -46,13 +46,13 @@ export default async function LeagueMatchManagePage({
 
   const [admin, session, events] = await Promise.all([isAdmin(), getSession(), getMatchEvents(id)]);
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
-  const captainSides = await Promise.all(
+  const editorSides = await Promise.all(
     [match.homeTeam, match.awayTeam].map((t) =>
-      t && t.kind !== "external" ? isCaptainOf(t.id) : Promise.resolve(false),
+      t && t.kind !== "external" ? canSetLineup(t.id) : Promise.resolve(false),
     ),
   );
   const isAssignedScorer = Boolean(match.scorerUserId && session?.user?.id === match.scorerUserId);
-  const canScore = admin || isAssignedScorer || captainSides.some(Boolean);
+  const canScore = admin || isAssignedScorer || editorSides.some(Boolean);
 
   const [homeSquad, awaySquad] =
     hasTeams && match.homeTeamId && match.awayTeamId

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { matchLineupSlots, matchLineups, lineupSlots, lineups } from "@/db/schema";
-import { requireAdmin, requireCaptainOf } from "@/server/auth";
+import { requireAdmin, requireLineupEditor } from "@/server/auth";
 import { MAX_SQUAD, MAX_SUBS, MIN_SQUAD, MIN_SUBS } from "@/lib/formations";
 
 export type LineupSlotInput = {
@@ -69,7 +69,7 @@ export async function saveMatchLineup(
   squadSize: number,
   slots: LineupSlotInput[],
 ) {
-  await requireCaptainOf(teamId);
+  await requireLineupEditor(teamId);
   validateLineup(squadSize, slots);
 
   const [lineup] = await db

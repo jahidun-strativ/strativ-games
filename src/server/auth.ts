@@ -64,18 +64,38 @@ export async function isCaptainOf(teamId: string): Promise<boolean> {
   return Boolean(player && team?.captainId && team.captainId === player.id);
 }
 
-// True if the user may manage this team (admin, or its captain). UI gating.
+// True if the signed-in user is this team's assigned manager. Manager = the app
+// user set as the team's managerUserId; they get captain-level powers over the
+// team. Never throws — safe for UI gating.
+export async function isManagerOf(teamId: string): Promise<boolean> {
+  const session = await getSession();
+  if (!session?.user) return false;
+  const team = await db.query.teams.findFirst({
+    where: eq(teams.id, teamId),
+    columns: { managerUserId: true },
+  });
+  return Boolean(team?.managerUserId && team.managerUserId === session.user.id);
+}
+
+// True if the user may manage this team (admin, its captain, or its manager). UI gating.
 export async function canManageTeam(teamId: string): Promise<boolean> {
-  return (await isAdmin()) || (await isCaptainOf(teamId));
+  return (await isAdmin()) || (await isCaptainOf(teamId)) || (await isManagerOf(teamId));
+}
+
+// True if the user may set this team's match line-ups: its captain or manager.
+// Admins assign those two rather than editing line-ups themselves. UI gating.
+export async function canSetLineup(teamId: string): Promise<boolean> {
+  return (await isCaptainOf(teamId)) || (await isManagerOf(teamId));
 }
 
 // Guards team-scoped mutations that admins may also do (roster add/remove):
-// admin or the team's captain.
+// admin, the team's captain, or its manager.
 export async function requireTeamManager(teamId: string) {
   const user = await requireUser();
   if ((await getRole(user.id)) === "admin") return user;
   if (await isCaptainOf(teamId)) return user;
-  throw new Error("Only an admin or this team's captain can do that.");
+  if (await isManagerOf(teamId)) return user;
+  throw new Error("Only an admin, this team's captain, or its manager can do that.");
 }
 
 // True if the user may record THIS match's result: an admin, the captain of
@@ -91,8 +111,10 @@ export async function canScoreMatch(
     const session = await getSession();
     if (session?.user?.id === scorerUserId) return true;
   }
-  if (homeTeamId && (await isCaptainOf(homeTeamId))) return true;
-  if (awayTeamId && (await isCaptainOf(awayTeamId))) return true;
+  if (homeTeamId && ((await isCaptainOf(homeTeamId)) || (await isManagerOf(homeTeamId))))
+    return true;
+  if (awayTeamId && ((await isCaptainOf(awayTeamId)) || (await isManagerOf(awayTeamId))))
+    return true;
   return false;
 }
 
@@ -110,11 +132,14 @@ export async function requireMatchScorer(matchId: string) {
   throw new Error("Only an admin, a participating captain, or the assigned scorer can do this.");
 }
 
-// Guards match line-ups: the team's CAPTAIN only. Admins do not
-// get in here (they set the captain instead). If the admin is also the captain
-// of this team, they pass — because they're the captain, not because they're an admin.
-export async function requireCaptainOf(teamId: string) {
+// Guards match line-ups: the team's captain OR its manager. Admins do not get in
+// here (they assign the captain/manager instead). An admin who is also the
+// captain or manager of this team passes — on that basis, not on being an admin.
+export async function requireLineupEditor(teamId: string) {
   await requireUser();
   if (await isCaptainOf(teamId)) return;
-  throw new Error("Only this team's captain can set match line-ups. An admin can assign one.");
+  if (await isManagerOf(teamId)) return;
+  throw new Error(
+    "Only this team's captain or manager can set match line-ups. An admin can assign them.",
+  );
 }

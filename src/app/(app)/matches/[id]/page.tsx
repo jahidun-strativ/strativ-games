@@ -22,7 +22,7 @@ import { EditMatchButton } from "@/components/entity-modals";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
 import { formatFull, formatBdt, paidByLabel } from "@/lib/format";
-import { isAdmin, isCaptainOf, getCurrentPlayer } from "@/server/auth";
+import { isAdmin, canSetLineup, getCurrentPlayer } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
 import type { AvailabilityStatus } from "@/db/schema";
 
@@ -72,22 +72,22 @@ export default async function MatchDetailPage({
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
   const league = match.session?.season ?? null;
 
-  // Team(s) the viewer can open the lineup page for: their own side as captain,
-  // or ANY internal side as admin (admins manage match squads for both teams,
-  // even though the starting XI itself stays captain-only on that page).
+  // Team(s) the viewer can open the lineup page for: their own side as captain or
+  // manager, or ANY internal side as admin (admins manage match squads for both
+  // teams, even though the starting XI itself stays captain/manager-only there).
   const lineupTeams = (
     await Promise.all(
       [match.homeTeam, match.awayTeam].map(async (t) => {
         if (!t || t.kind === "external") return null;
-        const captain = await isCaptainOf(t.id);
-        if (!captain && !admin) return null;
-        return { id: t.id, name: t.name, captain };
+        const canEdit = await canSetLineup(t.id);
+        if (!canEdit && !admin) return null;
+        return { id: t.id, name: t.name, canEdit };
       }),
     )
-  ).filter((t): t is { id: string; name: string; captain: boolean } => t !== null);
+  ).filter((t): t is { id: string; name: string; canEdit: boolean } => t !== null);
 
-  // Result entry is open to admins and to a captain of either team playing.
-  const canScore = admin || lineupTeams.some((t) => t.captain);
+  // Result entry is open to admins and to a captain/manager of either team playing.
+  const canScore = admin || lineupTeams.some((t) => t.canEdit);
 
   // RSVPs for this match + the viewer's own player (to prefill their control).
   const [availabilityRows, myPlayer] = await Promise.all([
@@ -306,7 +306,7 @@ export default async function MatchDetailPage({
                 variant="secondary"
                 href={`/matches/${match.id}/lineup/${t.id}`}
               >
-                {t.captain ? `🧢 Set ${t.name} lineup` : `👥 Manage ${t.name} squad`}
+                {t.canEdit ? `🧢 Set ${t.name} lineup` : `👥 Manage ${t.name} squad`}
               </ButtonLink>
             ))}
           </div>

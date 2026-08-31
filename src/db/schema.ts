@@ -41,6 +41,10 @@ export const teams = pgTable("teams", {
   // player is linked to gets captain powers for this team: editing per-match
   // lineups and managing the roster. Admin-assigned; null = no captain yet.
   captainId: uuid("captain_id"),
+  // The team's manager: the Neon Auth user id of an app user (a player or not)
+  // an admin put in charge of this team. Gets the same management powers as the
+  // captain — roster, lineups, staff, team details. Admin-assigned; null = none.
+  managerUserId: text("manager_user_id"),
   // The team's designated goalkeepers (players on this team). Drives the Best GK
   // award and the live-scorecard save picker. Admin-assigned; an empty list falls
   // back to detecting keepers by their position text.

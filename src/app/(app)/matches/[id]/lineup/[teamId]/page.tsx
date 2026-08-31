@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
 import { saveMatchLineup } from "@/server/actions/lineups";
 import { getEffectiveSquad, pickedByOtherTeamsInSlot } from "@/server/queries/match-squad";
-import { canManageTeam, isCaptainOf } from "@/server/auth";
+import { canManageTeam, canSetLineup } from "@/server/auth";
 import { formatFull } from "@/lib/format";
 
 export const metadata = { title: "Match lineup" };
@@ -41,10 +41,10 @@ export default async function MatchLineupPage({
         : null;
   if (!team || team.kind === "external") notFound();
 
-  // Match line-ups are captain-only — admins assign the captain, not the lineup.
-  // Match squads (who's available to field) are admin-or-captain.
+  // Match line-ups are for the captain or manager — admins assign those two, not
+  // the lineup. Match squads (who's available to field) are admin-or-captain/manager.
   const [canEdit, canManageSquad] = await Promise.all([
-    isCaptainOf(teamId),
+    canSetLineup(teamId),
     canManageTeam(teamId),
   ]);
 
