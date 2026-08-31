@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { App, Drawer } from "antd";
 import {
-  DEFAULT_SUBS,
-  MAX_SUBS,
-  MIN_SUBS,
   SQUAD_SIZES,
   buildFormationSlots,
   formationsForSize,
@@ -15,6 +12,12 @@ import { type LineupSlotInput } from "@/server/actions/lineups";
 import type { Player } from "@/db/schema";
 
 type Active = { kind: "starter"; index: number } | { kind: "sub"; index: number } | null;
+
+// Two initials for the small sub chip.
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "") || name[0] || "?").toUpperCase();
+}
 
 export function PitchBuilder({
   roster,
@@ -29,8 +32,9 @@ export function PitchBuilder({
   initialFormation: string;
   // playerId keyed by starter slot index
   initialStarters: Record<number, string | null>;
-  // ordered bench playerIds
-  initialSubs: (string | null)[];
+  // each starting position's designated substitute, keyed by the SAME starter
+  // slot index (so a sub sits beside the position it backs up)
+  initialSubs: Record<number, string | null>;
   // Persists the built lineup. Provided by the caller (team-default vs per-match).
   onSave: (formation: string, squadSize: number, slots: LineupSlotInput[]) => Promise<void>;
   canEdit?: boolean;
@@ -41,9 +45,7 @@ export function PitchBuilder({
   const { message } = App.useApp();
   const [formation, setFormation] = useState(initialFormation);
   const [starters, setStarters] = useState<Record<number, string | null>>(initialStarters);
-  const [subs, setSubs] = useState<(string | null)[]>(
-    initialSubs.length >= MIN_SUBS ? initialSubs : Array(DEFAULT_SUBS).fill(null),
-  );
+  const [subs, setSubs] = useState<Record<number, string | null>>(initialSubs);
   const [active, setActive] = useState<Active>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -64,7 +66,7 @@ export function PitchBuilder({
   const playerById = useMemo(() => new Map(roster.map((p) => [p.id, p])), [roster]);
 
   const usedIds = new Set<string>(
-    [...Object.values(starters), ...subs].filter(Boolean) as string[],
+    [...Object.values(starters), ...Object.values(subs)].filter(Boolean) as string[],
   );
 
   function changeSquadSize(nextSize: number) {
@@ -73,45 +75,37 @@ export function PitchBuilder({
   }
 
   function applyFormation(next: string) {
-    setStarters((prev) => {
-      // Keep assignments by slot index that still exist in the new shape.
-      const nextCount = buildFormationSlots(next).length;
+    // Keep both starters and their subs by slot index that still exist in the
+    // new shape.
+    const nextCount = buildFormationSlots(next).length;
+    const prune = (prev: Record<number, string | null>) => {
       const kept: Record<number, string | null> = {};
       for (let i = 0; i < nextCount; i++) if (prev[i]) kept[i] = prev[i];
       return kept;
-    });
+    };
+    setStarters(prune);
+    setSubs(prune);
     setFormation(next);
     setActive(null);
     setSaved(false);
   }
 
   function clearFrom(playerId: string) {
-    setStarters((prev) => {
+    const drop = (prev: Record<number, string | null>) => {
       const next = { ...prev };
       for (const k of Object.keys(next)) if (next[Number(k)] === playerId) next[Number(k)] = null;
       return next;
-    });
-    setSubs((prev) => prev.map((id) => (id === playerId ? null : id)));
+    };
+    setStarters(drop);
+    setSubs(drop);
   }
 
   function assign(playerId: string | null) {
     if (!active) return;
     if (playerId) clearFrom(playerId);
-    if (active.kind === "starter") {
-      setStarters((prev) => ({ ...prev, [active.index]: playerId }));
-    } else {
-      setSubs((prev) => prev.map((id, i) => (i === active.index ? playerId : id)));
-    }
+    const setter = active.kind === "starter" ? setStarters : setSubs;
+    setter((prev) => ({ ...prev, [active.index]: playerId }));
     setActive(null);
-    setSaved(false);
-  }
-
-  function setBenchSize(n: number) {
-    setSubs((prev) => {
-      const next = prev.slice(0, n);
-      while (next.length < n) next.push(null);
-      return next;
-    });
     setSaved(false);
   }
 
@@ -123,12 +117,16 @@ export function PitchBuilder({
         positionLabel: slot.position,
         playerId: starters[i] ?? null,
       })),
-      ...subs.map((playerId, i) => ({
-        role: "sub" as const,
-        slotIndex: i,
-        positionLabel: "SUB",
-        playerId,
-      })),
+      // One sub per starting position that has a backup assigned, tagged with
+      // the position it covers and stored under that starter's slot index.
+      ...slots
+        .map((slot, i) => ({
+          role: "sub" as const,
+          slotIndex: i,
+          positionLabel: slot.position,
+          playerId: subs[i] ?? null,
+        }))
+        .filter((s) => s.playerId),
     ];
     startTransition(async () => {
       try {
@@ -141,9 +139,8 @@ export function PitchBuilder({
     });
   }
 
-  const surname = (name: string) => name.split(" ").at(-1) ?? name;
   const startersFilled = Object.values(starters).filter(Boolean).length;
-  const subsFilled = subs.filter(Boolean).length;
+  const subsFilled = Object.values(subs).filter(Boolean).length;
 
   // Roster available to assign into the currently open slot.
   const currentPlayerId =
@@ -158,7 +155,7 @@ export function PitchBuilder({
       ? ""
       : active.kind === "starter"
         ? `Pick ${slots[active.index].position}`
-        : `Pick substitute ${active.index + 1}`;
+        : `Pick sub for ${slots[active.index].position}`;
 
   // The clear-slot action + roster list, shared by the desktop sidebar and the
   // mobile bottom sheet.
@@ -240,20 +237,6 @@ export function PitchBuilder({
               ))}
             </select>
           </label>
-          <label className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-            Subs
-            <select
-              value={subs.length}
-              onChange={(e) => setBenchSize(Number(e.target.value))}
-              className="mt-1 block rounded-lg border border-line bg-cream-50 px-3 py-2 text-sm font-semibold text-ink-900 shadow-sm"
-            >
-              {Array.from({ length: MAX_SUBS - MIN_SUBS + 1 }, (_, i) => MIN_SUBS + i).map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
           <button
             onClick={handleSave}
             disabled={isPending}
@@ -265,7 +248,7 @@ export function PitchBuilder({
         </div>
 
         <p className="mb-3 text-xs text-ink-500">
-          {startersFilled}/{size} starters · {subsFilled}/{subs.length} subs picked
+          {startersFilled}/{size} starters · {subsFilled} position sub{subsFilled === 1 ? "" : "s"}
         </p>
 
         {/* Pitch */}
@@ -282,65 +265,64 @@ export function PitchBuilder({
 
           {slots.map((slot, i) => {
             const player = starters[i] ? playerById.get(starters[i]!) : null;
-            const isActive = active?.kind === "starter" && active.index === i;
+            const subPlayer = subs[i] ? playerById.get(subs[i]!) : null;
+            const starterActive = active?.kind === "starter" && active.index === i;
+            const subActive = active?.kind === "sub" && active.index === i;
             return (
-              <button
+              <div
                 key={i}
-                disabled={!canEdit}
-                onClick={() => setActive(isActive ? null : { kind: "starter", index: i })}
-                className="absolute -translate-x-1/2 -translate-y-1/2 disabled:cursor-default"
+                className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               >
-                <span
-                  className={`flex h-12 w-12 flex-col items-center justify-center rounded-full border-2 text-[11px] font-bold leading-tight transition-transform sm:h-14 sm:w-14 ${
-                    isActive
-                      ? "scale-110 border-gold-300 bg-gold-300 text-black"
-                      : player
-                        ? "border-white/70 bg-cream-50 text-ink-900 shadow-lg"
-                        : "border-dashed border-white/70 bg-black/30 text-white"
-                  }`}
-                >
-                  {player ? (
-                    <span className="max-w-full truncate px-1">{surname(player.name)}</span>
-                  ) : (
-                    <span>{slot.position}</span>
-                  )}
-                </span>
-              </button>
+                <div className="relative">
+                  {/* Starter token — shows the position; the name sits on a
+                      readable label below, not crammed inside the circle. */}
+                  <button
+                    disabled={!canEdit}
+                    onClick={() => setActive(starterActive ? null : { kind: "starter", index: i })}
+                    title={player?.name}
+                    className={`flex h-11 w-11 items-center justify-center rounded-full border-2 text-[11px] font-bold transition-transform disabled:cursor-default sm:h-12 sm:w-12 ${
+                      starterActive
+                        ? "scale-110 border-gold-300 bg-gold-300 text-black"
+                        : player
+                          ? "border-white/70 bg-cream-50 text-ink-900 shadow-lg"
+                          : "border-dashed border-white/70 bg-black/30 text-white"
+                    }`}
+                  >
+                    {slot.position}
+                  </button>
+
+                  {/* Per-position sub chip, tucked at the token's shoulder. */}
+                  <button
+                    disabled={!canEdit}
+                    onClick={() => setActive(subActive ? null : { kind: "sub", index: i })}
+                    title={subPlayer ? `Sub for ${slot.position}: ${subPlayer.name}` : `Add a sub for ${slot.position}`}
+                    className={`absolute -right-2 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[9px] font-bold leading-none transition-transform disabled:cursor-default ${
+                      subActive
+                        ? "scale-110 border-gold-300 bg-gold-300 text-black"
+                        : subPlayer
+                          ? "border-sky-300 bg-sky-500 text-white shadow"
+                          : "border-white/50 bg-black/50 text-white/80"
+                    }`}
+                  >
+                    {subPlayer ? initials(subPlayer.name) : "+"}
+                  </button>
+                </div>
+
+                {/* Name label — full name, truncated with a tooltip, always legible. */}
+                {player ? (
+                  <span
+                    title={player.name}
+                    className="mt-1 max-w-[76px] truncate rounded bg-black/70 px-1.5 py-0.5 text-center text-[10px] font-semibold text-white sm:max-w-[92px]"
+                  >
+                    {player.name}
+                  </span>
+                ) : (
+                  <span className="mt-1 text-[10px] font-semibold text-white/70">Tap to fill</span>
+                )}
+              </div>
             );
           })}
-        </div>
-
-        {/* Bench */}
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
-            Bench
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {subs.map((playerId, i) => {
-              const player = playerId ? playerById.get(playerId) : null;
-              const isActive = active?.kind === "sub" && active.index === i;
-              return (
-                <button
-                  key={i}
-                  disabled={!canEdit}
-                  onClick={() => setActive(isActive ? null : { kind: "sub", index: i })}
-                  className={`flex min-w-28 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors disabled:cursor-default ${
-                    isActive
-                      ? "border-gold-300 bg-gold-300/15"
-                      : "border-line bg-cream-50 hover:bg-cream-200"
-                  }`}
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cream-200 text-xs font-bold">
-                    {i + 1}
-                  </span>
-                  <span className="truncate font-semibold">
-                    {player ? player.name : "Empty"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -363,9 +345,9 @@ export function PitchBuilder({
           <div>
             <p className="font-display text-lg text-ink-900">Lineup builder</p>
             <p className="mt-2 text-sm text-ink-500">
-              Choose squad size (5–11), a formation, and up to {MAX_SUBS} subs. Tap a
-              position on the pitch or a bench slot, then pick a player. Each player can
-              only hold one spot.
+              Choose squad size (5–11) and a formation. Tap a position to pick its starter,
+              or tap the small <span className="font-bold text-sky-500">+</span> chip beside
+              it to name that position&apos;s substitute. Each player can only hold one spot.
             </p>
           </div>
         )}

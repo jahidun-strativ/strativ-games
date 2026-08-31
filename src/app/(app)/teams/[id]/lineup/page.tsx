@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
-import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
+import { ALL_FORMATIONS, DEFAULT_FORMATION } from "@/lib/formations";
 import { saveLineup } from "@/server/actions/lineups";
 import { isAdmin } from "@/server/auth";
 
@@ -31,16 +31,14 @@ export default async function LineupPage({
       ? savedFormation
       : DEFAULT_FORMATION;
 
-  const starterSlots = (team.lineup?.slots ?? []).filter((s) => s.role === "starter");
-  const subSlots = (team.lineup?.slots ?? [])
-    .filter((s) => s.role === "sub")
-    .sort((a, b) => a.slotIndex - b.slotIndex);
-
+  const slots = team.lineup?.slots ?? [];
+  // Starters and their per-position subs are both keyed by starter slot index.
   const initialStarters: Record<number, string | null> = {};
-  for (const s of starterSlots) initialStarters[s.slotIndex] = s.playerId;
-
-  const initialSubs =
-    subSlots.length > 0 ? subSlots.map((s) => s.playerId) : Array(DEFAULT_SUBS).fill(null);
+  const initialSubs: Record<number, string | null> = {};
+  for (const s of slots) {
+    if (s.role === "starter") initialStarters[s.slotIndex] = s.playerId;
+    else initialSubs[s.slotIndex] = s.playerId;
+  }
 
   return (
     <div>

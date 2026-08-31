@@ -7,7 +7,7 @@ import { MatchSquadManager } from "@/components/match-squad-manager";
 import { FillSquadButton } from "@/components/fill-squad-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
-import { ALL_FORMATIONS, DEFAULT_FORMATION, DEFAULT_SUBS } from "@/lib/formations";
+import { ALL_FORMATIONS, DEFAULT_FORMATION } from "@/lib/formations";
 import { saveMatchLineup } from "@/server/actions/lineups";
 import { getEffectiveSquad, pickedByOtherTeamsInSlot } from "@/server/queries/match-squad";
 import { canManageTeam, canSetLineup } from "@/server/auth";
@@ -80,16 +80,13 @@ export default async function MatchLineupPage({
       ? savedFormation
       : DEFAULT_FORMATION;
 
-  const starterSlots = (source?.slots ?? []).filter((s) => s.role === "starter");
-  const subSlots = (source?.slots ?? [])
-    .filter((s) => s.role === "sub")
-    .sort((a, b) => a.slotIndex - b.slotIndex);
-
+  // Starters and their per-position subs are both keyed by starter slot index.
   const initialStarters: Record<number, string | null> = {};
-  for (const s of starterSlots) initialStarters[s.slotIndex] = s.playerId;
-
-  const initialSubs =
-    subSlots.length > 0 ? subSlots.map((s) => s.playerId) : Array(DEFAULT_SUBS).fill(null);
+  const initialSubs: Record<number, string | null> = {};
+  for (const s of source?.slots ?? []) {
+    if (s.role === "starter") initialStarters[s.slotIndex] = s.playerId;
+    else initialSubs[s.slotIndex] = s.playerId;
+  }
 
   return (
     <div>

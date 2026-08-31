@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { matchLineupSlots, matchLineups, lineupSlots, lineups } from "@/db/schema";
 import { requireAdmin, requireTeamRunner } from "@/server/auth";
-import { MAX_SQUAD, MAX_SUBS, MIN_SQUAD, MIN_SUBS } from "@/lib/formations";
+import { MAX_SQUAD, MIN_SQUAD } from "@/lib/formations";
 
 export type LineupSlotInput = {
   role: "starter" | "sub";
@@ -18,9 +18,11 @@ function validateLineup(squadSize: number, slots: LineupSlotInput[]) {
   if (squadSize < MIN_SQUAD || squadSize > MAX_SQUAD) {
     throw new Error(`Squad size must be between ${MIN_SQUAD} and ${MAX_SQUAD}.`);
   }
+  // Subs are now per-position (at most one backup per starting slot), so a
+  // lineup can have anywhere from zero up to one sub per position.
   const subCount = slots.filter((s) => s.role === "sub").length;
-  if (subCount < MIN_SUBS || subCount > MAX_SUBS) {
-    throw new Error(`Bench must have between ${MIN_SUBS} and ${MAX_SUBS} substitutes.`);
+  if (subCount > squadSize) {
+    throw new Error("Each position can have at most one substitute.");
   }
 }
 
