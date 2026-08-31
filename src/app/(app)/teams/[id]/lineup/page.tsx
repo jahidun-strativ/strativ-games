@@ -6,7 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { PosterButton } from "@/components/poster-button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION } from "@/lib/formations";
 import { saveLineup } from "@/server/actions/lineups";
-import { isAdmin } from "@/server/auth";
+import { canSetLineup } from "@/server/auth";
 
 export const metadata = { title: "Lineup" };
 
@@ -22,7 +22,7 @@ export default async function LineupPage({
     },
   });
   if (!team) notFound();
-  const admin = await isAdmin();
+  const canEdit = await canSetLineup(team.id);
 
   // A previously saved lineup keeps its formation; otherwise a fresh team
   // builds up at the 6-a-side default rather than a full 11.
@@ -67,7 +67,7 @@ export default async function LineupPage({
         initialStarters={initialStarters}
         initialSubs={initialSubs}
         onSave={saveLineup.bind(null, team.id)}
-        canEdit={admin}
+        canEdit={canEdit}
       />
     </div>
   );
