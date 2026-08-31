@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { matchAvailability, players, teams } from "@/db/schema";
 import { requireAdmin, requireTeamRunner } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
+import { recordAudit } from "@/server/audit";
 import { opt, str } from "@/server/form";
 
 // Admin edits identity + membership only. A player's position is NOT here — it's
@@ -24,13 +25,30 @@ function playerValues(formData: FormData) {
 export async function createPlayer(formData: FormData) {
   await requireAdmin();
   // Position starts blank; the team's captain/manager sets it later.
-  await db.insert(players).values({ ...playerValues(formData), position: "" });
+  const values = playerValues(formData);
+  const [row] = await db
+    .insert(players)
+    .values({ ...values, position: "" })
+    .returning({ id: players.id });
+  await recordAudit({
+    action: "player.create",
+    entity: "player",
+    entityId: row?.id,
+    summary: `Created player ${values.name}`,
+  });
   revalidatePath("/players");
 }
 
 export async function updatePlayer(id: string, formData: FormData) {
   await requireAdmin();
-  await db.update(players).set(playerValues(formData)).where(eq(players.id, id));
+  const values = playerValues(formData);
+  await db.update(players).set(values).where(eq(players.id, id));
+  await recordAudit({
+    action: "player.update",
+    entity: "player",
+    entityId: id,
+    summary: `Updated player ${values.name}`,
+  });
   revalidatePath("/players");
   revalidatePath(`/players/${id}`);
 }
@@ -52,6 +70,12 @@ export async function deletePlayer(id: string) {
     );
   }
   await db.delete(players).where(eq(players.id, id));
+  await recordAudit({
+    action: "player.delete",
+    entity: "player",
+    entityId: id,
+    summary: `Deleted player ${player.name}`,
+  });
   revalidatePath("/players");
   redirect("/players");
 }
@@ -99,6 +123,13 @@ export async function assignPlayerToTeam(playerId: string, teamId: string) {
   }
   await db.update(players).set({ teamId }).where(eq(players.id, playerId));
   await onboardToTeam(playerId, teamId);
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId), columns: { name: true } });
+  await recordAudit({
+    action: "player.assign",
+    entity: "player",
+    entityId: playerId,
+    summary: `Added ${player.name} to ${team?.name ?? "a team"}`,
+  });
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
 }
@@ -134,6 +165,15 @@ export async function movePlayerToTeam(playerId: string, teamId: string | null) 
     await onboardToTeam(playerId, teamId);
     revalidatePath(`/teams/${teamId}`);
   }
+  const dest = teamId
+    ? (await db.query.teams.findFirst({ where: eq(teams.id, teamId), columns: { name: true } }))?.name
+    : null;
+  await recordAudit({
+    action: "player.move",
+    entity: "player",
+    entityId: playerId,
+    summary: `Moved ${player.name} to ${dest ?? "free agency"}`,
+  });
   revalidatePath("/players");
   revalidatePath("/teams");
 }
@@ -185,6 +225,12 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
     url: `/teams/${a.teamId}`,
   });
 
+  await recordAudit({
+    action: "player.swap",
+    entity: "player",
+    entityId: a.id,
+    summary: `Swapped ${a.name} (${teamA?.name ?? "?"}) with ${b.name} (${teamB?.name ?? "?"})`,
+  });
   revalidatePath("/players");
   revalidatePath("/teams");
   revalidatePath(`/teams/${a.teamId}`);
@@ -197,12 +243,19 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
 export async function setPlayerRole(playerId: string, role: string) {
   const player = await db.query.players.findFirst({
     where: eq(players.id, playerId),
-    columns: { id: true, teamId: true },
+    columns: { id: true, teamId: true, name: true },
   });
   if (!player) throw new Error("Player not found.");
   if (!player.teamId) throw new Error("This player isn't on a team.");
   await requireTeamRunner(player.teamId);
-  await db.update(players).set({ position: role.trim() }).where(eq(players.id, playerId));
+  const next = role.trim();
+  await db.update(players).set({ position: next }).where(eq(players.id, playerId));
+  await recordAudit({
+    action: "player.position.set",
+    entity: "player",
+    entityId: playerId,
+    summary: `Set ${player.name}'s position to ${next || "—"}`,
+  });
   revalidatePath("/league/teams");
   revalidatePath(`/teams/${player.teamId}`);
   revalidatePath("/players");
@@ -214,11 +267,21 @@ export async function setPlayerRole(playerId: string, role: string) {
 // captaincy is cleared.
 export async function removePlayerFromTeam(playerId: string, teamId: string) {
   await requireAdmin();
+  const [player, team] = await Promise.all([
+    db.query.players.findFirst({ where: eq(players.id, playerId), columns: { name: true } }),
+    db.query.teams.findFirst({ where: eq(teams.id, teamId), columns: { name: true } }),
+  ]);
   await db.update(players).set({ teamId: null }).where(eq(players.id, playerId));
   await db
     .update(teams)
     .set({ captainId: null })
     .where(and(eq(teams.id, teamId), eq(teams.captainId, playerId)));
+  await recordAudit({
+    action: "player.release",
+    entity: "player",
+    entityId: playerId,
+    summary: `Released ${player?.name ?? "a player"} from ${team?.name ?? "a team"}`,
+  });
   revalidatePath("/players");
   revalidatePath(`/teams/${teamId}`);
 }

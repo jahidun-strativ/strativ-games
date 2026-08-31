@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { appUsers, matches, playerMatchStats, pushSubscriptions, sessions, teams } from "@/db/schema";
 import { requireAdmin, requireMatchScorer } from "@/server/auth";
+import { recordAudit } from "@/server/audit";
 import { opt, optInt, str } from "@/server/form";
 import { notifyMatchToAll, notifyMatchResult } from "@/server/notify-match";
 import { notifyPlayers } from "@/server/notifications";
@@ -15,6 +16,16 @@ import { getNotificationSettings } from "@/server/queries/notification-settings"
 
 // `sent` = push devices reached; `inApp` = app users who got an in-app row.
 export type NotifyResult = { sent: number; inApp: number; configured: boolean };
+
+// "Home v Away" for readable audit summaries; falls back to the id.
+async function matchLabel(id: string): Promise<string> {
+  const m = await db.query.matches.findFirst({
+    where: eq(matches.id, id),
+    with: { homeTeam: { columns: { name: true } }, awayTeam: { columns: { name: true } } },
+  });
+  if (!m) return id;
+  return `${m.homeTeam?.name ?? "TBD"} v ${m.awayTeam?.name ?? "TBD"}`;
+}
 
 // Manually (re)send a match's notification to everyone — ignores the toggle.
 // Fires both the PWA push (subscribed devices) and the in-app inbox (all users).
@@ -108,6 +119,12 @@ export async function createMatch(formData: FormData) {
   await assertVenueFree(values.venueId, values.kickoffAt);
   const [match] = await db.insert(matches).values(values).returning();
   await seedDefaultAvailability(match.id, [values.homeTeamId, values.awayTeamId]);
+  await recordAudit({
+    action: "match.create",
+    entity: "match",
+    entityId: match.id,
+    summary: `Scheduled ${await matchLabel(match.id)}`,
+  });
   revalidateMatchPages();
   // Notify all subscribers (admins included) if on-create notifications are on.
   const settings = await getNotificationSettings();
@@ -155,20 +172,30 @@ export async function rescheduleMatch(id: string, formData: FormData) {
     .update(matches)
     .set({ venueId, kickoffAt, status: "scheduled" })
     .where(eq(matches.id, id));
+  await recordAudit({
+    action: "match.reschedule",
+    entity: "match",
+    entityId: id,
+    summary: `Rescheduled ${await matchLabel(id)}`,
+  });
   revalidateMatchPages(id);
   await notifyMatchChange(id, "rescheduled");
 }
 
 export async function cancelMatch(id: string) {
   await requireAdmin();
+  const label = await matchLabel(id);
   await db.update(matches).set({ status: "cancelled" }).where(eq(matches.id, id));
+  await recordAudit({ action: "match.cancel", entity: "match", entityId: id, summary: `Cancelled ${label}` });
   revalidateMatchPages(id);
   await notifyMatchChange(id, "cancelled");
 }
 
 export async function deleteMatch(id: string) {
   await requireAdmin();
+  const label = await matchLabel(id);
   await db.delete(matches).where(eq(matches.id, id));
+  await recordAudit({ action: "match.delete", entity: "match", entityId: id, summary: `Deleted ${label}` });
   revalidateMatchPages();
   redirect("/matches");
 }
@@ -226,6 +253,13 @@ export async function recordResult(id: string, formData: FormData) {
     .update(matches)
     .set({ homeScore, awayScore, status: "completed" })
     .where(eq(matches.id, id));
+
+  await recordAudit({
+    action: "match.result",
+    entity: "match",
+    entityId: id,
+    summary: `Recorded ${await matchLabel(id)} — ${homeScore}–${awayScore}`,
+  });
 
   // Per-player rows: stat-<playerId>-goals / -assists / -fouls / -gk / -played.
   const statements = [];

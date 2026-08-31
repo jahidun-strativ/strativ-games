@@ -17,6 +17,7 @@ import {
   Wallet,
   ShieldCheck,
   Settings,
+  ScrollText,
   MoreHorizontal,
   ChevronRight,
 } from "lucide-react";
@@ -54,6 +55,7 @@ const links: NavLink[] = [
   { href: "/venues", label: "Venues", icon: <MapPin size={ICON} /> },
   { href: "/costs", label: "Costs", icon: <Wallet size={ICON} /> },
   { href: "/members", label: "Members", icon: <ShieldCheck size={ICON} />, adminOnly: true },
+  { href: "/audit", label: "Audit log", icon: <ScrollText size={ICON} />, adminOnly: true },
 ];
 
 // Bottom tab bar pins the 4 most-used destinations; everything else (including

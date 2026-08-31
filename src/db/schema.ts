@@ -399,6 +399,26 @@ export const notifications = pgTable(
   (t) => [index("notifications_user_created_idx").on(t.userId, t.createdAt)],
 );
 
+// System-wide audit trail — one row per meaningful change (who did what, when).
+// actorEmail is denormalized so an entry stays readable even if the user record
+// is later removed. `action` is a dotted verb ("player.create", "team.manager.set").
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorUserId: text("actor_user_id"),
+    actorEmail: text("actor_email"),
+    action: text("action").notNull(),
+    entity: text("entity"),
+    entityId: text("entity_id"),
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("audit_logs_created_idx").on(t.createdAt)],
+);
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+
 // Web Push subscriptions — one row per browser/device a user has enabled.
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),

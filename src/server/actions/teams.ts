@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { players, teams } from "@/db/schema";
 import { requireAdmin, requireTeamManager } from "@/server/auth";
 import { sendPushToUser } from "@/lib/push";
+import { recordAudit } from "@/server/audit";
 import { opt, str } from "@/server/form";
 
 // Formation is not set here: new teams take the schema default ("4-4-2") and
@@ -22,7 +23,14 @@ function teamValues(formData: FormData) {
 
 export async function createTeam(formData: FormData) {
   await requireAdmin();
-  await db.insert(teams).values(teamValues(formData));
+  const values = teamValues(formData);
+  const [row] = await db.insert(teams).values(values).returning({ id: teams.id });
+  await recordAudit({
+    action: "team.create",
+    entity: "team",
+    entityId: row?.id,
+    summary: `Created team ${values.name}`,
+  });
   revalidatePath("/teams");
   revalidatePath("/");
 }
@@ -32,7 +40,14 @@ export async function createTeam(formData: FormData) {
 // split into a constrained form if that ever needs locking down.
 export async function updateTeam(id: string, formData: FormData) {
   await requireTeamManager(id);
-  await db.update(teams).set(teamValues(formData)).where(eq(teams.id, id));
+  const values = teamValues(formData);
+  await db.update(teams).set(values).where(eq(teams.id, id));
+  await recordAudit({
+    action: "team.update",
+    entity: "team",
+    entityId: id,
+    summary: `Updated team ${values.name}`,
+  });
   revalidatePath("/teams");
   revalidatePath(`/teams/${id}`);
   revalidatePath("/league/teams");
@@ -40,7 +55,14 @@ export async function updateTeam(id: string, formData: FormData) {
 
 export async function deleteTeam(id: string) {
   await requireAdmin();
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, id), columns: { name: true } });
   await db.delete(teams).where(eq(teams.id, id));
+  await recordAudit({
+    action: "team.delete",
+    entity: "team",
+    entityId: id,
+    summary: `Deleted team ${team?.name ?? id}`,
+  });
   revalidatePath("/teams");
   revalidatePath("/");
   redirect("/teams");
@@ -80,6 +102,12 @@ export async function setTeamGoalkeepers(teamId: string, playerIds: string[]) {
   }
 
   await db.update(teams).set({ goalkeeperIds: ids }).where(eq(teams.id, teamId));
+  await recordAudit({
+    action: "team.goalkeepers.set",
+    entity: "team",
+    entityId: teamId,
+    summary: `Set ${team.name} goalkeepers (${ids.length})`,
+  });
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");
   revalidatePath("/league/teams");
@@ -110,6 +138,12 @@ export async function setTeamCaptain(teamId: string, playerId: string | null) {
 
   const changed = team.captainId !== (playerId ?? null);
   await db.update(teams).set({ captainId: playerId }).where(eq(teams.id, teamId));
+  await recordAudit({
+    action: "team.captain.set",
+    entity: "team",
+    entityId: teamId,
+    summary: captain ? `Made ${captain.name} captain of ${team.name}` : `Cleared ${team.name} captain`,
+  });
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");
   revalidatePath("/league/teams");
@@ -142,6 +176,12 @@ export async function setTeamManager(teamId: string, userId: string | null) {
 
   const changed = team.managerUserId !== (userId ?? null);
   await db.update(teams).set({ managerUserId: userId }).where(eq(teams.id, teamId));
+  await recordAudit({
+    action: "team.manager.set",
+    entity: "team",
+    entityId: teamId,
+    summary: userId ? `Assigned a manager to ${team.name}` : `Cleared ${team.name} manager`,
+  });
   revalidatePath(`/teams/${teamId}`);
   revalidatePath("/teams");
   revalidatePath("/league/teams");

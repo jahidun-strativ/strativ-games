@@ -270,14 +270,15 @@ export default async function LeagueTeamsPage() {
                 </div>
               )}
 
-              {/* Staff — captains/managers add coaches, physios, etc. for their team */}
+              {/* Staff — the team's OWN captain/manager add coaches, physios,
+                  etc. (not admin), same as positions. */}
               <div className="mt-6 border-t border-line pt-5">
                 <h3 className="font-display mb-3 text-base text-ink-900">Staff</h3>
                 <TeamStaffManager
                   teamId={team.id}
                   sportId={team.sportId}
                   staff={team.staff}
-                  canManage={canManage}
+                  canManage={canEditRole}
                   people={staffPeople}
                 />
               </div>

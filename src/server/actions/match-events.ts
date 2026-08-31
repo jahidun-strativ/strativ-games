@@ -9,6 +9,7 @@ import { opt, optInt, str } from "@/server/form";
 import { deriveScore, tallyEvents } from "@/lib/match-scoring";
 import { notifyMatchResult } from "@/server/notify-match";
 import { notifyUsers } from "@/server/notifications";
+import { recordAudit } from "@/server/audit";
 
 // Refresh every surface a live event touches: the manager, the public result
 // page with its timeline, and the league/stats views that read the score.
@@ -46,6 +47,12 @@ export async function assignScorer(matchId: string, formData: FormData) {
   await requireAdmin();
   const scorerUserId = opt(formData, "scorerUserId");
   await db.update(matches).set({ scorerUserId }).where(eq(matches.id, matchId));
+  await recordAudit({
+    action: "match.scorer.assign",
+    entity: "match",
+    entityId: matchId,
+    summary: scorerUserId ? "Assigned a match scorekeeper" : "Cleared the match scorekeeper",
+  });
   if (scorerUserId) {
     await notifyUsers([scorerUserId], {
       type: "assignment",
@@ -110,6 +117,13 @@ export async function finalizeMatch(matchId: string) {
   await db.delete(playerMatchStats).where(eq(playerMatchStats.matchId, matchId));
   const rows = tally.map((t) => ({ matchId, ...t }));
   if (rows.length > 0) await db.insert(playerMatchStats).values(rows);
+
+  await recordAudit({
+    action: "match.finalize",
+    entity: "match",
+    entityId: matchId,
+    summary: `Finalized a live match (${events.length} events)`,
+  });
 
   revalidateLive(matchId);
   revalidatePath("/stats");

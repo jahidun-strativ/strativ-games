@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matches, seasons, sessions, teams } from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
+import { recordAudit } from "@/server/audit";
 import { int, opt, optInt, str } from "@/server/form";
 import { threeTeamRoundRobin } from "@/server/round-robin";
 import { seedDefaultAvailability } from "@/server/seed-availability";
@@ -34,6 +35,12 @@ export async function createSeason(formData: FormData) {
     .insert(seasons)
     .values({ name, sportId, startAt, plannedMatchdays, status: "active" })
     .returning();
+  await recordAudit({
+    action: "season.create",
+    entity: "season",
+    entityId: season.id,
+    summary: `Started season ${name}`,
+  });
   revalidateLeague(season.id);
   redirect("/league");
 }
@@ -175,12 +182,24 @@ export async function updateSeason(seasonId: string, formData: FormData) {
     .update(seasons)
     .set({ name, startAt, plannedMatchdays })
     .where(eq(seasons.id, seasonId));
+  await recordAudit({
+    action: "season.update",
+    entity: "season",
+    entityId: seasonId,
+    summary: `Updated season ${name}`,
+  });
   revalidateLeague(seasonId);
 }
 
 export async function setSeasonStatus(seasonId: string, status: "active" | "ended") {
   await requireAdmin();
   await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
+  await recordAudit({
+    action: "season.status",
+    entity: "season",
+    entityId: seasonId,
+    summary: status === "ended" ? "Ended the season" : "Reopened the season",
+  });
   revalidateLeague(seasonId);
   // Crown the champion to everyone when the season closes.
   if (status === "ended") await notifyLeagueChampion(seasonId).catch(() => {});
@@ -200,5 +219,11 @@ export async function setAward(seasonId: string, formData: FormData) {
     .update(seasons)
     .set({ [field]: winnerId })
     .where(eq(seasons.id, seasonId));
+  await recordAudit({
+    action: "season.award.set",
+    entity: "season",
+    entityId: seasonId,
+    summary: `${winnerId ? "Set" : "Cleared"} award ${field}`,
+  });
   revalidateLeague(seasonId);
 }
