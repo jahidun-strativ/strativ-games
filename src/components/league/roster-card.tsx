@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { App, Input } from "antd";
+import { App, Select } from "antd";
 import { setPlayerRole } from "@/server/actions/players";
+import { POSITION_OPTIONS, POSITIONS } from "@/lib/positions";
 
 type Player = { id: string; name: string; position: string; status: string };
 
@@ -17,37 +18,45 @@ const CBadge = () => (
 );
 
 // The role/position line: read-only text, or (for a captain/manager/admin) an
-// inline field that saves on blur/Enter.
+// inline position picker that saves on change. Football positions only — a
+// legacy free-text value is kept as an extra option so it still shows.
 function RoleField({ playerId, role }: { playerId: string; role: string }) {
   const { message } = App.useApp();
-  const [value, setValue] = useState(role);
+  const [value, setValue] = useState(role || undefined);
   const [pending, start] = useTransition();
 
-  function save() {
-    const next = value.trim();
-    if (next === role.trim()) return;
+  const options =
+    role && !POSITIONS.includes(role)
+      ? [{ label: role, options: [{ value: role, label: `${role} (legacy)` }] }, ...POSITION_OPTIONS]
+      : POSITION_OPTIONS;
+
+  function change(next: string | undefined) {
+    setValue(next);
     start(async () => {
       try {
-        await setPlayerRole(playerId, next);
+        await setPlayerRole(playerId, next ?? "");
         message.success("Role updated.");
       } catch (err) {
-        setValue(role);
+        setValue(role || undefined);
         message.error(err instanceof Error ? err.message : "Couldn't update role.");
       }
     });
   }
 
   return (
-    <Input
+    <Select<string>
       size="small"
+      allowClear
+      showSearch
+      optionFilterProp="label"
       variant="borderless"
-      className="!px-0 !text-xs !text-ink-500"
+      className="-ml-1 w-full text-ink-500"
+      popupMatchSelectWidth={220}
       value={value}
       disabled={pending}
-      placeholder="Set role / position"
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={save}
-      onPressEnter={(e) => e.currentTarget.blur()}
+      placeholder="Set position"
+      options={options}
+      onChange={change}
     />
   );
 }

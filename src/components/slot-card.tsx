@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { DayBadge } from "@/components/ui/day-badge";
 import { formatDate, formatTime, formatBdt, paidByLabel } from "@/lib/format";
 import type { MatchWithRefs } from "@/components/match-card";
 
@@ -61,6 +62,7 @@ export function SlotCard({
           {formatTime(slot.startAt)}
         </span>
         <div className="flex items-center gap-1.5">
+          {status === "scheduled" ? <DayBadge at={slot.startAt} /> : null}
           {!isLeague && slot.kind === "competitive" ? (
             <span className="rounded-full bg-burnt-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-burnt-400">
               Competitive

@@ -4,6 +4,7 @@ import { Button, Form, Input, Select } from "antd";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { PLAYER_STATUSES } from "@/db/schema";
 import type { Player, Sport, Team } from "@/db/schema";
+import { POSITION_OPTIONS } from "@/lib/positions";
 
 export function PlayerForm({
   action,
@@ -61,7 +62,13 @@ export function PlayerForm({
           <Select allowClear placeholder="Free agent (no team)" options={teamOptions} />
         </Form.Item>
         <Form.Item label="Preferred position (optional)" name="position">
-          <Input placeholder="e.g. Striker — leave blank if any" />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Any position"
+            options={POSITION_OPTIONS}
+          />
         </Form.Item>
         <Form.Item label="Status" name="status">
           <Select options={PLAYER_STATUSES.map((s) => ({ value: s, label: s }))} />
