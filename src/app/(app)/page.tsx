@@ -5,7 +5,9 @@ import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/ic
 import { db } from "@/db";
 import { matches, players, sessions } from "@/db/schema";
 import { getMonthlyLeaderboard, type LeaderboardRow } from "@/server/queries/stats";
+import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { isAdmin } from "@/server/auth";
+import { DashboardLeague } from "@/components/league/dashboard-league";
 import { MatchCard } from "@/components/match-card";
 import { MonthlyRace } from "@/components/monthly-race";
 import { PageHeader } from "@/components/ui/page-header";
@@ -38,6 +40,9 @@ async function DashboardContent() {
     .from(sessions)
     .where(isNotNull(sessions.seasonId));
   const notLeague = or(isNull(matches.sessionId), notInArray(matches.sessionId, leagueSlotIds));
+
+  const activeSeason = await getActiveSeason();
+  const leagueView = activeSeason ? await getSeasonView(activeSeason) : null;
 
   const [upcoming, recent, monthly, allTeams, allVenues, playerCount] =
     await Promise.all([
@@ -103,6 +108,12 @@ async function DashboardContent() {
           </Link>
         ))}
       </section>
+
+      {leagueView ? (
+        <div className="mt-8">
+          <DashboardLeague view={leagueView} />
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-8">

@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Table } from "antd";
+import { Input, Table } from "antd";
+import { Search } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export type PlayerRow = {
@@ -41,14 +43,36 @@ function PosChip({ position }: { position: string }) {
 }
 
 export function PlayersTable({ players }: { players: PlayerRow[] }) {
+  const [query, setQuery] = useState("");
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return players;
+    return players.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.email?.toLowerCase().includes(q) ?? false) ||
+        (p.teamName?.toLowerCase().includes(q) ?? false) ||
+        p.position.toLowerCase().includes(q),
+    );
+  }, [players, query]);
+
   return (
     <>
+      <Input
+        allowClear
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        prefix={<Search className="h-4 w-4 text-ink-400" />}
+        placeholder="Search by name, team, position or email"
+        className="mb-4 max-w-md"
+      />
+
       {/* Desktop / tablet: table */}
       <div className="tv-card hidden overflow-hidden md:block">
         <Table<PlayerRow>
           rowKey="id"
-          dataSource={players}
-          pagination={players.length > 15 ? { pageSize: 15, hideOnSinglePage: true } : false}
+          dataSource={shown}
+          pagination={shown.length > 15 ? { pageSize: 15, hideOnSinglePage: true } : false}
           columns={[
             {
               title: "Player",
@@ -109,8 +133,11 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
       </div>
 
       {/* Mobile: stacked cards — no horizontal scrolling */}
+      {shown.length === 0 ? (
+        <p className="text-sm text-ink-500 md:hidden">No players match “{query}”.</p>
+      ) : null}
       <ul className="flex flex-col gap-2 md:hidden">
-        {players.map((p) => (
+        {shown.map((p) => (
           <li key={p.id}>
             <Link
               href={`/players/${p.id}`}

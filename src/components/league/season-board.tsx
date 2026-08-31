@@ -329,6 +329,52 @@ export function LeagueStats({ view }: { view: SeasonView }) {
   );
 }
 
+// One fixture row: "Home  score  Away  status", styled by result/status. Shared
+// by the full fixtures list and the dashboard's current-matchday card.
+export function FixtureRow({ g }: { g: SeasonView["matchdays"][number]["fixtures"][number] }) {
+  const done = g.status === "completed" && g.homeScore !== null;
+  const cancelled = g.status === "cancelled";
+  const homeWin = done && g.homeScore! > g.awayScore!;
+  const awayWin = done && g.awayScore! > g.homeScore!;
+  return (
+    <Link
+      href={`/matches/${g.id}`}
+      className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-cream-100/70 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line/60"
+    >
+      <span
+        className={`flex-1 truncate text-right ${
+          cancelled ? "text-ink-400 line-through" : homeWin ? "font-bold text-ink-900" : "text-ink-700"
+        }`}
+      >
+        {g.homeTeam?.name ?? "TBD"}
+      </span>
+      <span
+        className={`scoreboard w-12 shrink-0 rounded text-center text-sm font-bold ${
+          done ? "bg-cream-200 text-ink-900" : "text-ink-400"
+        }`}
+      >
+        {done ? `${g.homeScore}–${g.awayScore}` : cancelled ? "—" : "vs"}
+      </span>
+      <span
+        className={`flex-1 truncate ${
+          cancelled ? "text-ink-400 line-through" : awayWin ? "font-bold text-ink-900" : "text-ink-700"
+        }`}
+      >
+        {g.awayTeam?.name ?? "TBD"}
+      </span>
+      <span className="w-16 shrink-0 text-right text-[11px] font-semibold">
+        {done ? (
+          <span className="rounded bg-pitch-500/15 px-1.5 py-0.5 uppercase text-pitch-500">FT</span>
+        ) : cancelled ? (
+          <span className="uppercase text-tvred-500">Canc.</span>
+        ) : (
+          <span className="text-ink-500">{formatTime(g.kickoffAt)}</span>
+        )}
+      </span>
+    </Link>
+  );
+}
+
 export function LeagueMatchdays({ matchdays }: { matchdays: SeasonView["matchdays"] }) {
   return (
     <section>
@@ -349,51 +395,9 @@ export function LeagueMatchdays({ matchdays }: { matchdays: SeasonView["matchday
                   {md.venue ? ` · ${md.venue.name}` : ""}
                 </span>
               </div>
-              {md.fixtures.map((g) => {
-                const done = g.status === "completed" && g.homeScore !== null;
-                const cancelled = g.status === "cancelled";
-                const homeWin = done && g.homeScore! > g.awayScore!;
-                const awayWin = done && g.awayScore! > g.homeScore!;
-                return (
-                  <Link
-                    key={g.id}
-                    href={`/matches/${g.id}`}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-cream-100/70 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-line/60"
-                  >
-                    <span
-                      className={`flex-1 truncate text-right ${
-                        cancelled ? "text-ink-400 line-through" : homeWin ? "font-bold text-ink-900" : "text-ink-700"
-                      }`}
-                    >
-                      {g.homeTeam?.name ?? "TBD"}
-                    </span>
-                    <span
-                      className={`scoreboard w-12 shrink-0 rounded text-center text-sm font-bold ${
-                        done ? "bg-cream-200 text-ink-900" : "text-ink-400"
-                      }`}
-                    >
-                      {done ? `${g.homeScore}–${g.awayScore}` : cancelled ? "—" : "vs"}
-                    </span>
-                    <span
-                      className={`flex-1 truncate ${
-                        cancelled ? "text-ink-400 line-through" : awayWin ? "font-bold text-ink-900" : "text-ink-700"
-                      }`}
-                    >
-                      {g.awayTeam?.name ?? "TBD"}
-                    </span>
-                    {/* Status indicator */}
-                    <span className="w-16 shrink-0 text-right text-[11px] font-semibold">
-                      {done ? (
-                        <span className="rounded bg-pitch-500/15 px-1.5 py-0.5 uppercase text-pitch-500">FT</span>
-                      ) : cancelled ? (
-                        <span className="uppercase text-tvred-500">Canc.</span>
-                      ) : (
-                        <span className="text-ink-500">{formatTime(g.kickoffAt)}</span>
-                      )}
-                    </span>
-                  </Link>
-                );
-              })}
+              {md.fixtures.map((g) => (
+                <FixtureRow key={g.id} g={g} />
+              ))}
             </div>
           ))}
         </div>
