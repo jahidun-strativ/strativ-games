@@ -64,14 +64,16 @@ export function PlayersTable({ players }: { players: PlayerRow[] }) {
         onChange={(e) => setQuery(e.target.value)}
         prefix={<Search className="h-4 w-4 text-ink-400" />}
         placeholder="Search by name, team, position or email"
-        className="mb-4 max-w-md"
+        className="mb-4 w-full sm:max-w-md"
       />
 
-      {/* Desktop / tablet: table */}
+      {/* Desktop / tablet: table — scrolls horizontally inside its own card so a
+          wide row never pushes the whole page sideways. */}
       <div className="tv-card hidden overflow-hidden md:block">
         <Table<PlayerRow>
           rowKey="id"
           dataSource={shown}
+          scroll={{ x: "max-content" }}
           pagination={shown.length > 15 ? { pageSize: 15, hideOnSinglePage: true } : false}
           columns={[
             {
