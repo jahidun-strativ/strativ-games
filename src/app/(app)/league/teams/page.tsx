@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { asc, eq, isNotNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { appUsers, players as playersTable, teams } from "@/db/schema";
+import { teams } from "@/db/schema";
 import { isAdmin, canManageTeam } from "@/server/auth";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
@@ -55,22 +55,6 @@ export default async function LeagueTeamsPage() {
       with: { team: { columns: { name: true } } },
     }),
   ]);
-
-  // Admin's manager picker: every app user, labelled by their player name if any.
-  const managerOptions = admin
-    ? await (async () => {
-        const [users, named] = await Promise.all([
-          db.select({ userId: appUsers.userId, email: appUsers.email }).from(appUsers),
-          db
-            .select({ userId: playersTable.userId, name: playersTable.name })
-            .from(playersTable)
-            .where(isNotNull(playersTable.userId))
-            .orderBy(asc(playersTable.name)),
-        ]);
-        const nameByUser = new Map(named.map((n) => [n.userId, n.name] as const));
-        return users.map((u) => ({ userId: u.userId, label: nameByUser.get(u.userId) ?? u.email }));
-      })()
-    : [];
 
   const internal = sportTeams.filter((t) => t.kind !== "external");
   if (internal.length === 0) {
@@ -199,7 +183,8 @@ export default async function LeagueTeamsPage() {
                 )}
               </div>
 
-              {/* Manager — admin assigns; the manager gets captain-level powers. */}
+              {/* Manager — admin assigns; the manager gets captain-level powers.
+                  Only this team's players who have a linked account can be picked. */}
               {admin ? (
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
@@ -208,7 +193,9 @@ export default async function LeagueTeamsPage() {
                   <ManagerPicker
                     teamId={team.id}
                     managerUserId={team.managerUserId}
-                    users={managerOptions}
+                    users={team.players
+                      .filter((p) => p.userId)
+                      .map((p) => ({ userId: p.userId!, label: p.name }))}
                   />
                 </div>
               ) : null}
