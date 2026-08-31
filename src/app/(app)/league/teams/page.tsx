@@ -203,7 +203,9 @@ export default async function LeagueTeamsPage() {
               {/* Actions — one column of consistent full-width buttons: primary
                   CTA, then Lineup/Edit paired, then the share action. */}
               <div className="space-y-2 border-t border-line pt-4 [&_.ant-btn]:w-full [&_.ant-btn]:justify-center">
-                {canManage ? (
+                {/* Roster membership is admin-only — captains/managers don't add,
+                    remove or move players. */}
+                {admin ? (
                   <AddPlayerButton
                     teamId={team.id}
                     teamName={team.name}

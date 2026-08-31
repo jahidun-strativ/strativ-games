@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matchAvailability, players, teams } from "@/db/schema";
-import { requireAdmin, requireTeamManager } from "@/server/auth";
+import { requireAdmin } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
 import { opt, str } from "@/server/form";
 
@@ -86,10 +86,10 @@ async function onboardToTeam(playerId: string, teamId: string) {
 }
 
 // Assign an existing (unassigned) player to a team — used by the team page's
-// "Add player" modal. Admin or the team's captain. Refuses to poach a player
-// already on another team.
+// "Add player" modal. Admin-only: only admins decide roster membership. Refuses
+// to poach a player already on another team.
 export async function assignPlayerToTeam(playerId: string, teamId: string) {
-  await requireTeamManager(teamId);
+  await requireAdmin();
   const player = await db.query.players.findFirst({ where: eq(players.id, playerId) });
   if (!player) throw new Error("Player not found.");
   if (player.teamId && player.teamId !== teamId) {
@@ -189,10 +189,11 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
   revalidatePath(`/teams/${b.teamId}`);
 }
 
-// Release a player from a team (back to free agent). Admin or the team's
-// captain. If the released player was the captain, the captaincy is cleared.
+// Release a player from a team (back to free agent). Admin-only: only admins
+// decide roster membership. If the released player was the captain, the
+// captaincy is cleared.
 export async function removePlayerFromTeam(playerId: string, teamId: string) {
-  await requireTeamManager(teamId);
+  await requireAdmin();
   await db.update(players).set({ teamId: null }).where(eq(players.id, playerId));
   await db
     .update(teams)

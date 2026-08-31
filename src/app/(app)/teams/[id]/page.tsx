@@ -17,7 +17,7 @@ import { RosterTable } from "@/components/tables/roster-table";
 import { EditTeamButton } from "@/components/entity-modals";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { CaptainPicker } from "@/components/captain-picker";
-import { isAdmin, canManageTeam } from "@/server/auth";
+import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Team" };
 
@@ -45,7 +45,6 @@ export default async function TeamDetailPage({
   if (!team) notFound();
   const external = team.kind === "external";
   const admin = await isAdmin();
-  const canManage = external ? false : await canManageTeam(id);
 
   const teamMatches = await db.query.matches.findMany({
     where: or(eq(matches.homeTeamId, id), eq(matches.awayTeamId, id)),
@@ -158,7 +157,9 @@ export default async function TeamDetailPage({
                 <h2 className="font-display text-xl text-ink-900">
                   Roster <span className="text-sm text-ink-500">({team.players.length})</span>
                 </h2>
-                {canManage ? (
+                {/* Roster membership is admin-only — captains/managers don't add,
+                    remove or move players. */}
+                {admin ? (
                   <AddPlayerButton
                     teamId={team.id}
                     teamName={team.name}
