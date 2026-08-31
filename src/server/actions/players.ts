@@ -5,24 +5,26 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matchAvailability, players, teams } from "@/db/schema";
-import { requireAdmin, requireTeamManager } from "@/server/auth";
+import { requireAdmin, requireTeamRunner } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
 import { opt, str } from "@/server/form";
 
+// Admin edits identity + membership only. A player's position is NOT here — it's
+// set by the team's captain/manager via setPlayerRole, so admin edits never touch
+// (and never wipe) it.
 function playerValues(formData: FormData) {
   return {
     sportId: str(formData, "sportId"),
     teamId: opt(formData, "teamId"),
     name: str(formData, "name"),
-    // Position is optional — anyone can play anywhere in casual games.
-    position: opt(formData, "position") ?? "",
     status: opt(formData, "status") ?? "active",
   };
 }
 
 export async function createPlayer(formData: FormData) {
   await requireAdmin();
-  await db.insert(players).values(playerValues(formData));
+  // Position starts blank; the team's captain/manager sets it later.
+  await db.insert(players).values({ ...playerValues(formData), position: "" });
   revalidatePath("/players");
 }
 
@@ -189,9 +191,9 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
   revalidatePath(`/teams/${b.teamId}`);
 }
 
-// Set a player's role/position within their team. Admin, captain or manager —
-// this is squad configuration, not roster membership, so it doesn't move the
-// player between teams.
+// Set a player's role/position within their team. The team's captain or manager
+// only — NOT admin: admins decide roster membership, the team's own runners
+// configure positions. It never moves the player between teams.
 export async function setPlayerRole(playerId: string, role: string) {
   const player = await db.query.players.findFirst({
     where: eq(players.id, playerId),
@@ -199,7 +201,7 @@ export async function setPlayerRole(playerId: string, role: string) {
   });
   if (!player) throw new Error("Player not found.");
   if (!player.teamId) throw new Error("This player isn't on a team.");
-  await requireTeamManager(player.teamId);
+  await requireTeamRunner(player.teamId);
   await db.update(players).set({ position: role.trim() }).where(eq(players.id, playerId));
   revalidatePath("/league/teams");
   revalidatePath(`/teams/${player.teamId}`);

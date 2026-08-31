@@ -132,14 +132,13 @@ export async function requireMatchScorer(matchId: string) {
   throw new Error("Only an admin, a participating captain, or the assigned scorer can do this.");
 }
 
-// Guards match line-ups: the team's captain OR its manager. Admins do not get in
-// here (they assign the captain/manager instead). An admin who is also the
-// captain or manager of this team passes — on that basis, not on being an admin.
-export async function requireLineupEditor(teamId: string) {
+// The team's own runners: its captain OR its manager, NOT admin. Admins decide
+// roster membership and assign the captain/manager; those two run the team —
+// line-ups and per-player positions. An admin who is also the captain/manager of
+// this team passes on that basis, not on being an admin.
+export async function requireTeamRunner(teamId: string) {
   await requireUser();
   if (await isCaptainOf(teamId)) return;
   if (await isManagerOf(teamId)) return;
-  throw new Error(
-    "Only this team's captain or manager can set match line-ups. An admin can assign them.",
-  );
+  throw new Error("Only this team's captain or manager can do that. An admin can assign them.");
 }

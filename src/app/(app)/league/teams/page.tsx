@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { appUsers, teams } from "@/db/schema";
-import { isAdmin, canManageTeam } from "@/server/auth";
+import { isAdmin, canManageTeam, canSetLineup } from "@/server/auth";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
 import { GkPicker } from "@/components/gk-picker";
@@ -79,6 +79,8 @@ export default async function LeagueTeamsPage() {
   const rankByTeam = new Map(view.standings.map((r, i) => [r.teamId, i + 1]));
   const recByTeam = new Map(view.standings.map((r) => [r.teamId, r]));
   const manageable = await Promise.all(internal.map((t) => canManageTeam(t.id)));
+  // Setting player positions is the captain's/manager's job, not admin's.
+  const roleEditable = await Promise.all(internal.map((t) => canSetLineup(t.id)));
 
   const assignablePlayers = allPlayers.map((p) => ({
     id: p.id,
@@ -97,6 +99,7 @@ export default async function LeagueTeamsPage() {
 
       {internal.map((team, i) => {
         const canManage = manageable[i];
+        const canEditRole = roleEditable[i];
         const rank = rankByTeam.get(team.id);
         const rec = recByTeam.get(team.id);
         const record = [
@@ -259,7 +262,7 @@ export default async function LeagueTeamsPage() {
                       key={p.id}
                       player={{ id: p.id, name: p.name, position: p.position, status: p.status }}
                       isCaptain={team.captainId === p.id}
-                      canManage={canManage}
+                      canEditRole={canEditRole}
                       initials={initials(p.name)}
                       statusDot={STATUS_DOT[p.status] ?? "bg-ink-400"}
                     />

@@ -61,19 +61,19 @@ function RoleField({ playerId, role }: { playerId: string; role: string }) {
   );
 }
 
-// One roster entry. Read-only viewers get a link card; a captain/manager/admin
-// gets the same card with an editable role field (so the card is a div, with the
-// name as the link — no interactive controls nested inside an anchor).
+// One roster entry. Most viewers get a link card; only the team's captain/manager
+// (NOT admin) get the editable role field, as a div with the name as the link —
+// no interactive controls nested inside an anchor.
 export function RosterCard({
   player,
   isCaptain,
-  canManage,
+  canEditRole,
   initials,
   statusDot,
 }: {
   player: Player;
   isCaptain: boolean;
-  canManage: boolean;
+  canEditRole: boolean;
   initials: string;
   statusDot: string;
 }) {
@@ -86,7 +86,7 @@ export function RosterCard({
     <span title={player.status} className={`h-2 w-2 shrink-0 rounded-full ${statusDot}`} />
   );
 
-  if (!canManage) {
+  if (!canEditRole) {
     return (
       <Link href={`/players/${player.id}`} className={CARD}>
         {avatar}
