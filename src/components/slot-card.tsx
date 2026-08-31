@@ -25,7 +25,17 @@ const accent: Record<string, string> = {
 
 // A slot groups every game booked in one hire. Each game links to its match;
 // the header links to the slot itself (venue, cost split, all games).
-export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: string }) {
+// `label` overrides the league eyebrow with the chronological matchday name (the
+// stored title is a frozen creation number that drifts once dates are edited).
+export function SlotCard({
+  slot,
+  status,
+  label,
+}: {
+  slot: SlotWithFixtures;
+  status: string;
+  label?: string;
+}) {
   const count = slot.fixtures.length;
 
   const isLeague = Boolean(slot.seasonId);
@@ -40,7 +50,7 @@ export function SlotCard({ slot, status }: { slot: SlotWithFixtures; status: str
       {isLeague ? (
         <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300">
           <Trophy className="h-3.5 w-3.5" />
-          {slot.title || "League matchday"}
+          {label || slot.title || "League matchday"}
         </div>
       ) : null}
 

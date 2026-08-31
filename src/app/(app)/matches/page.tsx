@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { asc, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { matches, sessions } from "@/db/schema";
+import { matches } from "@/db/schema";
 import { MatchCard } from "@/components/match-card";
 import { SlotCard, type SlotWithFixtures } from "@/components/slot-card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -10,6 +10,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { FilterBarSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { NewSessionButton } from "@/components/entity-modals";
 import { PosterButton } from "@/components/poster-button";
+import { matchdayLabel } from "@/lib/format";
 import { isAdmin } from "@/server/auth";
 
 export const metadata = { title: "Matches" };
@@ -58,6 +59,21 @@ async function MatchesContent({
     db.query.venues.findMany(),
   ]);
 
+  // League matchdays carry a frozen creation-number title ("Matchday 3") that
+  // drifts once dates are edited. Renumber each season's matchdays by date, the
+  // same way /league does, so the label here matches everywhere else.
+  const leagueLabelById = new Map<string, string>();
+  const bySeason = new Map<string, typeof allSlots>();
+  for (const s of allSlots) {
+    if (!s.seasonId) continue;
+    (bySeason.get(s.seasonId) ?? bySeason.set(s.seasonId, []).get(s.seasonId)!).push(s);
+  }
+  for (const seasonSlots of bySeason.values()) {
+    seasonSlots
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+      .forEach((s, i) => leagueLabelById.set(s.id, matchdayLabel(s.title, i)));
+  }
+
   const admin = await isAdmin();
   const canSchedule = admin && allVenues.length >= 1;
   const scheduleButton = canSchedule ? (
@@ -98,7 +114,12 @@ async function MatchesContent({
 
   const renderItem = (it: Item) =>
     it.kind === "slot" ? (
-      <SlotCard key={`s-${it.slot.id}`} slot={it.slot} status={it.status} />
+      <SlotCard
+        key={`s-${it.slot.id}`}
+        slot={it.slot}
+        status={it.status}
+        label={leagueLabelById.get(it.slot.id)}
+      />
     ) : (
       <MatchCard key={`m-${it.match.id}`} match={it.match} />
     );
