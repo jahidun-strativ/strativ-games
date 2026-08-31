@@ -320,6 +320,17 @@ export function PitchBuilder({
                 ) : (
                   <span className="mt-1 text-[10px] font-semibold text-white/70">Tap to fill</span>
                 )}
+
+                {/* The position's substitute — shown by name, not just initials. */}
+                {subPlayer ? (
+                  <span
+                    title={`Sub: ${subPlayer.name}`}
+                    className="mt-0.5 flex max-w-[76px] items-center gap-0.5 rounded bg-sky-500/90 px-1.5 py-0.5 text-[9px] font-semibold text-white sm:max-w-[92px]"
+                  >
+                    <span className="shrink-0">⇄</span>
+                    <span className="truncate">{subPlayer.name}</span>
+                  </span>
+                ) : null}
               </div>
             );
           })}
