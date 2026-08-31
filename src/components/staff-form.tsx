@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Form, Input, Select } from "antd";
+import { AutoComplete, Button, Form, Input, Select } from "antd";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import type { Sport, StaffMember, Team } from "@/db/schema";
 
@@ -11,6 +11,7 @@ export function StaffForm({
   member,
   submitLabel,
   fixedTeam,
+  people,
   onSuccess,
 }: {
   action: (formData: FormData) => Promise<void>;
@@ -21,6 +22,8 @@ export function StaffForm({
   // When set, the team and sport are locked to this team (submitted as hidden
   // fields). Used where a captain/manager adds staff to their own team only.
   fixedTeam?: { id: string; sportId: string };
+  // Optional name suggestions (e.g. app users) — pick one or type a name.
+  people?: { value: string; label: string }[];
   onSuccess?: () => void;
 }) {
   const { onFinish, isPending } = useActionSubmit(action, onSuccess);
@@ -39,7 +42,17 @@ export function StaffForm({
     >
       <div className="grid gap-x-4 sm:grid-cols-2">
         <Form.Item label="Name" name="name" rules={[{ required: true }]}>
-          <Input />
+          {people && people.length > 0 ? (
+            <AutoComplete
+              options={people}
+              placeholder="Pick a user or type a name"
+              filterOption={(input, option) =>
+                (option?.label ?? "").toString().toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          ) : (
+            <Input />
+          )}
         </Form.Item>
         <Form.Item label="Role" name="role" rules={[{ required: true }]}>
           <Input placeholder="Head Coach" />

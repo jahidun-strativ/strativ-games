@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { matchAvailability, players, teams } from "@/db/schema";
-import { requireAdmin } from "@/server/auth";
+import { requireAdmin, requireTeamManager } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
 import { opt, str } from "@/server/form";
 
@@ -187,6 +187,23 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
   revalidatePath("/teams");
   revalidatePath(`/teams/${a.teamId}`);
   revalidatePath(`/teams/${b.teamId}`);
+}
+
+// Set a player's role/position within their team. Admin, captain or manager —
+// this is squad configuration, not roster membership, so it doesn't move the
+// player between teams.
+export async function setPlayerRole(playerId: string, role: string) {
+  const player = await db.query.players.findFirst({
+    where: eq(players.id, playerId),
+    columns: { id: true, teamId: true },
+  });
+  if (!player) throw new Error("Player not found.");
+  if (!player.teamId) throw new Error("This player isn't on a team.");
+  await requireTeamManager(player.teamId);
+  await db.update(players).set({ position: role.trim() }).where(eq(players.id, playerId));
+  revalidatePath("/league/teams");
+  revalidatePath(`/teams/${player.teamId}`);
+  revalidatePath(`/players/${playerId}`);
 }
 
 // Release a player from a team (back to free agent). Admin-only: only admins

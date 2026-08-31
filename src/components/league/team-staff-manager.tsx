@@ -15,11 +15,13 @@ export function TeamStaffManager({
   sportId,
   staff,
   canManage,
+  people,
 }: {
   teamId: string;
   sportId: string;
   staff: StaffMember[];
   canManage: boolean;
+  people?: { value: string; label: string }[];
 }) {
   const [adding, setAdding] = useState(false);
   const fixedTeam = { id: teamId, sportId };
@@ -55,6 +57,7 @@ export function TeamStaffManager({
                   teams={[]}
                   member={m}
                   fixedTeam={fixedTeam}
+                  people={people}
                   submitLabel="Save"
                 />
                 <div className="mt-2 flex justify-end">
@@ -81,6 +84,7 @@ export function TeamStaffManager({
               sports={[]}
               teams={[]}
               fixedTeam={fixedTeam}
+              people={people}
               submitLabel="Add staff"
               onSuccess={() => setAdding(false)}
             />

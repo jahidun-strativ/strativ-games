@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { teams } from "@/db/schema";
+import { appUsers, teams } from "@/db/schema";
 import { isAdmin, canManageTeam } from "@/server/auth";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { CaptainPicker } from "@/components/captain-picker";
 import { GkPicker } from "@/components/gk-picker";
 import { ManagerPicker } from "@/components/league/manager-picker";
+import { RosterCard } from "@/components/league/roster-card";
 import { TeamStaffManager } from "@/components/league/team-staff-manager";
 import { AddPlayerButton } from "@/components/add-player-to-team";
 import { EditTeamButton } from "@/components/entity-modals";
@@ -55,6 +55,17 @@ export default async function LeagueTeamsPage() {
       with: { team: { columns: { name: true } } },
     }),
   ]);
+
+  // Suggestions for the staff Name field: every app user, named by their linked
+  // player if any, else their email. Managers can still type any name manually.
+  const users = await db.select({ userId: appUsers.userId, email: appUsers.email }).from(appUsers);
+  const nameByUser = new Map(
+    allPlayers.filter((p) => p.userId).map((p) => [p.userId as string, p.name] as const),
+  );
+  const staffPeople = users.map((u) => {
+    const label = nameByUser.get(u.userId) ?? u.email;
+    return { value: label, label };
+  });
 
   const internal = sportTeams.filter((t) => t.kind !== "external");
   if (internal.length === 0) {
@@ -105,7 +116,7 @@ export default async function LeagueTeamsPage() {
               className="h-16 w-full"
             />
             {admin ? (
-              <div className="absolute right-3 top-3 z-10">
+              <div className="absolute left-3 top-3 z-10">
                 <TeamBannerGenerator
                   teamId={team.id}
                   teamName={team.name}
@@ -243,39 +254,16 @@ export default async function LeagueTeamsPage() {
                 <p className="text-sm text-ink-500">No players yet.</p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {team.players.map((p) => {
-                    const isCaptain = team.captainId === p.id;
-                    return (
-                      <Link
-                        key={p.id}
-                        href={`/players/${p.id}`}
-                        className="group flex items-center gap-2.5 rounded-lg border border-line bg-cream-200 px-3 py-2 transition-colors hover:border-burnt-500/40"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-cream-50 font-display text-xs text-ink-700">
-                          {initials(p.name)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-1.5">
-                            <span className="truncate text-sm font-semibold text-ink-900 group-hover:text-burnt-400">
-                              {p.name}
-                            </span>
-                            {isCaptain ? (
-                              <span className="shrink-0 rounded bg-burnt-500/15 px-1 py-0.5 text-[11px] font-bold uppercase text-burnt-400">
-                                C
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="block truncate text-xs text-ink-500">
-                            {p.position || "—"}
-                          </span>
-                        </span>
-                        <span
-                          title={p.status}
-                          className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[p.status] ?? "bg-ink-400"}`}
-                        />
-                      </Link>
-                    );
-                  })}
+                  {team.players.map((p) => (
+                    <RosterCard
+                      key={p.id}
+                      player={{ id: p.id, name: p.name, position: p.position, status: p.status }}
+                      isCaptain={team.captainId === p.id}
+                      canManage={canManage}
+                      initials={initials(p.name)}
+                      statusDot={STATUS_DOT[p.status] ?? "bg-ink-400"}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -287,6 +275,7 @@ export default async function LeagueTeamsPage() {
                   sportId={team.sportId}
                   staff={team.staff}
                   canManage={canManage}
+                  people={staffPeople}
                 />
               </div>
             </div>

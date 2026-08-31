@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { asc } from "drizzle-orm";
+import { asc, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import { staff } from "@/db/schema";
+import { appUsers, players, staff } from "@/db/schema";
 import { createStaff, deleteStaff, updateStaff } from "@/server/actions/staff";
 import { StaffForm } from "@/components/staff-form";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +13,7 @@ import { isAdmin } from "@/server/auth";
 export const metadata = { title: "Staff" };
 
 async function StaffContent() {
-  const [allStaff, allSports, allTeams, admin] = await Promise.all([
+  const [allStaff, allSports, allTeams, admin, users, named] = await Promise.all([
     db.query.staff.findMany({
       orderBy: asc(staff.name),
       with: { sport: true, team: true },
@@ -21,7 +21,19 @@ async function StaffContent() {
     db.query.sports.findMany(),
     db.query.teams.findMany(),
     isAdmin(),
+    db.select({ userId: appUsers.userId, email: appUsers.email }).from(appUsers),
+    db
+      .select({ userId: players.userId, name: players.name })
+      .from(players)
+      .where(isNotNull(players.userId)),
   ]);
+
+  // Name suggestions: every app user, named by their linked player if any.
+  const nameByUser = new Map(named.map((n) => [n.userId as string, n.name] as const));
+  const people = users.map((u) => {
+    const label = nameByUser.get(u.userId) ?? u.email;
+    return { value: label, label };
+  });
 
   return (
     <div className={`grid gap-6 ${admin ? "lg:grid-cols-[1fr_22rem]" : ""}`}>
@@ -63,6 +75,7 @@ async function StaffContent() {
                     sports={allSports}
                     teams={allTeams}
                     member={member}
+                    people={people}
                     submitLabel="Save"
                   />
                 </div>
@@ -86,6 +99,7 @@ async function StaffContent() {
               action={createStaff}
               sports={allSports}
               teams={allTeams}
+              people={people}
               submitLabel="Add staff"
             />
           </div>
