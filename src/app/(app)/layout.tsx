@@ -48,7 +48,7 @@ export default async function AppLayout({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         {/* Mobile top bar — sticks to the top of the scrolling content column */}
         <header className="glass-bar sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-line px-4 py-3 md:hidden">
           <Link href="/" className="font-display truncate text-lg text-burnt-500">

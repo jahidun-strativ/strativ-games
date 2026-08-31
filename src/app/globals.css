@@ -145,6 +145,14 @@ select,
   -webkit-backdrop-filter: blur(16px);
 }
 
+/* Nudge everything down ~1px on phones — all rem-based type and spacing scales
+   with the root, so the whole UI tightens uniformly. */
+@media (max-width: 640px) {
+  html {
+    font-size: 93.75%; /* 15px vs the 16px default */
+  }
+}
+
 /* Scoreboard digits. */
 .scoreboard {
   font-family: var(--font-score);

@@ -36,9 +36,9 @@ export function DashboardLeague({ view }: { view: SeasonView }) {
         </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         {/* Current matchday */}
-        <div className="tv-card-sm overflow-hidden">
+        <div className="tv-card-sm min-w-0 overflow-hidden">
           <div className="flex items-baseline justify-between gap-x-3 border-b border-line bg-cream-100 px-3 py-2">
             <span className="text-xs font-bold uppercase tracking-wider text-ink-700">
               {current ? matchdayLabel(current.title, currentIndex) : "Current matchday"}
@@ -58,7 +58,7 @@ export function DashboardLeague({ view }: { view: SeasonView }) {
         </div>
 
         {/* Standings snapshot */}
-        <div>
+        <div className="min-w-0">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-ink-500">
             Standings · after matchday {playedMatchdays}
           </p>
