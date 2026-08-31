@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { PitchBuilder } from "@/components/lineup/pitch-builder";
 import { PageHeader } from "@/components/ui/page-header";
 import { ButtonLink } from "@/components/ui/button";
+import { PosterButton } from "@/components/poster-button";
 import { ALL_FORMATIONS, DEFAULT_FORMATION } from "@/lib/formations";
 import { saveLineup } from "@/server/actions/lineups";
 import { isAdmin } from "@/server/auth";
@@ -46,9 +47,18 @@ export default async function LineupPage({
         kicker="Tactics board"
         title={`${team.name} lineup`}
         actions={
-          <ButtonLink variant="secondary" href={`/teams/${team.id}`}>
-            ← Back to team
-          </ButtonLink>
+          <div className="flex flex-wrap items-center gap-2">
+            <PosterButton
+              basePath={`/teams/${team.id}/lineup/poster`}
+              label="Lineup image"
+              variants={[
+                { label: "Lineup image", variant: "lineup", hint: "Formation on the pitch" },
+              ]}
+            />
+            <ButtonLink variant="secondary" href={`/teams/${team.id}`}>
+              ← Back to team
+            </ButtonLink>
+          </div>
         }
       />
       <PitchBuilder

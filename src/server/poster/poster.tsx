@@ -61,6 +61,23 @@ export type PosterData =
       subtitle?: string | null; // "5 sessions · 15 games"
       fixtures: PosterFixture[];
       sport?: string | null;
+    }
+  | {
+      // A team's line-up drawn on the pitch: each starter in position, with its
+      // per-position substitute named beneath.
+      variant: "lineup";
+      teamName: string;
+      formation: string; // "2-1-2"
+      squadLabel: string; // "6-a-side"
+      // Each starting slot, positioned by percentage (x 0–100, y 0–100, GK bottom).
+      slots: {
+        position: string;
+        x: number;
+        y: number;
+        name: string | null;
+        sub: string | null;
+      }[];
+      sport?: string | null;
     };
 
 // Fixed feed width (Instagram / Facebook portrait). The HEIGHT is computed from
@@ -84,6 +101,9 @@ export function posterHeight(data: PosterData): number {
   }
   // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
   if (data.variant === "vs" || data.variant === "league") return 1080;
+
+  // The pitch line-up: fixed portrait — header + the tall pitch + footer.
+  if (data.variant === "lineup") return LINEUP_HEIGHT;
 
   // The standalone squad sheet lays players in two columns of cards, so its
   // height grows with the taller column (ceil(n/2)), not the whole roster.
@@ -133,6 +153,12 @@ const FIXTURE_GAP = 16;
 
 // Fixed height of one fixture card (date badge · session type · time · venue).
 const FIXTURE_CARD_HEIGHT = 150;
+
+// Line-up pitch geometry. The pitch is a fixed box so tokens can be placed by
+// percentage; the whole poster height follows from it.
+const LINEUP_PITCH_W = 900;
+const LINEUP_PITCH_H = 1150;
+const LINEUP_HEIGHT = 1520; // padding + header + pitch + footer
 
 function Monogram({ size = 46 }: { size?: number }) {
   return (
@@ -883,7 +909,183 @@ function PageShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// One player marker on the line-up pitch: a position disc, the name on a dark
+// pill below, and (optional) the position's substitute on a sky pill. Centred on
+// (x%, y%) via negative margins (Satori has no reliable %-translate).
+function PitchToken({
+  x,
+  y,
+  position,
+  name,
+  sub,
+}: {
+  x: number;
+  y: number;
+  position: string;
+  name: string | null;
+  sub: string | null;
+}) {
+  const DISC = 90;
+  const BOX = 220; // fixed token column width, so centring math is constant
+  // Keep tokens (and the labels below them) inside the pitch with a safe band.
+  const py = y * 0.9 + 4;
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        position: "absolute",
+        left: `${x}%`,
+        top: `${py}%`,
+        width: BOX,
+        marginLeft: -BOX / 2,
+        marginTop: -DISC / 2,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: DISC,
+          height: DISC,
+          borderRadius: DISC / 2,
+          border: name ? "3px solid rgba(255,255,255,0.8)" : "3px dashed rgba(255,255,255,0.6)",
+          background: name ? "#eef2f7" : "rgba(0,0,0,0.28)",
+          color: name ? BASE : "#ffffff",
+          fontFamily: "Oswald",
+          fontWeight: 700,
+          fontSize: 26,
+          boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
+        }}
+      >
+        {position}
+      </div>
+      {name ? (
+        <div
+          style={{
+            display: "flex",
+            maxWidth: BOX,
+            marginTop: 10,
+            padding: "5px 12px",
+            borderRadius: 8,
+            background: "rgba(0,0,0,0.72)",
+            color: "#ffffff",
+            fontFamily: "Archivo",
+            fontWeight: 700,
+            fontSize: 24,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {name}
+        </div>
+      ) : null}
+      {sub ? (
+        <div
+          style={{
+            display: "flex",
+            maxWidth: BOX,
+            marginTop: 6,
+            padding: "3px 10px",
+            borderRadius: 7,
+            background: "#0284c7",
+            color: "#ffffff",
+            fontFamily: "Archivo",
+            fontWeight: 600,
+            fontSize: 18,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          SUB {sub}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// The green pitch with markings + every positioned token.
+function LineupPitch({ slots }: { slots: Extract<PosterData, { variant: "lineup" }>["slots"] }) {
+  const line = "rgba(255,255,255,0.6)";
+  return (
+    <div
+      style={{
+        display: "flex",
+        position: "relative",
+        width: LINEUP_PITCH_W,
+        height: LINEUP_PITCH_H,
+        marginLeft: "auto",
+        marginRight: "auto",
+        borderRadius: 24,
+        border: "2px solid rgba(0,0,0,0.4)",
+        background: "linear-gradient(180deg,#1c5228 0%,#16401f 100%)",
+        overflow: "hidden",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+      }}
+    >
+      {/* Turf stripes */}
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: `${(i * 100) / 8}%`,
+            height: `${100 / 8}%`,
+            background: i % 2 ? "rgba(255,255,255,0.04)" : "transparent",
+          }}
+        />
+      ))}
+      {/* Penalty boxes + centre line + circle */}
+      <div style={{ display: "flex", position: "absolute", left: "18%", right: "18%", top: 0, height: 150, border: `2px solid ${line}`, borderTop: "none", borderTopLeftRadius: 0, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }} />
+      <div style={{ display: "flex", position: "absolute", left: "18%", right: "18%", bottom: 0, height: 150, border: `2px solid ${line}`, borderBottom: "none", borderTopLeftRadius: 8, borderTopRightRadius: 8 }} />
+      <div style={{ display: "flex", position: "absolute", left: 0, right: 0, top: "50%", borderTop: `2px solid ${line}` }} />
+      <div style={{ display: "flex", position: "absolute", left: "50%", top: "50%", width: 170, height: 170, marginLeft: -85, marginTop: -85, borderRadius: 85, border: `2px solid ${line}` }} />
+
+      {slots.map((s, i) => (
+        <PitchToken key={i} x={s.x} y={s.y} position={s.position} name={s.name} sub={s.sub} />
+      ))}
+    </div>
+  );
+}
+
 export function Poster(data: PosterData) {
+  // Pitch line-up: a team's formation drawn on the field.
+  if (data.variant === "lineup") {
+    const { teamName, formation, squadLabel, slots, sport } = data;
+    return (
+      <PageShell>
+        <Header kindLabel={teamName} sport={sport} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginTop: 14,
+            fontFamily: "Archivo",
+            fontWeight: 600,
+            fontSize: 22,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+          }}
+        >
+          <span style={{ display: "flex", color: "#fb8b4c", marginRight: 12 }}>{squadLabel}</span>
+          <span style={{ display: "flex", color: INK_500, marginRight: 12 }}>·</span>
+          <span style={{ display: "flex", color: INK_700 }}>{formation}</span>
+        </div>
+        <div style={{ display: "flex", flex: 1, width: "100%", alignItems: "center", justifyContent: "center", marginTop: 24, marginBottom: 24 }}>
+          <LineupPitch slots={slots} />
+        </div>
+        <Footer />
+      </PageShell>
+    );
+  }
+
   // Schedule poster: a stack of date-badged slot cards. Handled first so the
   // match-only fields (teams/venue/when) never need to exist on this variant.
   if (data.variant === "fixtures") {
