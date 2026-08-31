@@ -5,27 +5,32 @@ import { Table } from "antd";
 import type { StandingsRow } from "@/server/queries/standings";
 
 export function StandingsTable({ rows }: { rows: StandingsRow[] }) {
-  const center = { align: "center" as const, width: 56 };
+  const center = { align: "center" as const, width: 48 };
   return (
     <div className="tv-card overflow-hidden">
       <Table<StandingsRow>
         rowKey="teamId"
         dataSource={rows}
         pagination={false}
-        size="middle"
-        scroll={{ x: true }}
+        size="small"
+        // max-content: the table keeps its natural width and scrolls sideways on
+        // narrow screens rather than squeezing team names into 3 wrapped lines.
+        scroll={{ x: "max-content" }}
         rowClassName={(_, i) => (i === 0 ? "bg-gold-400/10" : "")}
         columns={[
           {
             title: "#",
-            width: 48,
+            width: 40,
             render: (_, __, i) => <span className="scoreboard font-bold">{i + 1}</span>,
           },
           {
             title: "Team",
             dataIndex: "teamName",
             render: (name: string, row) => (
-              <Link href={`/teams/${row.teamId}`} className="font-bold hover:text-burnt-400">
+              <Link
+                href={`/teams/${row.teamId}`}
+                className="whitespace-nowrap font-bold hover:text-burnt-400"
+              >
                 {name}
               </Link>
             ),

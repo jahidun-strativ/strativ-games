@@ -18,15 +18,20 @@ export function DashboardLeague({ view }: { view: SeasonView }) {
 
   return (
     <section>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display flex items-center gap-2 text-xl text-ink-900">
-          <Trophy className="h-5 w-5 text-gold-300" />
-          {season.name}
-          <span className="rounded bg-cream-200 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-ink-700">
-            Matchday {Math.min(currentIndex + 1, season.plannedMatchdays)} of {season.plannedMatchdays}
+      <div className="mb-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <Trophy className="h-5 w-5 shrink-0 text-gold-300" />
+          <h2 className="font-display min-w-0 text-lg leading-tight text-ink-900 sm:text-xl">
+            {season.name}
+          </h2>
+          <span className="shrink-0 rounded bg-cream-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink-700">
+            MD {Math.min(currentIndex + 1, season.plannedMatchdays)}/{season.plannedMatchdays}
           </span>
-        </h2>
-        <Link href="/league" className="text-sm font-bold text-burnt-400 hover:underline">
+        </div>
+        <Link
+          href="/league"
+          className="mt-1 inline-block text-sm font-bold text-burnt-400 hover:underline"
+        >
           League table &amp; awards →
         </Link>
       </div>
