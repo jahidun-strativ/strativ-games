@@ -205,6 +205,7 @@ export async function setPlayerRole(playerId: string, role: string) {
   await db.update(players).set({ position: role.trim() }).where(eq(players.id, playerId));
   revalidatePath("/league/teams");
   revalidatePath(`/teams/${player.teamId}`);
+  revalidatePath("/players");
   revalidatePath(`/players/${playerId}`);
 }
 
