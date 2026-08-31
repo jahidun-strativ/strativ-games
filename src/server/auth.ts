@@ -78,25 +78,36 @@ export async function requireTeamManager(teamId: string) {
   throw new Error("Only an admin or this team's captain can do that.");
 }
 
-// True if the user may record THIS match's result: an admin, or the captain of
-// either team playing. UI gating — never throws.
-export async function canScoreMatch(homeTeamId: string | null, awayTeamId: string | null) {
+// True if the user may record THIS match's result: an admin, the captain of
+// either team playing, or the person an admin assigned as scorekeeper. UI
+// gating — never throws.
+export async function canScoreMatch(
+  homeTeamId: string | null,
+  awayTeamId: string | null,
+  scorerUserId?: string | null,
+) {
   if (await isAdmin()) return true;
+  if (scorerUserId) {
+    const session = await getSession();
+    if (session?.user?.id === scorerUserId) return true;
+  }
   if (homeTeamId && (await isCaptainOf(homeTeamId))) return true;
   if (awayTeamId && (await isCaptainOf(awayTeamId))) return true;
   return false;
 }
 
-// Guards result recording: admin, or a captain of a participating team.
+// Guards result recording: admin, a captain of a participating team, or the
+// assigned scorekeeper.
 export async function requireMatchScorer(matchId: string) {
   const user = await requireUser();
   if ((await getRole(user.id)) === "admin") return user;
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { homeTeamId: true, awayTeamId: true },
+    columns: { homeTeamId: true, awayTeamId: true, scorerUserId: true },
   });
-  if (match && (await canScoreMatch(match.homeTeamId, match.awayTeamId))) return user;
-  throw new Error("Only an admin or a participating team's captain can record this result.");
+  if (match && (await canScoreMatch(match.homeTeamId, match.awayTeamId, match.scorerUserId)))
+    return user;
+  throw new Error("Only an admin, a participating captain, or the assigned scorer can do this.");
 }
 
 // Guards match line-ups: the team's CAPTAIN only. Admins do not

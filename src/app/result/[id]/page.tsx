@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
+import { getMatchEvents } from "@/server/queries/match-events";
+import { MatchTimeline } from "@/components/league/match-timeline";
 import { formatFull } from "@/lib/format";
 
 export const metadata = { title: "Match result" };
+export const dynamic = "force-dynamic";
 
 type Line = { name: string; goals: number; assists: number; home: boolean };
 
@@ -72,6 +75,9 @@ export default async function PublicResultPage({
   const away = match.awayTeam;
   const completed = match.status === "completed";
   const cancelled = match.status === "cancelled";
+  // In-progress with logged events = a live match spectators can follow.
+  const events = await getMatchEvents(id);
+  const live = !completed && !cancelled && events.length > 0;
   const hs = match.homeScore;
   const as = match.awayScore;
   const homeWon = completed && hs != null && as != null && hs > as;
@@ -94,12 +100,20 @@ export default async function PublicResultPage({
   const homeScorers = lines.filter((l) => l.home);
   const awayScorers = lines.filter((l) => !l.home);
 
-  const statusLabel = completed ? "Full-time" : cancelled ? "Cancelled" : "Upcoming";
+  const statusLabel = completed
+    ? "Full-time"
+    : cancelled
+      ? "Cancelled"
+      : live
+        ? "Live"
+        : "Upcoming";
   const statusTone = completed
     ? "text-pitch-500"
     : cancelled
       ? "text-tvred-500"
-      : "text-gold-400";
+      : live
+        ? "text-tvred-500"
+        : "text-gold-400";
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -222,6 +236,21 @@ export default async function PublicResultPage({
           <p className="mt-5 text-center text-sm text-ink-500">No goals recorded.</p>
         ) : cancelled ? (
           <p className="mt-5 text-center text-sm text-ink-500">This match was cancelled.</p>
+        ) : live ? (
+          <section className="tv-card-sm mt-5 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.3em] text-tvred-500">
+                ● Live timeline
+              </h2>
+            </div>
+            <MatchTimeline
+              events={events}
+              homeTeamId={match.homeTeamId}
+              homeTeamName={home?.name ?? "Home"}
+              awayTeamName={away?.name ?? "Away"}
+              live
+            />
+          </section>
         ) : (
           <p className="mt-5 text-center text-sm text-ink-500">
             This match hasn&apos;t been played yet — check back after kick-off.

@@ -33,6 +33,12 @@ async function createForUsers(userIds: string[], input: NotificationInput) {
   }
 }
 
+// Targeted: notify specific app users by their auth user id (e.g. the person
+// assigned to score a match).
+export async function notifyUsers(userIds: string[], input: NotificationInput) {
+  await createForUsers(userIds, input);
+}
+
 // Broadcast to every registered app user (match scheduled, full-time result…).
 export async function notifyAllUsers(input: NotificationInput) {
   const rows = await db.select({ userId: appUsers.userId }).from(appUsers);

@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isNotNull } from "drizzle-orm";
 import { Trophy } from "lucide-react";
 import { db } from "@/db";
+import { appUsers, players } from "@/db/schema";
 import { recordResult, rescheduleMatch, cancelMatch } from "@/server/actions/matches";
-import { isAdmin, isCaptainOf } from "@/server/auth";
+import { getSession, isAdmin, isCaptainOf } from "@/server/auth";
 import { getEffectiveSquad } from "@/server/queries/match-squad";
+import { getMatchEvents } from "@/server/queries/match-events";
 import { ResultForm } from "@/components/result-form";
 import { RescheduleForm } from "@/components/reschedule-form";
+import { LiveScorecard } from "@/components/league/live-scorecard";
+import { MatchTimeline } from "@/components/league/match-timeline";
+import { ScorerPicker } from "@/components/league/scorer-picker";
 import { Button } from "@/components/ui/button";
 import { Scoreboard } from "@/components/ui/scoreboard";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -38,14 +44,15 @@ export default async function LeagueMatchManagePage({
   const league = match.session?.season ?? null;
   if (!league) notFound(); // this manager is league-matches only
 
-  const admin = await isAdmin();
+  const [admin, session, events] = await Promise.all([isAdmin(), getSession(), getMatchEvents(id)]);
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
   const captainSides = await Promise.all(
     [match.homeTeam, match.awayTeam].map((t) =>
       t && t.kind !== "external" ? isCaptainOf(t.id) : Promise.resolve(false),
     ),
   );
-  const canScore = admin || captainSides.some(Boolean);
+  const isAssignedScorer = Boolean(match.scorerUserId && session?.user?.id === match.scorerUserId);
+  const canScore = admin || isAssignedScorer || captainSides.some(Boolean);
 
   const [homeSquad, awaySquad] =
     hasTeams && match.homeTeamId && match.awayTeamId
@@ -54,6 +61,21 @@ export default async function LeagueMatchManagePage({
           getEffectiveSquad(id, match.awayTeamId),
         ])
       : [{ players: [] }, { players: [] }];
+
+  // Admin's assign-scorer picker: every app user, labelled by their player name.
+  const scorerOptions = admin
+    ? await (async () => {
+        const [users, named] = await Promise.all([
+          db.select({ userId: appUsers.userId, email: appUsers.email }).from(appUsers),
+          db
+            .select({ userId: players.userId, name: players.name })
+            .from(players)
+            .where(isNotNull(players.userId)),
+        ]);
+        const nameByUser = new Map(named.map((n) => [n.userId, n.name] as const));
+        return users.map((u) => ({ userId: u.userId, label: nameByUser.get(u.userId) ?? u.email }));
+      })()
+    : [];
 
   return (
     <div className="space-y-8">
@@ -97,55 +119,123 @@ export default async function LeagueMatchManagePage({
         </div>
       </section>
 
-      {canScore && match.status !== "cancelled" && hasTeams ? (
-        <section>
-          <h2 className="font-display mb-3 text-xl text-ink-900">
-            {match.status === "completed" ? "Edit result" : "Record result"}
-          </h2>
-          <ResultForm
-            action={recordResult.bind(null, match.id)}
-            homeTeamName={match.homeTeam!.name}
-            awayTeamName={match.awayTeam!.name}
-            homeSquad={homeSquad.players}
-            awaySquad={awaySquad.players}
-            stats={match.playerStats}
-            homeScore={match.homeScore}
-            awayScore={match.awayScore}
-            completed={match.status === "completed"}
-          />
-        </section>
+      {/* Live scorecard while the match is in progress */}
+      {hasTeams && match.status === "scheduled" ? (
+        canScore ? (
+          <section>
+            <h2 className="font-display mb-3 text-xl text-ink-900">Live scorecard</h2>
+            <LiveScorecard
+              matchId={match.id}
+              home={{
+                teamId: match.homeTeamId!,
+                teamName: match.homeTeam!.name,
+                players: homeSquad.players.map((p) => ({ id: p.id, name: p.name })),
+              }}
+              away={{
+                teamId: match.awayTeamId!,
+                teamName: match.awayTeam!.name,
+                players: awaySquad.players.map((p) => ({ id: p.id, name: p.name })),
+              }}
+              events={events}
+            />
+          </section>
+        ) : events.length > 0 ? (
+          <section className="tv-card-sm overflow-hidden">
+            <div className="border-b border-line px-4 py-2.5">
+              <h2 className="font-display text-lg text-ink-900">Live timeline</h2>
+            </div>
+            <MatchTimeline
+              events={events}
+              homeTeamId={match.homeTeamId}
+              homeTeamName={match.homeTeam!.name}
+              awayTeamName={match.awayTeam!.name}
+              live
+            />
+          </section>
+        ) : null
       ) : null}
 
-      {admin ? (
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="tv-card-sm p-5">
-            <h2 className="font-display mb-3 text-lg text-ink-900">Reschedule / move venue</h2>
-            <RescheduleForm
-              action={rescheduleMatch.bind(null, match.id)}
-              venues={allVenues}
-              currentVenueId={match.venueId}
-              currentKickoff={match.kickoffAt}
-            />
-          </div>
-          {match.status !== "cancelled" ? (
-            <div className="tv-card-sm flex flex-col justify-between gap-3 p-5">
-              <h2 className="font-display text-lg text-ink-900">Cancel</h2>
-              <p className="text-sm text-ink-500">
-                Cancel this game if it won&apos;t be played. You can reschedule it later.
-              </p>
-              <form action={cancelMatch.bind(null, match.id)}>
-                <Button type="submit" variant="secondary">
-                  Cancel match
-                </Button>
-              </form>
+      {/* Completed: show the timeline, plus the aggregate editor for scorers */}
+      {hasTeams && match.status === "completed" ? (
+        <section className="space-y-6">
+          {events.length > 0 ? (
+            <div className="tv-card-sm overflow-hidden">
+              <div className="border-b border-line px-4 py-2.5">
+                <h2 className="font-display text-lg text-ink-900">Timeline</h2>
+              </div>
+              <MatchTimeline
+                events={events}
+                homeTeamId={match.homeTeamId}
+                homeTeamName={match.homeTeam!.name}
+                awayTeamName={match.awayTeam!.name}
+              />
+            </div>
+          ) : null}
+          {canScore ? (
+            <div>
+              <h2 className="font-display mb-3 text-xl text-ink-900">Edit result</h2>
+              <ResultForm
+                action={recordResult.bind(null, match.id)}
+                homeTeamName={match.homeTeam!.name}
+                awayTeamName={match.awayTeam!.name}
+                homeSquad={homeSquad.players}
+                awaySquad={awaySquad.players}
+                stats={match.playerStats}
+                homeScore={match.homeScore}
+                awayScore={match.awayScore}
+                completed
+              />
             </div>
           ) : null}
         </section>
       ) : null}
 
+      {admin ? (
+        <section className="space-y-6">
+          {hasTeams && match.status !== "cancelled" ? (
+            <div className="tv-card-sm p-5">
+              <h2 className="font-display mb-1 text-lg text-ink-900">Scorekeeper</h2>
+              <p className="mb-3 text-sm text-ink-500">
+                Assign anyone to run this match&apos;s live scorecard — they get scoring access to
+                just this match.
+              </p>
+              <ScorerPicker
+                matchId={match.id}
+                users={scorerOptions}
+                currentUserId={match.scorerUserId}
+              />
+            </div>
+          ) : null}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="tv-card-sm p-5">
+              <h2 className="font-display mb-3 text-lg text-ink-900">Reschedule / move venue</h2>
+              <RescheduleForm
+                action={rescheduleMatch.bind(null, match.id)}
+                venues={allVenues}
+                currentVenueId={match.venueId}
+                currentKickoff={match.kickoffAt}
+              />
+            </div>
+            {match.status !== "cancelled" ? (
+              <div className="tv-card-sm flex flex-col justify-between gap-3 p-5">
+                <h2 className="font-display text-lg text-ink-900">Cancel</h2>
+                <p className="text-sm text-ink-500">
+                  Cancel this game if it won&apos;t be played. You can reschedule it later.
+                </p>
+                <form action={cancelMatch.bind(null, match.id)}>
+                  <Button type="submit" variant="secondary">
+                    Cancel match
+                  </Button>
+                </form>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       {!canScore && !admin ? (
         <p className="tv-card px-4 py-6 text-sm text-ink-500">
-          Only an admin or a team captain can manage this match.
+          Only an admin, a team captain, or the assigned scorer can manage this match.
         </p>
       ) : null}
     </div>

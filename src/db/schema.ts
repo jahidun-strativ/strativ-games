@@ -166,6 +166,9 @@ export const matches = pgTable("matches", {
   status: text("status").notNull().default("scheduled"),
   homeScore: integer("home_score"),
   awayScore: integer("away_score"),
+  // Neon Auth user id of the person an admin assigned to run this match's live
+  // scorecard. Grants scoring access on top of admins + team captains.
+  scorerUserId: text("scorer_user_id"),
   // Booking cost (BDT, whole taka) and who covers it: "office" or "self".
   cost: integer("cost"),
   paidBy: text("paid_by").notNull().default("office"),
@@ -199,6 +202,33 @@ export const playerMatchStats = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.matchId, t.playerId)],
+);
+
+// Live match timeline: one row per scored goal or keeper save, logged by the
+// assigned scorekeeper during the game. Source of truth WHILE a match is in
+// progress; rolled up into playerMatchStats on finalize. `kind` is one of
+// MATCH_EVENT_KINDS. For a goal, playerId = scorer, assistPlayerId = assister
+// (nullable); for a save, playerId = the keeper. teamId is the scoring/keeping
+// side. minute is optional (info only).
+export const matchEvents = pgTable(
+  "match_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    assistPlayerId: uuid("assist_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    minute: integer("minute"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("match_events_match_created_idx").on(t.matchId, t.createdAt)],
 );
 
 export const lineups = pgTable("lineups", {
@@ -437,6 +467,18 @@ export const matchesRelations = relations(matches, ({ one, many }) => ({
   venue: one(venues, { fields: [matches.venueId], references: [venues.id] }),
   playerStats: many(playerMatchStats),
   lineups: many(matchLineups),
+  events: many(matchEvents),
+}));
+
+export const matchEventsRelations = relations(matchEvents, ({ one }) => ({
+  match: one(matches, { fields: [matchEvents.matchId], references: [matches.id] }),
+  team: one(teams, { fields: [matchEvents.teamId], references: [teams.id] }),
+  player: one(players, { fields: [matchEvents.playerId], references: [players.id] }),
+  assist: one(players, {
+    fields: [matchEvents.assistPlayerId],
+    references: [players.id],
+    relationName: "assist",
+  }),
 }));
 
 export const playerMatchStatsRelations = relations(playerMatchStats, ({ one }) => ({
@@ -487,6 +529,7 @@ export type Season = typeof seasons.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type PlayerMatchStat = typeof playerMatchStats.$inferSelect;
+export type MatchEvent = typeof matchEvents.$inferSelect;
 export type Lineup = typeof lineups.$inferSelect;
 export type LineupSlot = typeof lineupSlots.$inferSelect;
 export type MatchLineup = typeof matchLineups.$inferSelect;
@@ -513,6 +556,9 @@ export type SeasonStatus = (typeof SEASON_STATUSES)[number];
 
 export const MATCH_KINDS = ["internal", "competitive"] as const;
 export type MatchKind = (typeof MATCH_KINDS)[number];
+
+export const MATCH_EVENT_KINDS = ["goal", "save"] as const;
+export type MatchEventKind = (typeof MATCH_EVENT_KINDS)[number];
 
 export const TEAM_KINDS = ["internal", "external"] as const;
 export type TeamKind = (typeof TEAM_KINDS)[number];
