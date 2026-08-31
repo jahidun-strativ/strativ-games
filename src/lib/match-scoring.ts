@@ -14,6 +14,8 @@ export type PlayerTally = {
   goals: number;
   assists: number;
   saves: number;
+  tackles: number;
+  clearances: number;
   goalkeeper: boolean;
   played: true;
 };
@@ -42,12 +44,14 @@ export function tallyEvents(events: ScoringEvent[]): PlayerTally[] {
   const bump = (id: string, patch: Partial<PlayerTally>) => {
     const t =
       byPlayer.get(id) ??
-      ({ playerId: id, goals: 0, assists: 0, saves: 0, goalkeeper: false, played: true } as PlayerTally);
+      ({ playerId: id, goals: 0, assists: 0, saves: 0, tackles: 0, clearances: 0, goalkeeper: false, played: true } as PlayerTally);
     byPlayer.set(id, {
       ...t,
       goals: t.goals + (patch.goals ?? 0),
       assists: t.assists + (patch.assists ?? 0),
       saves: t.saves + (patch.saves ?? 0),
+      tackles: t.tackles + (patch.tackles ?? 0),
+      clearances: t.clearances + (patch.clearances ?? 0),
       goalkeeper: t.goalkeeper || Boolean(patch.goalkeeper),
     });
   };
@@ -57,6 +61,10 @@ export function tallyEvents(events: ScoringEvent[]): PlayerTally[] {
       if (e.assistPlayerId) bump(e.assistPlayerId, { assists: 1 });
     } else if (e.kind === "save") {
       bump(e.playerId, { saves: 1, goalkeeper: true });
+    } else if (e.kind === "tackle") {
+      bump(e.playerId, { tackles: 1 });
+    } else if (e.kind === "clearance") {
+      bump(e.playerId, { clearances: 1 });
     }
   }
   return [...byPlayer.values()];

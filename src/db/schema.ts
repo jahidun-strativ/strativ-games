@@ -199,6 +199,9 @@ export const playerMatchStats = pgTable(
     goalkeeper: boolean("goalkeeper").notNull().default(false),
     // Shots the keeper saved in this match (goalkeeping tally).
     saves: integer("saves").notNull().default(0),
+    // Defensive work — credited to defenders only (drives the Top defenders board).
+    tackles: integer("tackles").notNull().default(0),
+    clearances: integer("clearances").notNull().default(0),
     // Legacy: kept so old data isn't dropped; the app now tracks fouls instead.
     yellowCards: integer("yellow_cards").notNull().default(0),
     redCards: integer("red_cards").notNull().default(0),
@@ -581,7 +584,7 @@ export type SeasonStatus = (typeof SEASON_STATUSES)[number];
 export const MATCH_KINDS = ["internal", "competitive"] as const;
 export type MatchKind = (typeof MATCH_KINDS)[number];
 
-export const MATCH_EVENT_KINDS = ["goal", "save"] as const;
+export const MATCH_EVENT_KINDS = ["goal", "save", "tackle", "clearance"] as const;
 export type MatchEventKind = (typeof MATCH_EVENT_KINDS)[number];
 
 export const TEAM_KINDS = ["internal", "external"] as const;

@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, inArray, sum } from "drizzle-orm";
 import { db } from "@/db";
 import { matches, playerMatchStats, players, seasons, sessions, teams } from "@/db/schema";
 import { computeStandings, type StandingsRow } from "@/server/queries/standings";
+import { isDefender } from "@/lib/positions";
 import type { Season } from "@/db/schema";
 
 export type SeasonScorer = {
@@ -14,6 +15,8 @@ export type SeasonScorer = {
   goals: number;
   assists: number;
   fouls: number;
+  tackles: number;
+  clearances: number;
   appearances: number;
 };
 
@@ -52,6 +55,14 @@ export function gkScore(k: {
     k.matches * GK_WEIGHTS.appearance -
     k.conceded * GK_WEIGHTS.conceded
   );
+}
+
+// Top-defender rating from live defensive events. A tackle (winning the ball) is
+// weighted above a clearance (hoofing it away). Plain integer weights so the
+// formula shown to users matches exactly.
+export const DEF_WEIGHTS = { tackle: 2, clearance: 1 } as const;
+export function defScore(d: { tackles: number; clearances: number }): number {
+  return d.tackles * DEF_WEIGHTS.tackle + d.clearances * DEF_WEIGHTS.clearance;
 }
 
 type AwardPlayer = { id: string; name: string; teamName: string | null };
@@ -106,6 +117,8 @@ async function seasonScorers(seasonId: string): Promise<SeasonScorer[]> {
       goals: sum(playerMatchStats.goals).mapWith(Number),
       assists: sum(playerMatchStats.assists).mapWith(Number),
       fouls: sum(playerMatchStats.fouls).mapWith(Number),
+      tackles: sum(playerMatchStats.tackles).mapWith(Number),
+      clearances: sum(playerMatchStats.clearances).mapWith(Number),
       appearances: count(playerMatchStats.id).mapWith(Number),
     })
     .from(playerMatchStats)
@@ -368,6 +381,13 @@ export const getSeasonView = cache(async (season: Season) => {
     // and the sort is stable, so order within each group is preserved.
     .sort((a, b) => Number(b.eligible) - Number(a.eligible));
 
+  // Top defenders: defenders (by position) with any tackle/clearance credit,
+  // ranked by defensive rating. Only defenders earn these — never other players.
+  const defenders = scorers
+    .filter((s) => isDefender(s.position) && s.tackles + s.clearances > 0)
+    .map((s) => ({ ...s, score: defScore(s) }))
+    .sort((a, b) => b.score - a.score || b.tackles - a.tackles || a.name.localeCompare(b.name));
+
   const awards = await resolveAwards(season, scorers, fairplay, rankedKeepers, gkFloor);
   const champion: StandingsRow | null =
     season.status === "ended" && standings[0]?.played > 0 ? standings[0] : null;
@@ -379,6 +399,7 @@ export const getSeasonView = cache(async (season: Season) => {
     matchdays,
     playedMatchdays,
     scorers,
+    defenders,
     fairplay,
     keepers: rankedKeepers,
     gkFloor,

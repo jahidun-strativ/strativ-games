@@ -10,6 +10,9 @@ const events: ScoringEvent[] = [
   { kind: "goal", teamId: A, playerId: "p3", assistPlayerId: "p1" }, // away goal, p1 assists
   { kind: "save", teamId: H, playerId: "gk", assistPlayerId: null }, // keeper save
   { kind: "save", teamId: H, playerId: "gk", assistPlayerId: null }, // keeper save
+  { kind: "tackle", teamId: H, playerId: "def", assistPlayerId: null }, // defender tackle
+  { kind: "tackle", teamId: H, playerId: "def", assistPlayerId: null }, // defender tackle
+  { kind: "clearance", teamId: H, playerId: "def", assistPlayerId: null }, // defender clearance
 ];
 
 // Score = goals per side.
@@ -25,9 +28,12 @@ assert.equal(tally.p2.goals, 0, "p2 scored none");
 assert.equal(tally.p3.goals, 1, "p3 scored once");
 assert.equal(tally.gk.saves, 2, "keeper made two saves");
 assert.equal(tally.gk.goalkeeper, true, "a player with a save is flagged keeper");
+assert.equal(tally.def.tackles, 2, "defender made two tackles");
+assert.equal(tally.def.clearances, 1, "defender made one clearance");
+assert.equal(tally.def.goalkeeper, false, "a tackler is not flagged keeper");
 assert.equal(tally.p1.played, true, "everyone on the timeline played");
-// Four distinct players touched the timeline.
-assert.equal(tallyEvents(events).length, 4);
+// Five distinct players touched the timeline.
+assert.equal(tallyEvents(events).length, 5);
 // Empty timeline yields no rows and a goalless score.
 assert.equal(tallyEvents([]).length, 0);
 assert.deepEqual(deriveScore([], H, A), { homeScore: 0, awayScore: 0 });

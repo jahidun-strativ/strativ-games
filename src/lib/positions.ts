@@ -41,3 +41,15 @@ export const POSITION_OPTIONS = POSITION_GROUPS.map((g) => ({
 }));
 
 export const POSITIONS: string[] = POSITION_GROUPS.flatMap((g) => g.positions.map(([v]) => v));
+
+// Defence codes (RB/CB/LB/RWB/LWB) — used to gate the defender-only match stats
+// (tackles & clearances) and the Top defenders board. Matches the position code
+// case-insensitively; free-text positions outside the vocabulary count as false.
+const DEFENDER_CODES = new Set(
+  (POSITION_GROUPS.find((g) => g.label === "Defence")?.positions ?? []).map(([v]) =>
+    v.toLowerCase(),
+  ),
+);
+export function isDefender(position: string | null | undefined): boolean {
+  return DEFENDER_CODES.has((position ?? "").trim().toLowerCase());
+}

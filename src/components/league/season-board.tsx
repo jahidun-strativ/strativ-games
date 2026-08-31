@@ -129,6 +129,60 @@ function KeeperList({ rows, gkFloor }: { rows: SeasonView["keepers"]; gkFloor: n
   );
 }
 
+// Top defenders: like KeeperList, a full-width row with named stat columns
+// (tackles / clearances / rating) since one value can't carry the breakdown.
+function DefenderList({ rows }: { rows: SeasonView["defenders"] }) {
+  if (rows.length === 0)
+    return <p className="p-4 text-sm text-ink-500">No defensive stats yet.</p>;
+  return (
+    <ul>
+      {rows.map((r, i) => (
+        <li
+          key={r.playerId}
+          className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0"
+        >
+          <span
+            className={`scoreboard flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+              i === 0 ? "bg-gold-300 text-black" : i < 3 ? "bg-cream-200" : "bg-cream-50"
+            }`}
+          >
+            {i + 1}
+          </span>
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/players/${r.playerId}`}
+              className="block truncate text-sm font-bold hover:text-burnt-400"
+            >
+              {r.name}
+            </Link>
+            <p className="truncate text-xs text-ink-500">{r.teamName ?? "Free agent"}</p>
+          </div>
+          <div className="flex shrink-0 gap-4 text-right">
+            {[
+              { label: "TKL", value: r.tackles, strong: false },
+              { label: "CLR", value: r.clearances, strong: false },
+              { label: "RTG", value: r.score, strong: true },
+            ].map((s) => (
+              <div key={s.label} className="w-9">
+                <p
+                  className={`scoreboard text-base font-bold ${
+                    s.strong ? "text-gold-300" : "text-burnt-400"
+                  }`}
+                >
+                  {s.value}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function AwardCard({
   icon,
   label,
@@ -243,7 +297,8 @@ export function LeagueAwards({ view }: { view: SeasonView }) {
 }
 
 export function LeagueStats({ view }: { view: SeasonView }) {
-  const { scorers, fairplay, keepers } = view;
+  const { scorers, fairplay, keepers, defenders } = view;
+  const topDefenders = defenders.slice(0, 3);
   const scorersWithGoals = scorers.filter((s) => s.goals > 0).slice(0, 8);
   const assisters = [...scorers].filter((s) => s.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 8);
   const booked = [...scorers]
@@ -299,6 +354,14 @@ export function LeagueStats({ view }: { view: SeasonView }) {
           <span className="font-semibold text-ink-400">Rating (RTG)</span> = clean sheets ×4 +
           saves ×1 + appearances ×1 − goals against ×2. Higher is better; ties break on fewer
           goals conceded per game.
+        </p>
+      </Panel>
+
+      <Panel title={<><ShieldCheck className="h-4 w-4" /> Top defenders</>}>
+        <DefenderList rows={topDefenders} />
+        <p className="border-t border-line px-4 py-2.5 text-xs text-ink-500">
+          <span className="font-semibold text-ink-400">Rating (RTG)</span> = tackles ×2 +
+          clearances ×1. Defenders only; ties break on more tackles.
         </p>
       </Panel>
 

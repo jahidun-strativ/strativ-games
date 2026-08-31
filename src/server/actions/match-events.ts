@@ -3,7 +3,9 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { matchEvents, matches, playerMatchStats } from "@/db/schema";
+import { MATCH_EVENT_KINDS, matchEvents, matches, playerMatchStats, players } from "@/db/schema";
+import type { MatchEventKind } from "@/db/schema";
+import { isDefender } from "@/lib/positions";
 import { requireAdmin, requireMatchScorer } from "@/server/auth";
 import { opt, optInt, str } from "@/server/form";
 import { deriveScore, tallyEvents } from "@/lib/match-scoring";
@@ -69,13 +71,26 @@ export async function assignScorer(matchId: string, formData: FormData) {
 export async function addMatchEvent(matchId: string, formData: FormData) {
   await requireMatchScorer(matchId);
   const kind = str(formData, "kind");
-  if (kind !== "goal" && kind !== "save") throw new Error("Unknown event kind.");
+  if (!MATCH_EVENT_KINDS.includes(kind as MatchEventKind)) {
+    throw new Error("Unknown event kind.");
+  }
   const playerId = str(formData, "playerId");
   const teamId = opt(formData, "teamId");
   const assistPlayerId = kind === "goal" ? opt(formData, "assistPlayerId") : null;
   const minute = optInt(formData, "minute");
   if (assistPlayerId && assistPlayerId === playerId) {
     throw new Error("A scorer can't assist their own goal.");
+  }
+  // Tackles & clearances are defender-only credit — enforce it at the boundary
+  // so a crafted request can't give a non-defender defensive stats.
+  if (kind === "tackle" || kind === "clearance") {
+    const player = await db.query.players.findFirst({
+      where: eq(players.id, playerId),
+      columns: { position: true },
+    });
+    if (!isDefender(player?.position)) {
+      throw new Error("Tackles and clearances can only be credited to a defender.");
+    }
   }
 
   await db.insert(matchEvents).values({ matchId, kind, teamId, playerId, assistPlayerId, minute });

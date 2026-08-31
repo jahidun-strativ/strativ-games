@@ -5,13 +5,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { addMatchEvent, deleteMatchEvent, finalizeMatch } from "@/server/actions/match-events";
 import { useActionSubmit } from "@/components/forms/form-utils";
+import { isDefender } from "@/lib/positions";
 import type { TimelineEvent } from "@/server/queries/match-events";
 
 type Side = {
   teamId: string;
   teamName: string;
-  players: { id: string; name: string }[];
+  players: { id: string; name: string; position: string | null }[];
   goalkeeperIds: string[];
+};
+
+// Icon + label per timeline event kind.
+const EVENT_LABEL: Record<string, { icon: string; text: string }> = {
+  goal: { icon: "⚽", text: "Goal" },
+  save: { icon: "🧤", text: "Save" },
+  tackle: { icon: "🛡️", text: "Tackle" },
+  clearance: { icon: "🧹", text: "Clearance" },
 };
 
 // The assigned scorekeeper's live console: log goals/saves as they happen (each
@@ -46,7 +55,15 @@ export function LiveScorecard({
   // A save can only be credited to a designated goalkeeper. If the team has none
   // set, fall back to the whole squad so the scorer is never blocked.
   const keepers = squad.filter((p) => side.goalkeeperIds.includes(p.id));
-  const playerPool = kind === "save" && keepers.length > 0 ? keepers : squad;
+  // Tackles & clearances are DEFENDER-only credit — no fallback (crediting a
+  // non-defender would be wrong); the server enforces this too.
+  const defenders = squad.filter((p) => isDefender(p.position));
+  const isDefKind = kind === "tackle" || kind === "clearance";
+  const playerPool = isDefKind
+    ? defenders
+    : kind === "save" && keepers.length > 0
+      ? keepers
+      : squad;
 
   // Poll for events logged elsewhere (another scorer, another device) so the
   // console stays in sync. ponytail: 10s poll, swap for SSE only if load demands.
@@ -96,6 +113,8 @@ export function LiveScorecard({
                 options={[
                   { label: "⚽ Goal", value: "goal" },
                   { label: "🧤 Save", value: "save" },
+                  { label: "🛡️ Tackle", value: "tackle" },
+                  { label: "🧹 Clearance", value: "clearance" },
                 ]}
               />
             </Form.Item>
@@ -104,14 +123,27 @@ export function LiveScorecard({
             </Form.Item>
             <Form.Item
               name="playerId"
-              label={kind === "goal" ? "Scorer" : "Keeper"}
+              label={
+                kind === "goal"
+                  ? "Scorer"
+                  : kind === "save"
+                    ? "Keeper"
+                    : "Defender"
+              }
               className="!mb-0"
               rules={[{ required: true, message: "Pick a player" }]}
+              extra={
+                isDefKind && defenders.length === 0 ? (
+                  <span className="text-xs text-burnt-400">
+                    No defenders in this squad — set a player&apos;s position to Defence first.
+                  </span>
+                ) : undefined
+              }
             >
               <Select
                 showSearch
                 optionFilterProp="label"
-                placeholder={kind === "save" ? "Goalkeeper" : "Player"}
+                placeholder={kind === "save" ? "Goalkeeper" : isDefKind ? "Defender" : "Player"}
                 className="!w-52"
                 options={playerPool.map((p) => ({ label: p.name, value: p.id }))}
               />
@@ -162,7 +194,7 @@ export function LiveScorecard({
                 <span className="scoreboard w-9 shrink-0 text-right text-sm font-bold text-ink-500">
                   {e.minute != null ? `${e.minute}'` : "—"}
                 </span>
-                <span className="shrink-0 text-lg">{e.kind === "goal" ? "⚽" : "🧤"}</span>
+                <span className="shrink-0 text-lg">{EVENT_LABEL[e.kind]?.icon ?? "•"}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">
                     {e.playerName}
@@ -171,7 +203,7 @@ export function LiveScorecard({
                     ) : null}
                   </p>
                   <p className="truncate text-xs text-ink-500">
-                    {e.kind === "goal" ? "Goal" : "Save"} · {teamName(e.teamId)}
+                    {EVENT_LABEL[e.kind]?.text ?? e.kind} · {teamName(e.teamId)}
                   </p>
                 </div>
                 <Button
