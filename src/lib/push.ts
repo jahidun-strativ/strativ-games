@@ -36,6 +36,8 @@ export async function sendPushToAll(payload: PushPayload) {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           data,
+          // Bound each send so one unreachable endpoint can't stall the fan-out.
+          { timeout: 10 },
         );
       } catch (err) {
         const code = (err as { statusCode?: number }).statusCode;

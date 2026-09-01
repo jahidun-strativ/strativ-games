@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/db";
 import { MATCH_EVENT_KINDS, matchEvents, matches, playerMatchStats, players } from "@/db/schema";
 import type { MatchEventKind } from "@/db/schema";
@@ -146,11 +147,10 @@ export async function finalizeMatch(matchId: string) {
   revalidateLive(matchId);
   revalidatePath("/stats");
   revalidatePath("/players");
+  // Full-time push fans out to every device — do NOT block the scorer's finalize
+  // on it. after() runs it once the response is flushed, so the button returns
+  // immediately and the result is already saved regardless.
   if (firstCompletion) {
-    try {
-      await notifyMatchResult(matchId);
-    } catch {
-      // ignore — result is already saved
-    }
+    after(() => notifyMatchResult(matchId).catch(() => {}));
   }
 }
