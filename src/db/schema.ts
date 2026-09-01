@@ -584,7 +584,7 @@ export type SeasonStatus = (typeof SEASON_STATUSES)[number];
 export const MATCH_KINDS = ["internal", "competitive"] as const;
 export type MatchKind = (typeof MATCH_KINDS)[number];
 
-export const MATCH_EVENT_KINDS = ["goal", "save", "tackle", "clearance"] as const;
+export const MATCH_EVENT_KINDS = ["goal", "own_goal", "save", "tackle", "clearance"] as const;
 export type MatchEventKind = (typeof MATCH_EVENT_KINDS)[number];
 
 export const TEAM_KINDS = ["internal", "external"] as const;

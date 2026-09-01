@@ -1,11 +1,12 @@
 "use client";
 
-import { App, Button, Form, InputNumber, Popconfirm, Segmented, Select } from "antd";
+import { App, Button, Checkbox, Form, InputNumber, Popconfirm, Segmented, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { addMatchEvent, deleteMatchEvent, finalizeMatch } from "@/server/actions/match-events";
 import { useActionSubmit } from "@/components/forms/form-utils";
 import { isDefender } from "@/lib/positions";
+import { eventLabel } from "@/lib/match-event-labels";
 import type { TimelineEvent } from "@/server/queries/match-events";
 
 type Side = {
@@ -13,14 +14,6 @@ type Side = {
   teamName: string;
   players: { id: string; name: string; position: string | null }[];
   goalkeeperIds: string[];
-};
-
-// Icon + label per timeline event kind.
-const EVENT_LABEL: Record<string, { icon: string; text: string }> = {
-  goal: { icon: "⚽", text: "Goal" },
-  save: { icon: "🧤", text: "Save" },
-  tackle: { icon: "🛡️", text: "Tackle" },
-  clearance: { icon: "🧹", text: "Clearance" },
 };
 
 // The assigned scorekeeper's live console: log goals/saves as they happen (each
@@ -48,6 +41,7 @@ export function LiveScorecard({
   );
 
   const kind = Form.useWatch("kind", form) ?? "goal";
+  const ownGoal = (Form.useWatch("ownGoal", form) ?? false) && kind === "goal";
   const teamId = Form.useWatch("teamId", form) ?? home.teamId;
   const scorerId = Form.useWatch("playerId", form);
   const side = teamId === away.teamId ? away : home;
@@ -105,6 +99,10 @@ export function LiveScorecard({
             if ("teamId" in changed || "kind" in changed) {
               form.resetFields(["playerId", "assistPlayerId"]);
             }
+            // Own goal is a goal-only modifier — clear it when leaving Goal.
+            if ("kind" in changed && changed.kind !== "goal") {
+              form.setFieldValue("ownGoal", false);
+            }
           }}
         >
           <div className="flex flex-wrap items-end gap-3">
@@ -124,11 +122,13 @@ export function LiveScorecard({
             <Form.Item
               name="playerId"
               label={
-                kind === "goal"
-                  ? "Scorer"
-                  : kind === "save"
-                    ? "Keeper"
-                    : "Defender"
+                ownGoal
+                  ? "Own goal by"
+                  : kind === "goal"
+                    ? "Scorer"
+                    : kind === "save"
+                      ? "Keeper"
+                      : "Defender"
               }
               className="!mb-0"
               rules={[{ required: true, message: "Pick a player" }]}
@@ -149,6 +149,11 @@ export function LiveScorecard({
               />
             </Form.Item>
             {kind === "goal" ? (
+              <Form.Item name="ownGoal" valuePropName="checked" className="!mb-0" label=" ">
+                <Checkbox>Own goal</Checkbox>
+              </Form.Item>
+            ) : null}
+            {kind === "goal" && !ownGoal ? (
               <Form.Item name="assistPlayerId" label="Assist (optional)" className="!mb-0">
                 <Select
                   allowClear
@@ -194,7 +199,7 @@ export function LiveScorecard({
                 <span className="scoreboard w-9 shrink-0 text-right text-sm font-bold text-ink-500">
                   {e.minute != null ? `${e.minute}'` : "—"}
                 </span>
-                <span className="shrink-0 text-lg">{EVENT_LABEL[e.kind]?.icon ?? "•"}</span>
+                <span className="shrink-0 text-lg">{eventLabel(e.kind).icon}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">
                     {e.playerName}
@@ -203,7 +208,7 @@ export function LiveScorecard({
                     ) : null}
                   </p>
                   <p className="truncate text-xs text-ink-500">
-                    {EVENT_LABEL[e.kind]?.text ?? e.kind} · {teamName(e.teamId)}
+                    {eventLabel(e.kind).text} · {teamName(e.teamId)}
                   </p>
                 </div>
                 <Button

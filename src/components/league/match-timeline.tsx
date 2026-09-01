@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { eventLabel } from "@/lib/match-event-labels";
 import type { TimelineEvent } from "@/server/queries/match-events";
 
 // Read-only match timeline. When `live`, it polls so spectators see goals and
@@ -40,7 +41,7 @@ export function MatchTimeline({
           <span className="scoreboard w-9 shrink-0 text-right text-sm font-bold text-ink-500">
             {e.minute != null ? `${e.minute}'` : "—"}
           </span>
-          <span className="shrink-0 text-lg">{e.kind === "goal" ? "⚽" : "🧤"}</span>
+          <span className="shrink-0 text-lg">{eventLabel(e.kind).icon}</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold">
               {e.playerName}
@@ -49,7 +50,7 @@ export function MatchTimeline({
               ) : null}
             </p>
             <p className="truncate text-xs text-ink-500">
-              {e.kind === "goal" ? "Goal" : "Save"} · {teamName(e.teamId)}
+              {eventLabel(e.kind).text} · {teamName(e.teamId)}
             </p>
           </div>
         </li>

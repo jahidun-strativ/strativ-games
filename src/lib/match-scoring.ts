@@ -29,9 +29,15 @@ export function deriveScore(
   let homeScore = 0;
   let awayScore = 0;
   for (const e of events) {
-    if (e.kind !== "goal") continue;
-    if (e.teamId && e.teamId === homeTeamId) homeScore++;
-    else if (e.teamId && e.teamId === awayTeamId) awayScore++;
+    // A normal goal counts for the scorer's team; an own goal (teamId = the
+    // player's OWN team) counts for the opponent.
+    if (e.kind === "goal") {
+      if (e.teamId && e.teamId === homeTeamId) homeScore++;
+      else if (e.teamId && e.teamId === awayTeamId) awayScore++;
+    } else if (e.kind === "own_goal") {
+      if (e.teamId && e.teamId === homeTeamId) awayScore++;
+      else if (e.teamId && e.teamId === awayTeamId) homeScore++;
+    }
   }
   return { homeScore, awayScore };
 }
@@ -59,6 +65,9 @@ export function tallyEvents(events: ScoringEvent[]): PlayerTally[] {
     if (e.kind === "goal") {
       bump(e.playerId, { goals: 1 });
       if (e.assistPlayerId) bump(e.assistPlayerId, { assists: 1 });
+    } else if (e.kind === "own_goal") {
+      // No personal goal credit — just mark the player as having appeared.
+      bump(e.playerId, {});
     } else if (e.kind === "save") {
       bump(e.playerId, { saves: 1, goalkeeper: true });
     } else if (e.kind === "tackle") {

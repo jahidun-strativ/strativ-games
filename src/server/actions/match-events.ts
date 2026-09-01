@@ -70,7 +70,10 @@ export async function assignScorer(matchId: string, formData: FormData) {
 // re-derive the score. Scorer/captain/admin only.
 export async function addMatchEvent(matchId: string, formData: FormData) {
   await requireMatchScorer(matchId);
-  const kind = str(formData, "kind");
+  // "Own goal" is logged as a goal with a flag; store it as its own kind so the
+  // score credits the opponent and the scorer gets no personal goal.
+  const rawKind = str(formData, "kind");
+  const kind = rawKind === "goal" && formData.get("ownGoal") === "on" ? "own_goal" : rawKind;
   if (!MATCH_EVENT_KINDS.includes(kind as MatchEventKind)) {
     throw new Error("Unknown event kind.");
   }

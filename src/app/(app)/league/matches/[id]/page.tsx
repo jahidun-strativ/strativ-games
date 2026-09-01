@@ -119,76 +119,63 @@ export default async function LeagueMatchManagePage({
         </div>
       </section>
 
-      {/* Live scorecard while the match is in progress */}
-      {hasTeams && match.status === "scheduled" ? (
-        canScore ? (
-          <section>
-            <h2 className="font-display mb-3 text-xl text-ink-900">Live scorecard</h2>
-            <LiveScorecard
-              matchId={match.id}
-              home={{
-                teamId: match.homeTeamId!,
-                teamName: match.homeTeam!.name,
-                players: homeSquad.players.map((p) => ({ id: p.id, name: p.name, position: p.position })),
-                goalkeeperIds: match.homeTeam!.goalkeeperIds,
-              }}
-              away={{
-                teamId: match.awayTeamId!,
-                teamName: match.awayTeam!.name,
-                players: awaySquad.players.map((p) => ({ id: p.id, name: p.name, position: p.position })),
-                goalkeeperIds: match.awayTeam!.goalkeeperIds,
-              }}
-              events={events}
-            />
-          </section>
-        ) : events.length > 0 ? (
-          <section className="tv-card-sm overflow-hidden">
-            <div className="border-b border-line px-4 py-2.5">
-              <h2 className="font-display text-lg text-ink-900">Live timeline</h2>
-            </div>
-            <MatchTimeline
-              events={events}
-              homeTeamId={match.homeTeamId}
-              homeTeamName={match.homeTeam!.name}
-              awayTeamName={match.awayTeam!.name}
-              live
-            />
-          </section>
-        ) : null
+      {/* Live scorecard — scorers can log/edit events any time the match isn't
+          cancelled, including AFTER it's finished (re-finalize rolls edits into
+          the stats). Non-scorers get the read-only timeline once events exist. */}
+      {hasTeams && match.status !== "cancelled" && canScore ? (
+        <section>
+          <h2 className="font-display mb-3 text-xl text-ink-900">Live scorecard</h2>
+          <LiveScorecard
+            matchId={match.id}
+            home={{
+              teamId: match.homeTeamId!,
+              teamName: match.homeTeam!.name,
+              players: homeSquad.players.map((p) => ({ id: p.id, name: p.name, position: p.position })),
+              goalkeeperIds: match.homeTeam!.goalkeeperIds,
+            }}
+            away={{
+              teamId: match.awayTeamId!,
+              teamName: match.awayTeam!.name,
+              players: awaySquad.players.map((p) => ({ id: p.id, name: p.name, position: p.position })),
+              goalkeeperIds: match.awayTeam!.goalkeeperIds,
+            }}
+            events={events}
+          />
+        </section>
       ) : null}
 
-      {/* Completed: show the timeline, plus the aggregate editor for scorers */}
-      {hasTeams && match.status === "completed" ? (
-        <section className="space-y-6">
-          {events.length > 0 ? (
-            <div className="tv-card-sm overflow-hidden">
-              <div className="border-b border-line px-4 py-2.5">
-                <h2 className="font-display text-lg text-ink-900">Timeline</h2>
-              </div>
-              <MatchTimeline
-                events={events}
-                homeTeamId={match.homeTeamId}
-                homeTeamName={match.homeTeam!.name}
-                awayTeamName={match.awayTeam!.name}
-              />
-            </div>
-          ) : null}
-          {canScore ? (
-            <div>
-              <h2 className="font-display mb-3 text-xl text-ink-900">Edit result</h2>
-              <ResultForm
-                action={recordResult.bind(null, match.id)}
-                homeTeamName={match.homeTeam!.name}
-                awayTeamName={match.awayTeam!.name}
-                homeSquad={homeSquad.players}
-                awaySquad={awaySquad.players}
-                stats={match.playerStats}
-                homeScore={match.homeScore}
-                awayScore={match.awayScore}
-                completed
-              />
-            </div>
-          ) : null}
+      {hasTeams && !canScore && events.length > 0 ? (
+        <section className="tv-card-sm overflow-hidden">
+          <div className="border-b border-line px-4 py-2.5">
+            <h2 className="font-display text-lg text-ink-900">
+              {match.status === "completed" ? "Timeline" : "Live timeline"}
+            </h2>
+          </div>
+          <MatchTimeline
+            events={events}
+            homeTeamId={match.homeTeamId}
+            homeTeamName={match.homeTeam!.name}
+            awayTeamName={match.awayTeam!.name}
+            live={match.status !== "completed"}
+          />
+        </section>
+      ) : null}
+
+      {/* Completed: scorers also get the aggregate result editor. */}
+      {hasTeams && match.status === "completed" && canScore ? (
+        <section>
+          <h2 className="font-display mb-3 text-xl text-ink-900">Edit result</h2>
+          <ResultForm
+            action={recordResult.bind(null, match.id)}
+            homeTeamName={match.homeTeam!.name}
+            awayTeamName={match.awayTeam!.name}
+            homeSquad={homeSquad.players}
+            awaySquad={awaySquad.players}
+            stats={match.playerStats}
+            homeScore={match.homeScore}
+            awayScore={match.awayScore}
+            completed
+          />
         </section>
       ) : null}
 

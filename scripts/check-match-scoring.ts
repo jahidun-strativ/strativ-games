@@ -13,10 +13,11 @@ const events: ScoringEvent[] = [
   { kind: "tackle", teamId: H, playerId: "def", assistPlayerId: null }, // defender tackle
   { kind: "tackle", teamId: H, playerId: "def", assistPlayerId: null }, // defender tackle
   { kind: "clearance", teamId: H, playerId: "def", assistPlayerId: null }, // defender clearance
+  { kind: "own_goal", teamId: H, playerId: "og1", assistPlayerId: null }, // home OG → away scores
 ];
 
-// Score = goals per side.
-assert.deepEqual(deriveScore(events, H, A), { homeScore: 2, awayScore: 1 });
+// Score = goals per side; an own goal by home credits away.
+assert.deepEqual(deriveScore(events, H, A), { homeScore: 2, awayScore: 2 });
 // A goal for a side not in the match counts for neither.
 assert.deepEqual(deriveScore(events, "x", "y"), { homeScore: 0, awayScore: 0 });
 
@@ -31,9 +32,11 @@ assert.equal(tally.gk.goalkeeper, true, "a player with a save is flagged keeper"
 assert.equal(tally.def.tackles, 2, "defender made two tackles");
 assert.equal(tally.def.clearances, 1, "defender made one clearance");
 assert.equal(tally.def.goalkeeper, false, "a tackler is not flagged keeper");
+assert.equal(tally.og1.goals, 0, "an own goal is not a personal goal");
+assert.equal(tally.og1.played, true, "the own-goal scorer still played");
 assert.equal(tally.p1.played, true, "everyone on the timeline played");
-// Five distinct players touched the timeline.
-assert.equal(tallyEvents(events).length, 5);
+// Six distinct players touched the timeline.
+assert.equal(tallyEvents(events).length, 6);
 // Empty timeline yields no rows and a goalless score.
 assert.equal(tallyEvents([]).length, 0);
 assert.deepEqual(deriveScore([], H, A), { homeScore: 0, awayScore: 0 });
