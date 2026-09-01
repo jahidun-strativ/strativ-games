@@ -44,6 +44,7 @@ const links: NavLink[] = [
     children: [
       { href: "/league/teams", label: "Teams" },
       { href: "/league/matches", label: "Matches" },
+      { href: "/league/transfers", label: "Transfers" },
       { href: "/league/settings", label: "Settings", adminOnly: true },
     ],
   },

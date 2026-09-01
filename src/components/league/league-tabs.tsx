@@ -7,6 +7,7 @@ const TABS = [
   { href: "/league", label: "Overview", exact: true },
   { href: "/league/teams", label: "Teams" },
   { href: "/league/matches", label: "Matches" },
+  { href: "/league/transfers", label: "Transfers" },
   { href: "/league/settings", label: "Settings", adminOnly: true },
 ] as const;
 

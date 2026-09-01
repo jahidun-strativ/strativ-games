@@ -78,6 +78,14 @@ export type PosterData =
         sub: string | null;
       }[];
       sport?: string | null;
+    }
+  | {
+      // A "done deal" transfer card: one move for a transfer, two for a swap.
+      variant: "transfer";
+      headline: string; // "Transfer" | "Swap Deal"
+      moves: { player: string; from: string | null; to: string | null }[];
+      date?: string | null;
+      sport?: string | null;
     };
 
 // Fixed feed width (Instagram / Facebook portrait). The HEIGHT is computed from
@@ -101,6 +109,9 @@ export function posterHeight(data: PosterData): number {
   }
   // The "vs" and "league" heroes have no line-ups; keep them tall & centred.
   if (data.variant === "vs" || data.variant === "league") return 1080;
+
+  // The transfer "done deal" card is a fixed hero.
+  if (data.variant === "transfer") return 1080;
 
   // The pitch line-up: fixed portrait — header + the tall pitch + footer.
   if (data.variant === "lineup") return LINEUP_HEIGHT;
@@ -835,6 +846,122 @@ function FixtureCard({ fx, accent, mb }: { fx: PosterFixture; accent: string; mb
   );
 }
 
+// One "done deal" move: the player's name over a FROM → TO team row. Used once
+// for a transfer, twice (stacked) for a swap.
+function TransferMove({
+  move,
+  single,
+}: {
+  move: { player: string; from: string | null; to: string | null };
+  single: boolean;
+}) {
+  const chip = (label: string, name: string | null, gold: boolean) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minWidth: 0,
+        padding: "18px 24px",
+        borderRadius: 16,
+        background: gold
+          ? "linear-gradient(120deg, rgba(245,184,31,0.22), rgba(249,115,22,0.06))"
+          : "linear-gradient(120deg, rgba(255,255,255,0.07), rgba(255,255,255,0.015))",
+        border: gold ? "1px solid rgba(245,184,31,0.4)" : "1px solid rgba(255,255,255,0.12)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          fontFamily: "Archivo",
+          fontWeight: 700,
+          fontSize: 15,
+          letterSpacing: 2.5,
+          textTransform: "uppercase",
+          color: gold ? "#f5cf6b" : INK_500,
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: "Oswald",
+          fontWeight: 700,
+          fontSize: 40,
+          lineHeight: 1,
+          textTransform: "uppercase",
+          letterSpacing: -0.5,
+          color: gold ? INK_900 : INK_700,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {name ?? "Free agent"}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        padding: "32px 36px",
+        marginBottom: single ? 0 : 24,
+        borderRadius: 24,
+        background: "linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          fontFamily: "Oswald",
+          fontWeight: 700,
+          fontSize: single ? 92 : 60,
+          lineHeight: 0.95,
+          textTransform: "uppercase",
+          letterSpacing: -1.5,
+          color: INK_900,
+          marginBottom: 26,
+        }}
+      >
+        {move.player}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+        {chip("From", move.from, false)}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            width: 64,
+            height: 64,
+            marginLeft: 18,
+            marginRight: 18,
+            borderRadius: 32,
+            background: "linear-gradient(150deg,#f97316,#f5b81f)",
+            boxShadow: "0 8px 22px rgba(249,115,22,0.4)",
+            fontFamily: "Oswald",
+            fontWeight: 700,
+            fontSize: 40,
+            color: BASE,
+          }}
+        >
+          →
+        </div>
+        {chip("To", move.to, true)}
+      </div>
+    </div>
+  );
+}
+
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -1056,6 +1183,38 @@ function LineupPitch({ slots }: { slots: Extract<PosterData, { variant: "lineup"
 }
 
 export function Poster(data: PosterData) {
+  // Transfer "done deal" card: a headline ribbon + the move(s) FROM → TO.
+  if (data.variant === "transfer") {
+    const { headline, moves, date, sport } = data;
+    const single = moves.length <= 1;
+    return (
+      <PageShell>
+        <Header kindLabel={headline} sport={sport} />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            width: "100%",
+            justifyContent: "center",
+            marginTop: 28,
+            marginBottom: 28,
+          }}
+        >
+          {moves.map((m, i) => (
+            <TransferMove key={i} move={m} single={single} />
+          ))}
+        </div>
+        {date ? (
+          <div style={{ display: "flex", width: "100%", marginBottom: 22 }}>
+            <MetaChips when={date} />
+          </div>
+        ) : null}
+        <Footer />
+      </PageShell>
+    );
+  }
+
   // Pitch line-up: a team's formation drawn on the field.
   if (data.variant === "lineup") {
     const { teamName, formation, squadLabel, slots, sport } = data;

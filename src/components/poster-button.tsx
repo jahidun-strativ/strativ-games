@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export type PosterVariant = {
   label: string;
-  variant: "full" | "vs" | "squad" | "fixtures" | "league" | "lineup";
+  variant: "full" | "vs" | "squad" | "fixtures" | "league" | "lineup" | "transfer";
   hint?: string;
 };
 

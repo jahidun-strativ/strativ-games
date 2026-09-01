@@ -422,6 +422,29 @@ export const auditLogs = pgTable(
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+// Roster moves worth remembering: a single transfer (one player changes team) or
+// a swap (two players trade teams). One row per move; the "cool photo card" and
+// the transfer feed both read from here. For a swap: playerId/counterpartPlayerId
+// are the two players, and (fromTeamId → toTeamId) is playerId's move — the
+// counterpart's is the reverse.
+export const transfers = pgTable(
+  "transfers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(), // "transfer" | "swap"
+    playerId: uuid("player_id").references(() => players.id, { onDelete: "set null" }),
+    fromTeamId: uuid("from_team_id").references(() => teams.id, { onDelete: "set null" }),
+    toTeamId: uuid("to_team_id").references(() => teams.id, { onDelete: "set null" }),
+    counterpartPlayerId: uuid("counterpart_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("transfers_created_idx").on(t.createdAt)],
+);
+
+export type Transfer = typeof transfers.$inferSelect;
+
 // Web Push subscriptions — one row per browser/device a user has enabled.
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -453,6 +476,25 @@ export const playersRelations = relations(players, ({ one, many }) => ({
   sport: one(sports, { fields: [players.sportId], references: [sports.id] }),
   team: one(teams, { fields: [players.teamId], references: [teams.id] }),
   matchStats: many(playerMatchStats),
+}));
+
+export const transfersRelations = relations(transfers, ({ one }) => ({
+  player: one(players, { fields: [transfers.playerId], references: [players.id] }),
+  counterpart: one(players, {
+    fields: [transfers.counterpartPlayerId],
+    references: [players.id],
+    relationName: "transferCounterpart",
+  }),
+  fromTeam: one(teams, {
+    fields: [transfers.fromTeamId],
+    references: [teams.id],
+    relationName: "transferFrom",
+  }),
+  toTeam: one(teams, {
+    fields: [transfers.toTeamId],
+    references: [teams.id],
+    relationName: "transferTo",
+  }),
 }));
 
 export const staffRelations = relations(staff, ({ one }) => ({

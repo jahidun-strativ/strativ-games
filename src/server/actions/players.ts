@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { matchAvailability, players, teams } from "@/db/schema";
+import { matchAvailability, players, teams, transfers } from "@/db/schema";
 import { requireAdmin, requireTeamRunner } from "@/server/auth";
 import { notifyPlayers } from "@/server/notifications";
 import { recordAudit } from "@/server/audit";
@@ -168,6 +168,15 @@ export async function movePlayerToTeam(playerId: string, teamId: string | null) 
   const dest = teamId
     ? (await db.query.teams.findFirst({ where: eq(teams.id, teamId), columns: { name: true } }))?.name
     : null;
+  // A move TO a team is a transfer worth a card; a release (to free agency) isn't.
+  if (teamId) {
+    await db.insert(transfers).values({
+      kind: "transfer",
+      playerId,
+      fromTeamId: player.teamId,
+      toTeamId: teamId,
+    });
+  }
   await recordAudit({
     action: "player.move",
     entity: "player",
@@ -176,6 +185,7 @@ export async function movePlayerToTeam(playerId: string, teamId: string | null) 
   });
   revalidatePath("/players");
   revalidatePath("/teams");
+  revalidatePath("/league/transfers");
 }
 
 // Trade two players between their two teams in one move. Admin-only: it
@@ -225,6 +235,15 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
     url: `/teams/${a.teamId}`,
   });
 
+  // One swap row: (from → to) is A's move; the counterpart B's move is the reverse.
+  await db.insert(transfers).values({
+    kind: "swap",
+    playerId: a.id,
+    fromTeamId: a.teamId,
+    toTeamId: b.teamId,
+    counterpartPlayerId: b.id,
+  });
+
   await recordAudit({
     action: "player.swap",
     entity: "player",
@@ -235,6 +254,7 @@ export async function swapPlayers(playerAId: string, playerBId: string) {
   revalidatePath("/teams");
   revalidatePath(`/teams/${a.teamId}`);
   revalidatePath(`/teams/${b.teamId}`);
+  revalidatePath("/league/transfers");
 }
 
 // Set a player's role/position within their team. The team's captain or manager
