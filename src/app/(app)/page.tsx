@@ -27,8 +27,9 @@ async function DashboardActions() {
   return <NewSessionButton venues={allVenues} teams={allTeams} />;
 }
 
-// Personal scorecard for the signed-in user — only shown when their account is
-// linked to a player. Matches played, money spent, due, goals and assists.
+// Personal all-time card for the signed-in user — only shown when their account
+// is linked to a player. Career matches played, goals, assists, plus money spent
+// and outstanding due across every self-paid slot.
 async function MyStats() {
   const me = await getCurrentPlayer();
   if (!me) return null;
@@ -54,28 +55,80 @@ async function MyStats() {
   ]);
   const { spent, due } = playerLedger(me.id, selfSlots);
 
-  const tiles = [
-    { label: "Matches played", value: String(card.played) },
-    { label: "Goals", value: String(card.goals) },
-    { label: "Assists", value: String(card.assists) },
-    { label: "Money spent", value: formatBdt(spent) },
-    { label: "Total due", value: formatBdt(due), tone: due > 0 ? "text-burnt-400" : undefined },
+  // Three performance stats up top, two money stats below a divider.
+  const play = [
+    { icon: "👟", label: "Matches", value: String(card.played) },
+    { icon: "⚽", label: "Goals", value: String(card.goals) },
+    { icon: "🅰️", label: "Assists", value: String(card.assists) },
+  ];
+  const money = [
+    { icon: "💸", label: "Spent", value: formatBdt(spent), tone: "text-ink-900" },
+    {
+      icon: "🧾",
+      label: "Due",
+      value: formatBdt(due),
+      tone: due > 0 ? "text-burnt-400" : "text-pitch-500",
+    },
   ];
 
   return (
     <section className="mt-8">
-      <h2 className="font-display mb-3 text-xl text-ink-900">Your season</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-        {tiles.map((t) => (
-          <div key={t.label} className="tv-card-sm p-4">
-            <p className={`scoreboard text-2xl font-bold leading-none sm:text-3xl ${t.tone ?? "text-ink-900"}`}>
-              {t.value}
-            </p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-              {t.label}
-            </p>
-          </div>
-        ))}
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-burnt-400">
+            All-time
+          </p>
+          <h2 className="font-display text-xl text-ink-900">Your record</h2>
+        </div>
+        <Link href="/stats" className="text-sm font-bold text-burnt-400 hover:underline">
+          Full stats →
+        </Link>
+      </div>
+
+      <div className="tv-card space-y-4 p-4 sm:p-5">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          {play.map((t) => (
+            <div
+              key={t.label}
+              className="flex flex-col items-center gap-1 rounded-xl bg-cream-200 py-3 text-center sm:flex-row sm:items-center sm:gap-3 sm:bg-transparent sm:py-0 sm:text-left"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-burnt-500/12 text-lg">
+                {t.icon}
+              </span>
+              <div className="min-w-0">
+                <p className="scoreboard text-2xl font-bold leading-none text-ink-900 sm:text-3xl">
+                  {t.value}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  {t.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="h-px bg-line" />
+
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          {money.map((t) => (
+            <div
+              key={t.label}
+              className="flex items-center gap-3 rounded-xl bg-cream-200 px-3 py-3 sm:bg-transparent sm:px-0"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-burnt-500/12 text-lg">
+                {t.icon}
+              </span>
+              <div className="min-w-0">
+                <p className={`scoreboard text-xl font-bold leading-none sm:text-2xl ${t.tone}`}>
+                  {t.value}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  {t.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
