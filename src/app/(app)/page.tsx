@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { CalendarCheck2, Goal, Handshake, Wallet, Receipt } from "lucide-react";
 import { and, asc, desc, eq, gte, isNull, isNotNull, notInArray, or } from "drizzle-orm";
 import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/icons";
 import { db } from "@/db";
@@ -56,12 +57,12 @@ async function MyStats() {
   const { spent, due } = playerLedger(me.id, selfSlots);
 
   const tiles = [
-    { icon: "👟", label: "Matches", value: String(card.played), tone: "text-ink-900" },
-    { icon: "⚽", label: "Goals", value: String(card.goals), tone: "text-ink-900" },
-    { icon: "🅰️", label: "Assists", value: String(card.assists), tone: "text-ink-900" },
-    { icon: "💸", label: "Spent", value: formatBdt(spent), tone: "text-ink-900" },
+    { icon: CalendarCheck2, label: "Matches", value: String(card.played), tone: "text-ink-900" },
+    { icon: Goal, label: "Goals", value: String(card.goals), tone: "text-ink-900" },
+    { icon: Handshake, label: "Assists", value: String(card.assists), tone: "text-ink-900" },
+    { icon: Wallet, label: "Spent", value: formatBdt(spent), tone: "text-ink-900" },
     {
-      icon: "🧾",
+      icon: Receipt,
       label: "Due",
       value: formatBdt(due),
       tone: due > 0 ? "text-burnt-400" : "text-pitch-500",
@@ -82,8 +83,8 @@ async function MyStats() {
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">
         {tiles.map((t) => (
           <div key={t.label} className="tv-card-sm flex items-center gap-2.5 p-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-burnt-500/12 text-sm">
-              {t.icon}
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-burnt-500/12 text-burnt-400">
+              <t.icon size={16} strokeWidth={2.25} />
             </span>
             <div className="min-w-0">
               <p className={`scoreboard text-lg font-bold leading-none ${t.tone}`}>{t.value}</p>
