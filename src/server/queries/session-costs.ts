@@ -36,3 +36,32 @@ export function deriveSessionPayers(
     .map(([id, name]) => ({ id, name, paid: paidById.get(id) ?? false }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+// One player's money across every self-paid slot they played in: `spent` is
+// their per-head share of slots they've settled, `due` the share still owed.
+// Same split as the Costs page (per-head = slot total / players who played).
+export function playerLedger(
+  playerId: string,
+  slots: {
+    cost: number | null;
+    extraCost: number | null;
+    paidBy: string;
+    fixtures: FixtureRow[];
+    payments: PaymentRow[];
+  }[],
+): { spent: number; due: number } {
+  let spent = 0;
+  let due = 0;
+  for (const s of slots) {
+    if (s.paidBy !== "self") continue; // office-paid costs the player nothing
+    const total = slotTotal(s);
+    if (total <= 0) continue;
+    const payers = deriveSessionPayers(s.fixtures, s.payments);
+    const me = payers.find((p) => p.id === playerId);
+    if (!me) continue;
+    const perHead = Math.round(total / payers.length);
+    if (me.paid) spent += perHead;
+    else due += perHead;
+  }
+  return { spent, due };
+}

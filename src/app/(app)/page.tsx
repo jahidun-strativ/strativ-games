@@ -4,9 +4,11 @@ import { and, asc, desc, eq, gte, isNull, isNotNull, notInArray, or } from "driz
 import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/icons";
 import { db } from "@/db";
 import { matches, players, sessions } from "@/db/schema";
-import { getMonthlyLeaderboard, type LeaderboardRow } from "@/server/queries/stats";
+import { getMonthlyLeaderboard, getPlayerScorecard, type LeaderboardRow } from "@/server/queries/stats";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
-import { isAdmin } from "@/server/auth";
+import { playerLedger } from "@/server/queries/session-costs";
+import { getCurrentPlayer, isAdmin } from "@/server/auth";
+import { formatBdt } from "@/lib/format";
 import { DashboardLeague } from "@/components/league/dashboard-league";
 import { MatchCard } from "@/components/match-card";
 import { MonthlyRace } from "@/components/monthly-race";
@@ -23,6 +25,60 @@ async function DashboardActions() {
   ]);
   if (!admin || allVenues.length < 1) return null;
   return <NewSessionButton venues={allVenues} teams={allTeams} />;
+}
+
+// Personal scorecard for the signed-in user — only shown when their account is
+// linked to a player. Matches played, money spent, due, goals and assists.
+async function MyStats() {
+  const me = await getCurrentPlayer();
+  if (!me) return null;
+
+  const [card, selfSlots] = await Promise.all([
+    getPlayerScorecard(me.id),
+    db.query.sessions.findMany({
+      where: eq(sessions.paidBy, "self"),
+      columns: { cost: true, extraCost: true, paidBy: true },
+      with: {
+        payments: { columns: { playerId: true, paid: true } },
+        fixtures: {
+          columns: { id: true },
+          with: {
+            playerStats: {
+              columns: { playerId: true, played: true },
+              with: { player: { columns: { name: true } } },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+  const { spent, due } = playerLedger(me.id, selfSlots);
+
+  const tiles = [
+    { label: "Matches played", value: String(card.played) },
+    { label: "Goals", value: String(card.goals) },
+    { label: "Assists", value: String(card.assists) },
+    { label: "Money spent", value: formatBdt(spent) },
+    { label: "Total due", value: formatBdt(due), tone: due > 0 ? "text-burnt-400" : undefined },
+  ];
+
+  return (
+    <section className="mt-8">
+      <h2 className="font-display mb-3 text-xl text-ink-900">Your season</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="tv-card-sm p-4">
+            <p className={`scoreboard text-2xl font-bold leading-none sm:text-3xl ${t.tone ?? "text-ink-900"}`}>
+              {t.value}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              {t.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 async function DashboardContent() {
@@ -108,6 +164,10 @@ async function DashboardContent() {
           </Link>
         ))}
       </section>
+
+      <Suspense fallback={null}>
+        <MyStats />
+      </Suspense>
 
       {leagueView ? (
         <div className="mt-8">

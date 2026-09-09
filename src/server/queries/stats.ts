@@ -72,6 +72,24 @@ export async function getMonthlyLeaderboard(
   return rows;
 }
 
+// Career card for one player: matches actually played (played=true), plus goal
+// and assist totals. Distinct from getPlayerTotals, which counts every stat row.
+export async function getPlayerScorecard(playerId: string) {
+  const [row] = await db
+    .select({
+      played: count().mapWith(Number),
+      goals: sum(playerMatchStats.goals).mapWith(Number),
+      assists: sum(playerMatchStats.assists).mapWith(Number),
+    })
+    .from(playerMatchStats)
+    .where(and(eq(playerMatchStats.playerId, playerId), eq(playerMatchStats.played, true)));
+  return {
+    played: row?.played ?? 0,
+    goals: row?.goals ?? 0,
+    assists: row?.assists ?? 0,
+  };
+}
+
 export async function getPlayerTotals(playerId: string) {
   const [row] = await db
     .select({
