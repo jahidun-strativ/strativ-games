@@ -49,7 +49,7 @@ export const getCurrentPlayer = cache(async () => {
   if (!session?.user) return null;
   const row = await db.query.players.findFirst({
     where: eq(players.userId, session.user.id),
-    columns: { id: true, teamId: true },
+    columns: { id: true, teamId: true, position: true },
   });
   return row ?? null;
 });

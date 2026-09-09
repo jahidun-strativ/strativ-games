@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lt, sql, sum, count } from "drizzle-orm";
 import { db } from "@/db";
 import { matches, playerMatchStats, players, teams } from "@/db/schema";
+import { tallyKeeperMatches } from "@/lib/match-scoring";
 
 export type LeaderboardRow = {
   playerId: string;
@@ -88,6 +89,31 @@ export async function getPlayerScorecard(playerId: string) {
     goals: row?.goals ?? 0,
     assists: row?.assists ?? 0,
   };
+}
+
+// All-time goalkeeping card for one keeper: completed matches kept, saves made,
+// and clean sheets. ponytail: attributes every completed match the player kept
+// to their CURRENT team (same limitation as seasonKeepers) — a keeper who
+// transferred sees old clean sheets scored against their new team's side.
+export async function getKeeperScorecard(playerId: string, teamId: string | null) {
+  const rows = await db
+    .select({
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      saves: playerMatchStats.saves,
+    })
+    .from(playerMatchStats)
+    .innerJoin(matches, eq(playerMatchStats.matchId, matches.id))
+    .where(
+      and(
+        eq(playerMatchStats.playerId, playerId),
+        eq(playerMatchStats.played, true),
+        eq(matches.status, "completed"),
+      ),
+    );
+  return tallyKeeperMatches(teamId, rows);
 }
 
 export async function getPlayerTotals(playerId: string) {

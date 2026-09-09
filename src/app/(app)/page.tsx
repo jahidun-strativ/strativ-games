@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { CalendarCheck2, Goal, Handshake, Wallet, Receipt } from "lucide-react";
+import { CalendarCheck2, Goal, Handshake, Wallet, Receipt, Hand, ShieldCheck } from "lucide-react";
 import { and, asc, desc, eq, gte, isNull, isNotNull, notInArray, or } from "drizzle-orm";
 import { EnvironmentOutlined, FlagOutlined, UserOutlined } from "@/components/icons";
 import { db } from "@/db";
 import { matches, players, sessions } from "@/db/schema";
-import { getMonthlyLeaderboard, getPlayerScorecard, type LeaderboardRow } from "@/server/queries/stats";
+import {
+  getMonthlyLeaderboard,
+  getPlayerScorecard,
+  getKeeperScorecard,
+  type LeaderboardRow,
+} from "@/server/queries/stats";
 import { getActiveSeason, getSeasonView } from "@/server/queries/season";
 import { playerLedger } from "@/server/queries/session-costs";
 import { getCurrentPlayer, isAdmin } from "@/server/auth";
+import { isKeeper } from "@/lib/positions";
 import { formatBdt } from "@/lib/format";
 import { DashboardLeague } from "@/components/league/dashboard-league";
 import { MatchCard } from "@/components/match-card";
@@ -34,9 +40,11 @@ async function DashboardActions() {
 async function MyStats() {
   const me = await getCurrentPlayer();
   if (!me) return null;
+  const keeper = isKeeper(me.position);
 
-  const [card, selfSlots] = await Promise.all([
+  const [card, gk, selfSlots] = await Promise.all([
     getPlayerScorecard(me.id),
+    keeper ? getKeeperScorecard(me.id, me.teamId) : null,
     db.query.sessions.findMany({
       where: eq(sessions.paidBy, "self"),
       columns: { cost: true, extraCost: true, paidBy: true },
@@ -56,10 +64,21 @@ async function MyStats() {
   ]);
   const { spent, due } = playerLedger(me.id, selfSlots);
 
+  // Keepers get saves & clean sheets; outfield players get goals & assists.
+  const perf =
+    keeper && gk
+      ? [
+          { icon: CalendarCheck2, label: "Matches", value: String(card.played) },
+          { icon: Hand, label: "Saves", value: String(gk.saves) },
+          { icon: ShieldCheck, label: "Clean sheets", value: String(gk.cleanSheets) },
+        ]
+      : [
+          { icon: CalendarCheck2, label: "Matches", value: String(card.played) },
+          { icon: Goal, label: "Goals", value: String(card.goals) },
+          { icon: Handshake, label: "Assists", value: String(card.assists) },
+        ];
   const tiles = [
-    { icon: CalendarCheck2, label: "Matches", value: String(card.played), tone: "text-ink-900" },
-    { icon: Goal, label: "Goals", value: String(card.goals), tone: "text-ink-900" },
-    { icon: Handshake, label: "Assists", value: String(card.assists), tone: "text-ink-900" },
+    ...perf.map((t) => ({ ...t, tone: "text-ink-900" })),
     { icon: Wallet, label: "Spent", value: formatBdt(spent), tone: "text-ink-900" },
     {
       icon: Receipt,

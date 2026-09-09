@@ -53,3 +53,11 @@ const DEFENDER_CODES = new Set(
 export function isDefender(position: string | null | undefined): boolean {
   return DEFENDER_CODES.has((position ?? "").trim().toLowerCase());
 }
+
+// A player keeps goal when their position reads "GK"/"Goalkeeper". Matches the
+// same free-text check the season Best-GK query uses, so a keeper's personal
+// card (saves & clean sheets) and the league table agree.
+export function isKeeper(position: string | null | undefined): boolean {
+  const p = (position ?? "").toLowerCase();
+  return p.includes("gk") || p.includes("keeper");
+}

@@ -78,3 +78,31 @@ export function tallyEvents(events: ScoringEvent[]): PlayerTally[] {
   }
   return [...byPlayer.values()];
 }
+
+export type KeeperMatch = {
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  saves: number;
+};
+
+// Pure keeper tally: matches kept, total saves, clean sheets. A keeper concedes
+// the OPPONENT's score each match (there is no conceded column — same derivation
+// as the season Best-GK query). `teamId` is the keeper's team, used to pick which
+// side's score they conceded; matches their team wasn't in are skipped.
+export function tallyKeeperMatches(teamId: string | null, rows: KeeperMatch[]) {
+  let kept = 0;
+  let saves = 0;
+  let cleanSheets = 0;
+  for (const r of rows) {
+    if (r.homeScore === null || r.awayScore === null) continue;
+    const conceded =
+      teamId === r.homeTeamId ? r.awayScore : teamId === r.awayTeamId ? r.homeScore : null;
+    if (conceded === null) continue;
+    kept += 1;
+    saves += r.saves;
+    if (conceded === 0) cleanSheets += 1;
+  }
+  return { kept, saves, cleanSheets };
+}
