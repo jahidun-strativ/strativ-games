@@ -620,7 +620,9 @@ export type Role = (typeof ROLES)[number];
 export const MATCH_STATUSES = ["scheduled", "completed", "cancelled"] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
-export const SEASON_STATUSES = ["active", "ended"] as const;
+// upcoming = queued behind the live season (created early, doesn't hijack the
+// board); active = the running league; ended = finished (champion crowned).
+export const SEASON_STATUSES = ["upcoming", "active", "ended"] as const;
 export type SeasonStatus = (typeof SEASON_STATUSES)[number];
 
 export const MATCH_KINDS = ["internal", "competitive"] as const;

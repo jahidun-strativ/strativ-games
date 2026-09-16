@@ -36,6 +36,8 @@ export default async function LeagueLayout({ children }: { children: React.React
     );
   }
 
+  const sports = admin ? await db.query.sports.findMany() : [];
+
   return (
     <div>
       <PageHeader
@@ -51,6 +53,7 @@ export default async function LeagueLayout({ children }: { children: React.React
               <ExternalLink className="h-4 w-4" />
               Public page
             </Link>
+            {admin ? <CreateSeasonButton sports={sports} label="+ Plan next season" /> : null}
             {admin ? <SeasonStatusButton season={season} /> : null}
           </div>
         }

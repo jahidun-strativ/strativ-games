@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -22,7 +22,12 @@ function revalidateLeague(seasonId?: string) {
   if (seasonId) revalidatePath(`/league/${seasonId}`);
 }
 
-/** Start a new season, scoped to a sport (its internal teams are the league). */
+/**
+ * Start a new season, scoped to a sport (its internal teams are the league).
+ * If that sport already has a running season, the new one is queued as
+ * "upcoming" so it doesn't hijack the live board — it goes live when the
+ * current season ends (or when an admin starts it early via startSeasonNow).
+ */
 export async function createSeason(formData: FormData) {
   await requireAdmin();
   const name = str(formData, "name");
@@ -31,18 +36,51 @@ export async function createSeason(formData: FormData) {
   if (Number.isNaN(startAt.getTime())) throw new Error("Invalid start date.");
   const plannedMatchdays = Math.max(1, int(formData, "plannedMatchdays"));
 
+  const running = await db.query.seasons.findFirst({
+    where: and(eq(seasons.status, "active"), eq(seasons.sportId, sportId)),
+  });
+  const status = running ? "upcoming" : "active";
+
   const [season] = await db
     .insert(seasons)
-    .values({ name, sportId, startAt, plannedMatchdays, status: "active" })
+    .values({ name, sportId, startAt, plannedMatchdays, status })
     .returning();
   await recordAudit({
     action: "season.create",
     entity: "season",
     entityId: season.id,
-    summary: `Started season ${name}`,
+    summary: status === "upcoming" ? `Queued season ${name}` : `Started season ${name}`,
   });
   revalidateLeague(season.id);
-  redirect("/league");
+  // Queued seasons are managed from Settings; the live board stays put.
+  redirect(status === "upcoming" ? "/league/settings" : "/league");
+}
+
+/**
+ * Promote an upcoming season to live now, ending whatever season is currently
+ * running for its sport (champion crowned) so there's only ever one live league.
+ */
+export async function startSeasonNow(seasonId: string) {
+  await requireAdmin();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, seasonId) });
+  if (!season) throw new Error("Season not found.");
+
+  const running = await db.query.seasons.findMany({
+    where: and(eq(seasons.status, "active"), eq(seasons.sportId, season.sportId)),
+  });
+  for (const c of running) {
+    if (c.id === seasonId) continue;
+    await db.update(seasons).set({ status: "ended" }).where(eq(seasons.id, c.id));
+    await notifyLeagueChampion(c.id).catch(() => {});
+  }
+  await db.update(seasons).set({ status: "active" }).where(eq(seasons.id, seasonId));
+  await recordAudit({
+    action: "season.status",
+    entity: "season",
+    entityId: seasonId,
+    summary: `Started season ${season.name}`,
+  });
+  revalidateLeague(seasonId);
 }
 
 // A matchday is a booked slot whose 3 internal teams play a round-robin — the
@@ -193,6 +231,7 @@ export async function updateSeason(seasonId: string, formData: FormData) {
 
 export async function setSeasonStatus(seasonId: string, status: "active" | "ended") {
   await requireAdmin();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, seasonId) });
   await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
   await recordAudit({
     action: "season.status",
@@ -201,8 +240,19 @@ export async function setSeasonStatus(seasonId: string, status: "active" | "ende
     summary: status === "ended" ? "Ended the season" : "Reopened the season",
   });
   revalidateLeague(seasonId);
-  // Crown the champion to everyone when the season closes.
-  if (status === "ended") await notifyLeagueChampion(seasonId).catch(() => {});
+  if (status === "ended" && season) {
+    // Crown the champion to everyone when the season closes.
+    await notifyLeagueChampion(seasonId).catch(() => {});
+    // Hand off to the next queued season for this sport, if one is waiting.
+    const next = await db.query.seasons.findFirst({
+      where: and(eq(seasons.status, "upcoming"), eq(seasons.sportId, season.sportId)),
+      orderBy: asc(seasons.startAt),
+    });
+    if (next) {
+      await db.update(seasons).set({ status: "active" }).where(eq(seasons.id, next.id));
+      revalidateLeague(next.id);
+    }
+  }
 }
 
 const AWARD_FIELDS = ["topScorerId", "fairplayTeamId", "playerOfSeasonId", "bestGkId"] as const;

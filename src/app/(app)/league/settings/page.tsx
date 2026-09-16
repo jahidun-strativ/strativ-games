@@ -1,6 +1,7 @@
 import { isAdmin } from "@/server/auth";
-import { getActiveSeason } from "@/server/queries/season";
+import { getActiveSeason, getUpcomingSeasons } from "@/server/queries/season";
 import { EditSeasonForm } from "@/components/league/edit-season-form";
+import { UpcomingSeasons } from "@/components/league/upcoming-seasons";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export const metadata = { title: "League settings" };
@@ -19,8 +20,10 @@ export default async function LeagueSettingsPage() {
     );
   }
 
+  const upcoming = await getUpcomingSeasons();
+
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl space-y-8">
       <div className="tv-card-sm p-5">
         <h2 className="font-display mb-1 text-xl text-ink-900">Edit season</h2>
         <p className="mb-4 text-sm text-ink-500">
@@ -28,6 +31,8 @@ export default async function LeagueSettingsPage() {
         </p>
         <EditSeasonForm season={season} />
       </div>
+
+      <UpcomingSeasons seasons={upcoming} />
     </div>
   );
 }

@@ -89,6 +89,14 @@ export const getSeasonById = cache(async (id: string): Promise<Season | null> =>
   return row ?? null;
 });
 
+// Seasons queued behind the live one (soonest start first), for admin planning.
+export const getUpcomingSeasons = cache(async (): Promise<Season[]> => {
+  return db.query.seasons.findMany({
+    where: eq(seasons.status, "upcoming"),
+    orderBy: asc(seasons.startAt),
+  });
+});
+
 // The matchday schedule (nested fixtures + team names). Its own cached query so
 // the Fixtures page can load just this without computing scorers/awards.
 export const getSeasonMatchdays = cache(async (seasonId: string) => {
