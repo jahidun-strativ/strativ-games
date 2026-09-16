@@ -39,6 +39,18 @@ export async function createSeason(formData: FormData) {
   const running = await db.query.seasons.findFirst({
     where: and(eq(seasons.status, "active"), eq(seasons.sportId, sportId)),
   });
+  // While a season runs you may queue exactly one upcoming season (with its own
+  // matchdays) — plan or start that one before adding another.
+  if (running) {
+    const queued = await db.query.seasons.findFirst({
+      where: and(eq(seasons.status, "upcoming"), eq(seasons.sportId, sportId)),
+    });
+    if (queued) {
+      throw new Error(
+        "A season is already queued for this sport. Start or edit it from League → Settings before planning another.",
+      );
+    }
+  }
   const status = running ? "upcoming" : "active";
 
   const [season] = await db
@@ -154,7 +166,9 @@ export async function addMatchday(seasonId: string, formData: FormData) {
   }
 
   const settings = await getNotificationSettings();
-  if (settings.notifyOnCreate) await notifyLeagueMatchday(session.id).catch(() => {});
+  // Don't ping players about a queued (upcoming) season's fixtures — only live ones.
+  if (settings.notifyOnCreate && season.status === "active")
+    await notifyLeagueMatchday(session.id).catch(() => {});
 
   revalidateLeague(seasonId);
   redirect(`/sessions/${session.id}`);

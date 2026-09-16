@@ -1,5 +1,6 @@
+import { db } from "@/db";
 import { isAdmin } from "@/server/auth";
-import { getActiveSeason, getUpcomingSeasons } from "@/server/queries/season";
+import { getActiveSeason, getUpcomingSeasons, getSeasonMatchdays } from "@/server/queries/season";
 import { EditSeasonForm } from "@/components/league/edit-season-form";
 import { UpcomingSeasons } from "@/components/league/upcoming-seasons";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,6 +22,20 @@ export default async function LeagueSettingsPage() {
   }
 
   const upcoming = await getUpcomingSeasons();
+  const [venues, ...matchdaysPer] = await Promise.all([
+    db.query.venues.findMany(),
+    ...upcoming.map((s) => getSeasonMatchdays(s.id)),
+  ]);
+  const items = upcoming.map((s, i) => ({
+    season: s,
+    matchdays: matchdaysPer[i].map((md) => ({
+      id: md.id,
+      title: md.title,
+      startAt: md.startAt,
+      venueName: md.venue?.name ?? null,
+      games: md.fixtures.length,
+    })),
+  }));
 
   return (
     <div className="max-w-xl space-y-8">
@@ -32,7 +47,7 @@ export default async function LeagueSettingsPage() {
         <EditSeasonForm season={season} />
       </div>
 
-      <UpcomingSeasons seasons={upcoming} />
+      <UpcomingSeasons items={items} venues={venues} />
     </div>
   );
 }
